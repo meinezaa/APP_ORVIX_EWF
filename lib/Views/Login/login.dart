@@ -279,7 +279,7 @@ class _LoginViewState extends State<LoginView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
-                        'assets/google_icon.png',
+                        'assets/google.png',
                         height: 22,
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(
