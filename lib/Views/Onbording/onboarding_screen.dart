@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'onboarding1.dart';
 import 'onboarding2.dart';
 import 'onboarding3.dart';
+import 'welcome_screen.dart'; // Import halaman welcome
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -25,7 +26,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _startAutoPlay() {
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_currentPage < 2) {
-        // 2 adalah indeks halaman Onboarding 3
         _currentPage++;
         _pageController.animateToPage(
           _currentPage,
@@ -33,9 +33,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           curve: Curves.easeInOut,
         );
       } else {
-        _timer?.cancel(); // Berhenti di halaman terakhir
+        _timer?.cancel();
+        _navigateToWelcome(); // Pindah otomatis saat slide 3 selesai
       }
     });
+  }
+
+  void _navigateToWelcome() {
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      );
+    }
   }
 
   void _resetTimer() {
@@ -61,7 +70,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           });
           _resetTimer();
         },
-        children: const [OnboardingOne(), OnboardingTwo(), OnboardingThree()],
+        children: const [
+          OnboardingOne(),
+          OnboardingTwo(),
+          OnboardingThree(),
+        ],
       ),
     );
   }

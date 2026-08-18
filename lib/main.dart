@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // Import file splash screen yang sudah dipisah tadi
-import 'package:app_pt_ewf/views/splash_screen.dart';
+import 'package:app_pt_ewf/views/Onbording/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
