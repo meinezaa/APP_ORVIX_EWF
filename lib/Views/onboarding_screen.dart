@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'onboarding1.dart';
 import 'onboarding2.dart';
 import 'onboarding3.dart';
+import 'welcome_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -12,6 +13,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const int _welcomePageIndex = 3;
   final PageController _pageController = PageController();
   int _currentPage = 0;
   Timer? _timer;
@@ -24,8 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _startAutoPlay() {
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_currentPage < 2) {
-        // 2 adalah indeks halaman Onboarding 3
+      if (_currentPage < _welcomePageIndex) {
         _currentPage++;
         _pageController.animateToPage(
           _currentPage,
@@ -61,7 +62,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           });
           _resetTimer();
         },
-        children: const [OnboardingOne(), OnboardingTwo(), OnboardingThree()],
+        children: const [
+          OnboardingOne(),
+          OnboardingTwo(),
+          OnboardingThree(),
+          WelcomeView(),
+        ],
       ),
     );
   }

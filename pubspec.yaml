@@ -62,6 +62,8 @@ flutter:
     - assets/onboarding1.png # Daftarkan gambar onboarding 1
     - assets/onboarding2.png # Daftarkan gambar onboarding 2
     - assets/onboarding3.png # Daftarkan gambar onboarding 3
+    - assets/goldencoin.png # Daftarkan gambar welcomescreen 4
+    - assets/google.png # Daftarkan ikon Google untuk tombol login
 
 
   # To add assets to your application, add an assets section, like this:
