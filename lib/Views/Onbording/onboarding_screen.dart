@@ -13,7 +13,6 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const int _welcomePageIndex = 3;
   final PageController _pageController = PageController();
   int _currentPage = 0;
   Timer? _timer;

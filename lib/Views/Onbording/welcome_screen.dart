@@ -1,8 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../Login/login.dart'; // Import halaman Login
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
+
+  // Inisialisasi instance GoogleSignIn
+  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  // Fungsi untuk menangani proses login Google
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    try {
+      // Menampilkan pemilih akun Google (Account Picker)
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser != null && context.mounted) {
+        // Berhasil memilih akun Google
+        // TODO: Kirim data googleUser (email, id, token) ke backend/Firebase kamu di sini
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Berhasil masuk sebagai ${googleUser.email}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Lanjut navigasi ke halaman utama/dashboard setelah login berhasil
+        // Navigator.of(context).pushReplacement(...);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal masuk dengan Google: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +151,7 @@ class WelcomeView extends StatelessWidget {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: Implementasi Google Sign-In
+                    _handleGoogleSignIn(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: buttonBackground,

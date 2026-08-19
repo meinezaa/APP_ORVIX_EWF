@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+import '../Auth/register.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -7,14 +10,68 @@ class LoginView extends StatefulWidget {
   State<LoginView> createState() => _LoginViewState();
 }
 
-class _LoginViewState extends State<LoginView> {
+class _LoginViewState extends State<LoginView>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
+  // Controller & Animasi Mengambang (Naik-Turun)
+  late AnimationController _animationController;
+  late Animation<Offset> _offsetAnimation;
+
+  // Inisialisasi GoogleSignIn
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Setup durasi & perulangan animasi
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    // Setup pergerakan offset ke atas dan bawah secara halus
+    _offsetAnimation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0, -0.08)).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeInOut,
+          ),
+        );
+  }
+
+  // Fungsi penanganan login Google
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Berhasil masuk sebagai ${googleUser.email}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal masuk dengan Google: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _animationController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -36,16 +93,19 @@ class _LoginViewState extends State<LoginView> {
               children: [
                 const SizedBox(height: 20),
 
-                // 1. LOGO BERLIAN
+                // 1. LOGO BERLIAN / KOIN (ANIMASI MENGAMBANG NAIK-TURUN)
                 Center(
-                  child: Image.asset(
-                    'assets/graphic_logo.png',
-                    width: 120,
-                    height: 120,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.diamond,
-                      size: 90,
-                      color: Color(0xFFD36A28),
+                  child: SlideTransition(
+                    position: _offsetAnimation,
+                    child: Image.asset(
+                      'assets/graphic_logo.png',
+                      width: 120,
+                      height: 120,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.diamond,
+                        size: 90,
+                        color: Color(0xFFD36A28),
+                      ),
                     ),
                   ),
                 ),
@@ -262,9 +322,7 @@ class _LoginViewState extends State<LoginView> {
 
                 // 8. TOMBOL LOGIN GOOGLE
                 OutlinedButton(
-                  onPressed: () {
-                    // TODO: Eksekusi Google Sign-In
-                  },
+                  onPressed: _handleGoogleSignIn,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(
@@ -313,7 +371,11 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        // TODO: Navigasi ke Halaman Buat Akun
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (context) => const RegisterView(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Buat Akun',
