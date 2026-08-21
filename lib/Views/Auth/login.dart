@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../Home/beranda.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-import '../Auth/register.dart';
+import 'register.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -44,6 +44,40 @@ class _LoginViewState extends State<LoginView>
         );
   }
 
+  // Fungsi navigasi langsung ke Beranda
+  void _navigateToHome() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeView()),
+    );
+  }
+
+  // Fungsi penanganan login Manual (Email & Password)
+  void _handleManualLogin() {
+    // Validasi input sederhana
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email dan Password tidak boleh kosong!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Jika berhasil, tampilkan notifikasi singkat lalu masuk ke Home
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login Berhasil! Selamat datang.'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    _navigateToHome();
+  }
+
   // Fungsi penanganan login Google
   Future<void> _handleGoogleSignIn() async {
     try {
@@ -54,8 +88,12 @@ class _LoginViewState extends State<LoginView>
           SnackBar(
             content: Text('Berhasil masuk sebagai ${googleUser.email}'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
           ),
         );
+
+        // Pindah ke HomeView setelah berhasil Login Google
+        _navigateToHome();
       }
     } catch (error) {
       if (mounted) {
@@ -98,7 +136,7 @@ class _LoginViewState extends State<LoginView>
                   child: SlideTransition(
                     position: _offsetAnimation,
                     child: Image.asset(
-                      'assets/graphic_logo.png',
+                      'assets/icon_logo.png',
                       width: 120,
                       height: 120,
                       errorBuilder: (context, error, stackTrace) => const Icon(
@@ -273,9 +311,7 @@ class _LoginViewState extends State<LoginView>
 
                 // 6. TOMBOL UTAMA MASUK
                 ElevatedButton(
-                  onPressed: () {
-                    // TODO: Eksekusi Fungsi Login
-                  },
+                  onPressed: _handleManualLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD36A28),
                     elevation: 0,

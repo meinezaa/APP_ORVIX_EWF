@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../Login/login.dart'; // Import halaman Login
+import '../Auth/login.dart'; // Import halaman Login
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});

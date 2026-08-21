@@ -96,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: SlideTransition(
                   position: _fallAnimation,
                   child: Image.asset(
-                    'assets/graphic_logo.png',
+                    'assets/icon_logo.png',
                     width: 140,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.diamond,

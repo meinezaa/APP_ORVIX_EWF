@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../Login/login.dart';
+import 'login.dart';
 
 class OtpVerificationView extends StatefulWidget {
   final String phoneNumber;

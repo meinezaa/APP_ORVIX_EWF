@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'otp_verivication.dart';
+import 'otp_verification.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
