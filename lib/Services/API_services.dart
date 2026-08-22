@@ -1,38 +1,86 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as parser;
+import 'package:flutter/foundation.dart';
 import '../models/gold_data.dart';
 
 class ApiService {
-  // Ganti dengan URL Endpoint API News Maker yang kamu gunakan
-  static const String _baseUrl = 'https://api.newsmaker.id/v1';
+  /// Mengambil data dari beberapa halaman/slide newsmaker.id sekaligus
+  static Future<List<GoldHistory>> getGoldHistory({int maxPages = 10}) async {
+    List<GoldHistory> fetchedData = [];
+    Set<String> seenDates = {}; // Mencegah tanggal duplikat
+    const baseUrl =
+        'https://www.newsmaker.id/index.php/id/tools/historical-data-2';
 
-  static Future<List<GoldHistory>> getGoldHistory(
-    String startDate,
-    String endDate,
-  ) async {
-    final url = Uri.parse(
-      '$_baseUrl/gold-history?start_date=$startDate&end_date=$endDate',
-    );
+    for (int page = 1; page <= maxPages; page++) {
+      int offset = (page - 1) * 10;
 
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': 'Bearer YOUR_API_KEY', // Buka komentar jika API pakai Key
-        },
-      );
+      // Mengakses pagination via query parameter (?start=X&page=Y)
+      final rawUrl = page == 1 ? baseUrl : '$baseUrl?start=$offset&page=$page';
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> body = json.decode(response.body);
-        final List<dynamic> data = body['data'];
+      final url = kIsWeb
+          ? Uri.parse('https://corsproxy.io/?${Uri.encodeComponent(rawUrl)}')
+          : Uri.parse(rawUrl);
 
-        return data.map((item) => GoldHistory.fromJson(item)).toList();
-      } else {
-        throw Exception('Gagal mengambil data dari server');
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          var document = parser.parse(response.body);
+          var rows = document.querySelectorAll('table tbody tr');
+
+          int newRowsInThisPage = 0;
+
+          for (var row in rows) {
+            var columns = row.querySelectorAll('td');
+            if (columns.length >= 5) {
+              String date = columns[0].text.trim().replaceAll('\u00a0', ' ');
+              double open =
+                  double.tryParse(columns[1].text.trim().replaceAll(',', '')) ??
+                  0.0;
+              double high =
+                  double.tryParse(columns[2].text.trim().replaceAll(',', '')) ??
+                  0.0;
+              double low =
+                  double.tryParse(columns[3].text.trim().replaceAll(',', '')) ??
+                  0.0;
+              double close =
+                  double.tryParse(columns[4].text.trim().replaceAll(',', '')) ??
+                  0.0;
+
+              // Masukkan hanya jika tanggal belum ada di daftar
+              if (date.isNotEmpty && !seenDates.contains(date)) {
+                seenDates.add(date);
+                fetchedData.add(
+                  GoldHistory(
+                    date: date,
+                    open: open,
+                    high: high,
+                    low: low,
+                    close: close,
+                  ),
+                );
+                newRowsInThisPage++;
+              }
+            }
+          }
+
+          // Jika halaman tidak menghasilkan data baru lagi, hentikan pengambilan
+          if (newRowsInThisPage == 0) break;
+        } else {
+          break;
+        }
+      } catch (e) {
+        debugPrint('Error fetching page $page: $e');
+        break;
       }
-    } catch (e) {
-      throw Exception('Terjadi kesalahan jaringan: $e');
     }
+
+    return fetchedData;
   }
 }
