@@ -137,11 +137,11 @@ class _LoginViewState extends State<LoginView>
                     position: _offsetAnimation,
                     child: Image.asset(
                       'assets/icon_logo.png',
-                      width: 120,
-                      height: 120,
+                      width: 175,
+                      height: 175,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.diamond,
-                        size: 90,
+                        size: 125,
                         color: Color(0xFFD36A28),
                       ),
                     ),

@@ -4,79 +4,91 @@ import 'package:flutter/foundation.dart';
 import '../models/gold_data.dart';
 
 class ApiService {
-  /// Mengambil data dari beberapa halaman/slide newsmaker.id sekaligus
+  /// Mengambil data dari beberapa halaman tabel historical data.
   static Future<List<GoldHistory>> getGoldHistory({int maxPages = 10}) async {
-    List<GoldHistory> fetchedData = [];
-    Set<String> seenDates = {}; // Mencegah tanggal duplikat
+    final fetchedData = <GoldHistory>[];
+    final seenDates = <String>{};
     const baseUrl =
         'https://www.newsmaker.id/index.php/id/tools/historical-data-2';
 
     for (int page = 1; page <= maxPages; page++) {
       int offset = (page - 1) * 10;
 
-      // Mengakses pagination via query parameter (?start=X&page=Y)
-      final rawUrl = page == 1 ? baseUrl : '$baseUrl?start=$offset&page=$page';
+      // Situs menggunakan `start` sebagai offset. Parameter `page` tambahan
+      // membuat beberapa perangkat menerima halaman pertama berulang kali.
+      final rawUrl = page == 1 ? baseUrl : '$baseUrl?start=$offset';
 
       final url = kIsWeb
           ? Uri.parse('https://corsproxy.io/?${Uri.encodeComponent(rawUrl)}')
           : Uri.parse(rawUrl);
 
       try {
-        final response = await http.get(
-          url,
-          headers: {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-        );
+        final response = await http
+            .get(
+              url,
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml',
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
-        if (response.statusCode == 200) {
-          var document = parser.parse(response.body);
-          var rows = document.querySelectorAll('table tbody tr');
+        if (response.statusCode != 200) {
+          throw Exception('Server mengembalikan status ${response.statusCode}');
+        }
 
-          int newRowsInThisPage = 0;
+        final document = parser.parse(response.body);
+        // `tbody` tidak selalu ada di HTML yang dikirim server, jadi gunakan
+        // seluruh baris tabel sebagai fallback.
+        final rows = document.querySelectorAll('table tbody tr').isNotEmpty
+            ? document.querySelectorAll('table tbody tr')
+            : document.querySelectorAll('table tr');
 
-          for (var row in rows) {
-            var columns = row.querySelectorAll('td');
-            if (columns.length >= 5) {
-              String date = columns[0].text.trim().replaceAll('\u00a0', ' ');
-              double open =
-                  double.tryParse(columns[1].text.trim().replaceAll(',', '')) ??
-                  0.0;
-              double high =
-                  double.tryParse(columns[2].text.trim().replaceAll(',', '')) ??
-                  0.0;
-              double low =
-                  double.tryParse(columns[3].text.trim().replaceAll(',', '')) ??
-                  0.0;
-              double close =
-                  double.tryParse(columns[4].text.trim().replaceAll(',', '')) ??
-                  0.0;
+        var newRowsInThisPage = 0;
 
-              // Masukkan hanya jika tanggal belum ada di daftar
-              if (date.isNotEmpty && !seenDates.contains(date)) {
-                seenDates.add(date);
-                fetchedData.add(
-                  GoldHistory(
-                    date: date,
-                    open: open,
-                    high: high,
-                    low: low,
-                    close: close,
-                  ),
-                );
-                newRowsInThisPage++;
-              }
+        for (final row in rows) {
+          final columns = row.querySelectorAll('td');
+          if (columns.length >= 5) {
+            final date = columns[0].text.trim().replaceAll('\u00a0', ' ');
+            final open =
+                double.tryParse(columns[1].text.trim().replaceAll(',', '')) ??
+                0.0;
+            final high =
+                double.tryParse(columns[2].text.trim().replaceAll(',', '')) ??
+                0.0;
+            final low =
+                double.tryParse(columns[3].text.trim().replaceAll(',', '')) ??
+                0.0;
+            final close =
+                double.tryParse(columns[4].text.trim().replaceAll(',', '')) ??
+                0.0;
+
+            if (date.isNotEmpty && !seenDates.contains(date)) {
+              seenDates.add(date);
+              fetchedData.add(
+                GoldHistory(
+                  date: date,
+                  open: open,
+                  high: high,
+                  low: low,
+                  close: close,
+                ),
+              );
+              newRowsInThisPage++;
             }
           }
-
-          // Jika halaman tidak menghasilkan data baru lagi, hentikan pengambilan
-          if (newRowsInThisPage == 0) break;
-        } else {
-          break;
         }
+
+        // Tidak ada data baru berarti sudah mencapai halaman terakhir.
+        if (newRowsInThisPage == 0) break;
       } catch (e) {
         debugPrint('Error fetching page $page: $e');
+        if (fetchedData.isEmpty) {
+          throw Exception('Tidak dapat mengambil historical data. $e');
+        }
+        // Data dari halaman sebelumnya tetap bisa ditampilkan bila halaman
+        // berikutnya bermasalah.
         break;
       }
     }
