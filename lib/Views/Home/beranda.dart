@@ -10,8 +10,6 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  int _selectedNavIndex = 0;
-
   // Tanggal Filter Default (MM/DD/YYYY)
   DateTime? _startDate = DateTime(2026, 7, 8); // 8 Juli 2026
   DateTime? _endDate = DateTime(2026, 8, 20); // 20 Agustus 2026
@@ -63,12 +61,14 @@ class _HomeViewState extends State<HomeView> {
           value,
           textAlign: TextAlign.center,
           style: isHeader
-                ? TextStyle(fontFamily: 'sans-serif',
+              ? TextStyle(
+                  fontFamily: 'sans-serif',
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF211A17),
                 )
-                : TextStyle(fontFamily: 'sans-serif-medium',
+              : TextStyle(
+                  fontFamily: 'sans-serif-medium',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF302A27),
@@ -707,152 +707,7 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                   ),
-                  // Tambahkan padding bawah agar konten tidak tertutup navbar melayang
-                  const SizedBox(height: 80),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // CUSTOM NAVIGATION BAR PERSIS DESIGN
-      bottomNavigationBar: SizedBox(
-        height: 90,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Background Navbar dengan Kurva Kustom[cite: 2]
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: CustomPaint(
-                size: Size(MediaQuery.of(context).size.width, 84),
-                painter: NavBarPainter(),
-              ),
-            ),
-
-            // Item Menu Navbar[cite: 2]
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 80,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildNavItem(0, '', Icons.home, isPlaceholder: true),
-                  _buildNavItem(1, 'Calculate', Icons.calculate_outlined),
-                  _buildNavItem(2, 'History', Icons.history),
-                  _buildNavItem(3, 'Profil', Icons.person_outline),
-                ],
-              ),
-            ),
-
-            // Floating Home Button di sebelah kiri yang menjorok keluar kurva[cite: 2]
-            Positioned(
-              top: -12,
-              left: MediaQuery.of(context).size.width * 0.125 - 27,
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedNavIndex = 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFD36A28),
-                          width: 2.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.18),
-                            blurRadius: 10,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.home,
-                          color: Color(0xFFD36A28),
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Column(
-                      children: [
-                        const Text(
-                          'Home',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E1E1E),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Container(
-                          width: 14,
-                          height: 2.5,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD36A28),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    int index,
-    String label,
-    IconData icon, {
-    bool isPlaceholder = false,
-  }) {
-    if (isPlaceholder) {
-      return const Expanded(child: SizedBox.shrink());
-    }
-
-    bool isSelected = _selectedNavIndex == index;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _selectedNavIndex = index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isSelected
-                  ? const Color(0xFFD36A28)
-                  : const Color(0xFF7E7E7E),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'sans-serif',
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? const Color(0xFFD36A28)
-                    : const Color(0xFF7E7E7E),
               ),
             ),
           ],
@@ -983,60 +838,4 @@ class _HomeViewState extends State<HomeView> {
       ),
     );
   }
-}
-
-// Custom Painter untuk membuat bentuk lengkungan atas (Notch)[cite: 2]
-class NavBarPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
-      ..color = Colors.white
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill;
-
-    Path path = Path();
-    const curveRadius = 38.0;
-    final curveCenter = size.width * 0.125;
-    const cornerRadius = 22.0;
-
-    path.moveTo(0, cornerRadius);
-    path.quadraticBezierTo(0, 0, cornerRadius, 0);
-    path.lineTo(curveCenter - curveRadius - 10, 0);
-
-    path.cubicTo(
-      curveCenter - curveRadius,
-      0,
-      curveCenter - curveRadius + 5,
-      curveRadius,
-      curveCenter,
-      curveRadius,
-    );
-    path.cubicTo(
-      curveCenter + curveRadius - 5,
-      curveRadius,
-      curveCenter + curveRadius,
-      0,
-      curveCenter + curveRadius + 10,
-      0,
-    );
-
-    path.lineTo(size.width - cornerRadius, 0);
-    path.quadraticBezierTo(size.width, 0, size.width, cornerRadius);
-    path.lineTo(size.width, size.height - cornerRadius);
-    path.quadraticBezierTo(
-      size.width,
-      size.height,
-      size.width - cornerRadius,
-      size.height,
-    );
-    path.lineTo(cornerRadius, size.height);
-    path.quadraticBezierTo(0, size.height, 0, size.height - cornerRadius);
-    path.close();
-
-    canvas.drawShadow(path, Colors.black.withOpacity(0.16), 10.0, true);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

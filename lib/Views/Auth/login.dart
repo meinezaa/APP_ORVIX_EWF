@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Home/beranda.dart';
+import '../main_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'register.dart';
 
@@ -44,11 +44,11 @@ class _LoginViewState extends State<LoginView>
         );
   }
 
-  // Fungsi navigasi langsung ke Beranda
+  // Fungsi navigasi ke shell utama aplikasi
   void _navigateToHome() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeView()),
+      MaterialPageRoute(builder: (context) => const MainScreen()),
     );
   }
 
