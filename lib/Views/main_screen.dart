@@ -11,23 +11,31 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  late int _selectedIndex;
+  late int _selectedNavIndex;
+  late int _previousNavIndex;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex;
+    _selectedNavIndex = widget.initialIndex;
+    _previousNavIndex = widget.initialIndex;
   }
 
-  // List Halaman Utama
+  void _selectNavIndex(int index) {
+    if (index == _selectedNavIndex) return;
+    setState(() {
+      _previousNavIndex = _selectedNavIndex;
+      _selectedNavIndex = index;
+    });
+  }
+
   final List<Widget> _pages = [
-    const HomeView(), // Index 0: Home
-    const KalkulatorEmasFisikView(), // Index 1: Calculate
-    const Center(child: Text('History View')), // Index 2: History
-    const Center(child: Text('Profil View')), // Index 3: Profil
+    const HomeView(), // Index 0
+    const KalkulatorEmasFisikView(), // Index 1
+    const Center(child: Text('History View')), // Index 2
+    const Center(child: Text('Profil View')), // Index 3
   ];
 
-  // Config Data Navbar
   final List<Map<String, dynamic>> _navItems = [
     {
       'label': 'Home',
@@ -37,7 +45,7 @@ class _MainScreenState extends State<MainScreen> {
     {
       'label': 'Calculate',
       'iconUnselected': Icons.calculate_outlined,
-      'iconSelected': Icons.calculate,
+      'iconSelected': Icons.calculate_rounded,
     },
     {
       'label': 'History',
@@ -53,134 +61,216 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double itemWidth = screenWidth / _navItems.length;
-    const primaryOrange = Color(0xFFD95B14);
+    final double screenWidth = MediaQuery.of(context).size.width;
+    const double navHorizontalMargin = 12;
+    final double navWidth = screenWidth - (navHorizontalMargin * 2);
+    final double itemWidth = navWidth / 4;
+    final double previousCenterX =
+        navHorizontalMargin + (itemWidth * _previousNavIndex) + (itemWidth / 2);
+    final double activeCenterX =
+        navHorizontalMargin + (itemWidth * _selectedNavIndex) + (itemWidth / 2);
+    const Color primaryOrange = Color(0xFFD95B14);
 
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: Container(
-        height: 85,
-        color: Colors.transparent,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            // 1. BAR BACKGROUND UTAMA (Unselected Items)
-            Container(
-              height: 65,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, -3),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: IndexedStack(index: _selectedNavIndex, children: _pages),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          navHorizontalMargin,
+          0,
+          navHorizontalMargin,
+          8,
+        ),
+        child: SizedBox(
+          height: 72,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: [
+              // 1. BACKGROUND LEKUKAN WHITE NAVBAR (Presisi & Dinamis)
+              Positioned.fill(
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey(_selectedNavIndex),
+                  tween: Tween<double>(
+                    begin: previousCenterX,
+                    end: activeCenterX,
                   ),
-                ],
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeInOutQuad,
+                  builder: (context, animX, child) {
+                    return CustomPaint(
+                      size: Size(navWidth, 72),
+                      painter: SeamlessNavBarPainter(
+                        notchCenterX: animX - navHorizontalMargin,
+                      ),
+                    );
+                  },
+                ),
               ),
-              child: Row(
-                children: List.generate(_navItems.length, (index) {
-                  bool isSelected = _selectedIndex == index;
 
-                  // Berikan slot kosong jika tab sedang dipilih (karena akan diisi oleh ikon melayang)
-                  if (isSelected) {
-                    return SizedBox(width: itemWidth);
-                  }
+              // 2. ITEM NAVBAR UNSELECTED
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 60,
+                child: Row(
+                  children: List.generate(_navItems.length, (index) {
+                    final bool isSelected = _selectedNavIndex == index;
 
-                  return Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedIndex = index),
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _navItems[index]['iconUnselected'],
-                            color: Colors.grey.shade500,
-                            size: 22,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _navItems[index]['label'],
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.normal,
+                    if (isSelected) {
+                      return SizedBox(width: itemWidth);
+                    }
+
+                    return Expanded(
+                      child: InkWell(
+                        onTap: () => _selectNavIndex(index),
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _navItems[index]['iconUnselected'],
+                              color: const Color(0xFF757575),
+                              size: 22,
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _navItems[index]['label'],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF757575),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+
+              // 3. FLOATING ACTIVE BUTTON (Mengikuti Lekukan)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOutQuad,
+                bottom: 4,
+                left: activeCenterX - navHorizontalMargin - 27,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: primaryOrange, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
+                      child: Icon(
+                        _navItems[_selectedNavIndex]['iconSelected'],
+                        color: primaryOrange,
+                        size: 26,
+                      ),
                     ),
-                  );
-                }),
+                    const SizedBox(height: 2),
+                    Text(
+                      _navItems[_selectedNavIndex]['label'],
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: primaryOrange,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      width: 14,
+                      height: 2.5,
+                      decoration: BoxDecoration(
+                        color: primaryOrange,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-
-            // 2. ICON DYNAMIC FLOATING (Pindah Halus / Animated Positioned)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.decelerate,
-              bottom: 6,
-              left:
-                  (itemWidth * _selectedIndex) +
-                  (itemWidth / 2) -
-                  29, // Menempatkan posisi presisi di tengah slot
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Lingkaran dengan Border Oranye
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primaryOrange, width: 2.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryOrange.withOpacity(0.18),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      _navItems[_selectedIndex]['iconSelected'],
-                      color: primaryOrange,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  // Judul Teks Aktif Oranye
-                  Text(
-                    _navItems[_selectedIndex]['label'],
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: primaryOrange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  // Garis Indikator Bawah
-                  Container(
-                    width: 14,
-                    height: 2.5,
-                    decoration: BoxDecoration(
-                      color: primaryOrange,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class SeamlessNavBarPainter extends CustomPainter {
+  final double notchCenterX;
+
+  SeamlessNavBarPainter({required this.notchCenterX});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    Path path = Path();
+    double barTop = 0.0;
+    double cornerRadius = 18.0;
+    double notchWidth = 38.0;
+    double notchDepth = 26.0;
+
+    path.moveTo(0, size.height);
+
+    path.lineTo(0, barTop + cornerRadius);
+    path.quadraticBezierTo(0, barTop, cornerRadius, barTop);
+
+    path.lineTo(notchCenterX - notchWidth - 8, barTop);
+
+    path.cubicTo(
+      notchCenterX - notchWidth,
+      barTop,
+      notchCenterX - notchWidth + 6,
+      barTop + notchDepth,
+      notchCenterX,
+      barTop + notchDepth,
+    );
+    path.cubicTo(
+      notchCenterX + notchWidth - 6,
+      barTop + notchDepth,
+      notchCenterX + notchWidth,
+      barTop,
+      notchCenterX + notchWidth + 8,
+      barTop,
+    );
+
+    path.lineTo(size.width - cornerRadius, barTop);
+    path.quadraticBezierTo(
+      size.width,
+      barTop,
+      size.width,
+      barTop + cornerRadius,
+    );
+
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawShadow(path, Colors.black.withOpacity(0.08), 5.0, true);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant SeamlessNavBarPainter oldDelegate) {
+    return oldDelegate.notchCenterX != notchCenterX;
   }
 }
