@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../main_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../main_screen.dart';
+import '../../Models/users_model.dart';
+import '../../Services/auth_services.dart';
 import 'register.dart';
 
 class LoginView extends StatefulWidget {
@@ -14,6 +16,10 @@ class _LoginViewState extends State<LoginView>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Instance Service & State Loading
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
@@ -53,10 +59,12 @@ class _LoginViewState extends State<LoginView>
   }
 
   // Fungsi penanganan login Manual (Email & Password)
-  void _handleManualLogin() {
+  Future<void> _handleManualLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
     // Validasi input sederhana
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email dan Password tidak boleh kosong!'),
@@ -66,16 +74,41 @@ class _LoginViewState extends State<LoginView>
       return;
     }
 
-    // Jika berhasil, tampilkan notifikasi singkat lalu masuk ke Home
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Login Berhasil! Selamat datang.'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 1),
-      ),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    _navigateToHome();
+    try {
+      // Panggil method login dari AuthService
+      UserModel? user = await _authService.loginUser(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login Berhasil! Selamat datang, ${user.nama}.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+        _navigateToHome();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   // Fungsi penanganan login Google
@@ -176,6 +209,7 @@ class _LoginViewState extends State<LoginView>
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  enabled: !_isLoading,
                   decoration: InputDecoration(
                     hintText: 'contoh@email.com',
                     hintStyle: const TextStyle(
@@ -217,8 +251,9 @@ class _LoginViewState extends State<LoginView>
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  enabled: !_isLoading,
                   decoration: InputDecoration(
-                    hintText: 'Buat kata sandi minimal 8 karakter',
+                    hintText: 'Masukkan kata sandi',
                     hintStyle: const TextStyle(
                       color: Color(0xFFA09891),
                       fontSize: 14,
@@ -274,11 +309,13 @@ class _LoginViewState extends State<LoginView>
                               borderRadius: BorderRadius.circular(4),
                             ),
                             side: const BorderSide(color: Color(0xFFD1C7BD)),
-                            onChanged: (value) {
-                              setState(() {
-                                _rememberMe = value ?? false;
-                              });
-                            },
+                            onChanged: _isLoading
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      _rememberMe = value ?? false;
+                                    });
+                                  },
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -309,25 +346,37 @@ class _LoginViewState extends State<LoginView>
 
                 const SizedBox(height: 28),
 
-                // 6. TOMBOL UTAMA MASUK
+                // 6. TOMBOL UTAMA MASUK (DENGAN INDIKATOR LOADING)
                 ElevatedButton(
-                  onPressed: _handleManualLogin,
+                  onPressed: _isLoading ? null : _handleManualLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD36A28),
+                    disabledBackgroundColor: const Color(
+                      0xFFD36A28,
+                    ).withValues(alpha: 0.6),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Masuk',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text(
+                          'Masuk',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
 
                 const SizedBox(height: 24),
@@ -358,7 +407,7 @@ class _LoginViewState extends State<LoginView>
 
                 // 8. TOMBOL LOGIN GOOGLE
                 OutlinedButton(
-                  onPressed: _handleGoogleSignIn,
+                  onPressed: _isLoading ? null : _handleGoogleSignIn,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(

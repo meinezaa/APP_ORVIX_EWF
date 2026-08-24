@@ -171,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
                         border: Border.all(color: primaryOrange, width: 3),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 8,
                             spreadRadius: 1,
                             offset: const Offset(0, 3),
@@ -265,7 +265,7 @@ class SeamlessNavBarPainter extends CustomPainter {
     path.lineTo(size.width, size.height);
     path.close();
 
-    canvas.drawShadow(path, Colors.black.withOpacity(0.08), 5.0, true);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.08), 5.0, true);
     canvas.drawPath(path, paint);
   }
 

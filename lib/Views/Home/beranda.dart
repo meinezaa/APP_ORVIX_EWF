@@ -463,7 +463,7 @@ class _HomeViewState extends State<HomeView> {
                       border: Border.all(color: const Color(0xFFE8E0D8)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -556,7 +556,9 @@ class _HomeViewState extends State<HomeView> {
                                       Divider(
                                         height: 1,
                                         thickness: 1,
-                                        color: Colors.black.withOpacity(0.14),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.14,
+                                        ),
                                       ),
                                     ],
                                   );

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'otp_verification.dart';
@@ -15,7 +17,8 @@ class _RegisterViewState extends State<RegisterView> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   // State untuk kelola visibilitas password
   bool _isPasswordObscured = true;
@@ -23,6 +26,9 @@ class _RegisterViewState extends State<RegisterView> {
 
   // State untuk checkbox persetujuan
   bool _isAgreed = true;
+
+  // State untuk indikator loading proses registrasi
+  bool _isLoading = false;
 
   // Skema Warna dari UI
   final Color primaryOrange = const Color(0xFFE05813);
@@ -209,7 +215,7 @@ class _RegisterViewState extends State<RegisterView> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _continueToOtp,
+                  onPressed: _isLoading ? null : _continueToOtp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryOrange,
                     elevation: 0,
@@ -217,14 +223,23 @@ class _RegisterViewState extends State<RegisterView> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Daftar',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Daftar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
 
@@ -236,10 +251,7 @@ class _RegisterViewState extends State<RegisterView> {
                 children: [
                   Text(
                     'Sudah punya akun? ',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: subtitleTextColor,
-                    ),
+                    style: TextStyle(fontSize: 14, color: subtitleTextColor),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -291,10 +303,7 @@ class _RegisterViewState extends State<RegisterView> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(
-          color: Color(0xFFA6A6A6),
-          fontSize: 14,
-        ),
+        hintStyle: const TextStyle(color: Color(0xFFA6A6A6), fontSize: 14),
         filled: true,
         fillColor: inputBgColor,
         contentPadding: const EdgeInsets.symmetric(
@@ -314,7 +323,8 @@ class _RegisterViewState extends State<RegisterView> {
     );
   }
 
-  void _continueToOtp() {
+  // Fungsi Proses Registrasi ke Firebase Auth & Firestore
+  Future<void> _continueToOtp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
@@ -322,7 +332,11 @@ class _RegisterViewState extends State<RegisterView> {
     final confirmation = _confirmPasswordController.text;
 
     String? message;
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || confirmation.isEmpty) {
+    if (name.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        confirmation.isEmpty) {
       message = 'Lengkapi seluruh data pendaftaran.';
     } else if (!email.contains('@')) {
       message = 'Masukkan alamat email yang valid.';
@@ -335,14 +349,69 @@ class _RegisterViewState extends State<RegisterView> {
     }
 
     if (message != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => OtpVerificationView(phoneNumber: phone),
-      ),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Buat akun di Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      String uid = userCredential.user!.uid;
+
+      // 2. Simpan data staff ke Firestore secara otomatis
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'user_id': uid,
+        'nama': name,
+        'email': email,
+        'phone': phone,
+        'role': 'staff', // Peran otomatis dikunci sebagai staff
+        'status': 'active',
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registrasi akun staff berhasil!')),
+      );
+
+      // 3. Pindah ke halaman verifikasi OTP
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => OtpVerificationView(phoneNumber: phone),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMsg = 'Terjadi kesalahan registrasi.';
+      if (e.code == 'weak-password') {
+        errorMsg = 'Password yang digunakan terlalu lemah.';
+      } else if (e.code == 'email-already-in-use') {
+        errorMsg = 'Email ini sudah terdaftar.';
+      } else if (e.code == 'invalid-email') {
+        errorMsg = 'Format email tidak valid.';
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMsg)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal registrasi: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
