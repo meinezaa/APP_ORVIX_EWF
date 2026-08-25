@@ -12,7 +12,20 @@
           "package_name": "com.company.appORVIX"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "49789057845-vsepijgot4sdeqqajg12rsbvrnelp6h1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.company.appORVIX",
+            "certificate_hash": "dccafe37c53b13623884a5f1559f1632069f8f88"
+          }
+        },
+        {
+          "client_id": "49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBZdfSLO-cluPQbX-K8dmuH_bMWdQ22EOg"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "49789057845-1co0sj11i6c7nsfe64m31i1lmnp60tmt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.appPtEwf"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +56,12 @@
           "package_name": "com.example.app_pt_ewf"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBZdfSLO-cluPQbX-K8dmuH_bMWdQ22EOg"
@@ -39,7 +69,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "49789057845-1co0sj11i6c7nsfe64m31i1lmnp60tmt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.appPtEwf"
+              }
+            }
+          ]
         }
       }
     }
