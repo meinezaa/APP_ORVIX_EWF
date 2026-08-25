@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/gold_data.dart';
-import '../../Services/api_services.dart';
+import '../../services/api_services.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -129,6 +129,28 @@ class _HomeViewState extends State<HomeView> {
       }
     } catch (_) {}
     return null;
+  }
+
+  String _formatDisplayDate(String dateStr) {
+    final date = _parseDate(dateStr);
+    if (date == null) return dateStr;
+
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final day = date.day.toString().padLeft(2, '0');
+    return '$day ${monthNames[date.month - 1]} ${date.year}';
   }
 
   // 3. Filter Data Berdasarkan Rentang Tanggal yang Dipilih User[cite: 1]
@@ -463,7 +485,7 @@ class _HomeViewState extends State<HomeView> {
                       border: Border.all(color: const Color(0xFFE8E0D8)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -537,7 +559,9 @@ class _HomeViewState extends State<HomeView> {
                                         ),
                                         child: Row(
                                           children: [
-                                            _buildTableCell(data.date),
+                                            _buildTableCell(
+                                              _formatDisplayDate(data.date),
+                                            ),
                                             _buildTableCell(
                                               data.open.toStringAsFixed(2),
                                             ),
@@ -556,7 +580,7 @@ class _HomeViewState extends State<HomeView> {
                                       Divider(
                                         height: 1,
                                         thickness: 1,
-                                        color: Colors.black.withOpacity(0.14),
+                                        color: Colors.black.withValues(alpha: 0.14),
                                       ),
                                     ],
                                   );
