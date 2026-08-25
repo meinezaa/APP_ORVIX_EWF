@@ -431,13 +431,9 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-<<<<<<< HEAD
-                    color: _canResend ? primaryOrange : textColorGrey.withValues(alpha: 0.6),
-=======
                     color: _canResend
                         ? primaryOrange
                         : textColorGrey.withValues(alpha: 0.6),
->>>>>>> origin/inez
                   ),
                 ),
               ),

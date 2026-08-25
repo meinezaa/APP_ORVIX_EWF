@@ -12,10 +12,30 @@ class _MainScreenState extends State<MainScreen> {
 
   // Daftar halaman/view yang akan berubah saat menu navigasi diklik
   final List<Widget> _pages = [
-    const Center(child: Text('Home Screen', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-    const Center(child: Text('Calculate Screen', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-    const Center(child: Text('History Screen', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-    const Center(child: Text('Profil Screen', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+    const Center(
+      child: Text(
+        'Home Screen',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    ),
+    const Center(
+      child: Text(
+        'Calculate Screen',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    ),
+    const Center(
+      child: Text(
+        'History Screen',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    ),
+    const Center(
+      child: Text(
+        'Profil Screen',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    ),
   ];
 
   @override
@@ -66,16 +86,13 @@ class CustomBottomNavBar extends StatelessWidget {
             right: 0,
             child: CustomPaint(
               size: const Size(double.infinity, 70),
-              painter: BottomNavPainter(
-                backgroundColor: primaryOrange,
-              ),
+              painter: BottomNavPainter(backgroundColor: primaryOrange),
               child: Container(
                 height: 70,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-<<<<<<< HEAD
                     // Spasi kosong di kiri untuk memberi ruang pada tombol Home yang mengambang
                     const SizedBox(width: 48),
 
@@ -84,29 +101,6 @@ class CustomBottomNavBar extends StatelessWidget {
                       index: 1,
                       icon: Icons.calculate_outlined,
                       label: 'Calculate',
-=======
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: primaryOrange, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        _navItems[_selectedNavIndex]['iconSelected'],
-                        color: primaryOrange,
-                        size: 26,
-                      ),
->>>>>>> origin/inez
                     ),
 
                     // Menu 3: History
@@ -143,10 +137,7 @@ class CustomBottomNavBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: primaryOrange,
-                        width: 4,
-                      ),
+                      border: Border.all(color: primaryOrange, width: 4),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.15),
@@ -205,11 +196,7 @@ class CustomBottomNavBar extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 26,
-            ),
+            Icon(icon, color: Colors.white, size: 26),
             const SizedBox(height: 4),
             Text(
               label,
@@ -245,20 +232,28 @@ class BottomNavPainter extends CustomPainter {
 
     // Menggambar bentuk kustom dengan tonjolan lengkung di bagian atas-kiri
     path.moveTo(0, radius + 10);
-    path.cubicTo(0, 5, 20, 0, 52, 0); // Kurva melengkung ke atas untuk tombol Home
+    path.cubicTo(
+      0,
+      5,
+      20,
+      0,
+      52,
+      0,
+    ); // Kurva melengkung ke atas untuk tombol Home
     path.lineTo(size.width - radius, 0);
     path.quadraticBezierTo(size.width, 0, size.width, radius);
     path.lineTo(size.width, size.height - radius);
-    path.quadraticBezierTo(size.width, size.height, size.width - radius, size.height);
+    path.quadraticBezierTo(
+      size.width,
+      size.height,
+      size.width - radius,
+      size.height,
+    );
     path.lineTo(radius, size.height);
     path.quadraticBezierTo(0, size.height, 0, size.height - radius);
-    
     path.close();
 
-<<<<<<< HEAD
-=======
     canvas.drawShadow(path, Colors.black.withValues(alpha: 0.08), 5.0, true);
->>>>>>> origin/inez
     canvas.drawPath(path, paint);
   }
 
