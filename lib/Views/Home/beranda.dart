@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/gold_data.dart';
+import '../../Models/gold_data.dart';
 import '../../services/api_services.dart';
 
 class HomeView extends StatefulWidget {

@@ -8,8 +8,7 @@ class ApiService {
   static Future<List<GoldHistory>> getGoldHistory({int maxPages = 10}) async {
     final fetchedData = <GoldHistory>[];
     final seenDates = <String>{};
-    const baseUrl =
-        'https://www.newsmaker.id/index.php/id/tools/historical-data-2';
+    const baseUrl = 'https://www.newsmaker.id/id/tools/historical-data';
 
     for (int page = 1; page <= maxPages; page++) {
       final offset = (page - 1) * 10;

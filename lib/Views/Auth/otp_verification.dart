@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'login.dart';
+import '../Onbording/welcome_screen.dart';
 
 class OtpVerificationView extends StatefulWidget {
   final String phoneNumber;
@@ -242,8 +243,12 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                 // Teks Kembali ke Beranda
                 GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Navigasi ke Beranda/Welcome View
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const WelcomeView(),
+                      ),
+                      (route) => false,
+                    );
                   },
                   child: Text(
                     'Kembali ke Beranda',

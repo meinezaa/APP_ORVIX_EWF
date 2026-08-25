@@ -4,6 +4,7 @@ import '../main_screen.dart';
 import '../../Models/users_model.dart';
 import '../../Services/auth_services.dart';
 import 'register.dart';
+import 'forgot_password.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -330,7 +331,11 @@ class _LoginViewState extends State<LoginView>
                     ),
                     GestureDetector(
                       onTap: () {
-                        // TODO: Navigasi ke Halaman Lupa Password
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (context) => const ForgotPasswordView(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Lupa Password?',

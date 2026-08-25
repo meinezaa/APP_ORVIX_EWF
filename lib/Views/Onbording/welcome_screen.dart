@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../Auth/login.dart'; // Import halaman Login
+import '../main_screen.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -15,8 +17,12 @@ class WelcomeView extends StatelessWidget {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser != null && context.mounted) {
-        // Berhasil memilih akun Google
-        // TODO: Kirim data googleUser (email, id, token) ke backend/Firebase kamu di sini
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -25,8 +31,9 @@ class WelcomeView extends StatelessWidget {
           ),
         );
 
-        // Lanjut navigasi ke halaman utama/dashboard setelah login berhasil
-        // Navigator.of(context).pushReplacement(...);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (context) => const MainScreen()),
+        );
       }
     } catch (error) {
       if (context.mounted) {

@@ -97,6 +97,10 @@ class AuthService {
     await _auth.signOut();
   }
 
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   // HELPER ERROR
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
