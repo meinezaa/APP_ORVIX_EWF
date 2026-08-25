@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
-// Import file splash screen yang sudah dipisah tadi
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:app_pt_ewf/views/Onbording/splash_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inisialisasi Firebase dengan opsi platform
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
