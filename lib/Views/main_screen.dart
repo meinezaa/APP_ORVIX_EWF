@@ -75,6 +75,7 @@ class CustomBottomNavBar extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+<<<<<<< HEAD
                     // Spasi kosong di kiri untuk memberi ruang pada tombol Home yang mengambang
                     const SizedBox(width: 48),
 
@@ -83,6 +84,29 @@ class CustomBottomNavBar extends StatelessWidget {
                       index: 1,
                       icon: Icons.calculate_outlined,
                       label: 'Calculate',
+=======
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: primaryOrange, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        _navItems[_selectedNavIndex]['iconSelected'],
+                        color: primaryOrange,
+                        size: 26,
+                      ),
+>>>>>>> origin/inez
                     ),
 
                     // Menu 3: History
@@ -231,6 +255,10 @@ class BottomNavPainter extends CustomPainter {
     
     path.close();
 
+<<<<<<< HEAD
+=======
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.08), 5.0, true);
+>>>>>>> origin/inez
     canvas.drawPath(path, paint);
   }
 

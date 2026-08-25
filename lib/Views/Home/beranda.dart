@@ -580,7 +580,7 @@ class _HomeViewState extends State<HomeView> {
                                       Divider(
                                         height: 1,
                                         thickness: 1,
-                                        color: Colors.black.withValues(alpha: 0.14),
+                                        color: Colors.black.withOpacity(0.14),
                                       ),
                                     ],
                                   );

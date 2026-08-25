@@ -6,10 +6,7 @@ import 'login.dart';
 class OtpVerificationView extends StatefulWidget {
   final String phoneNumber;
 
-  const OtpVerificationView({
-    super.key,
-    this.phoneNumber = '0812****6789',
-  });
+  const OtpVerificationView({super.key, this.phoneNumber = '0812****6789'});
 
   @override
   State<OtpVerificationView> createState() => _OtpVerificationViewState();
@@ -17,8 +14,10 @@ class OtpVerificationView extends StatefulWidget {
 
 class _OtpVerificationViewState extends State<OtpVerificationView> {
   // Controller & FocusNode untuk 6 Kotak Input OTP
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   // Timer Hitung Mundur OTP
@@ -331,7 +330,8 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                   ),
                   children: [
                     const TextSpan(
-                      text: 'Masukkan kode 6 digit yang telah dikirimkan ke\nnomor telepon Anda ',
+                      text:
+                          'Masukkan kode 6 digit yang telah dikirimkan ke\nnomor telepon Anda ',
                     ),
                     TextSpan(
                       text: widget.phoneNumber,
@@ -372,11 +372,17 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                         contentPadding: EdgeInsets.zero,
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: inputBorderColor, width: 1.5),
+                          borderSide: BorderSide(
+                            color: inputBorderColor,
+                            width: 1.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: primaryOrange, width: 1.5),
+                          borderSide: BorderSide(
+                            color: primaryOrange,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       onChanged: (value) {
@@ -425,7 +431,13 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
+<<<<<<< HEAD
                     color: _canResend ? primaryOrange : textColorGrey.withValues(alpha: 0.6),
+=======
+                    color: _canResend
+                        ? primaryOrange
+                        : textColorGrey.withValues(alpha: 0.6),
+>>>>>>> origin/inez
                   ),
                 ),
               ),
