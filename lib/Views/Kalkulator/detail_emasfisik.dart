@@ -22,10 +22,10 @@ class DetailPerhitunganEmasFisikView extends StatelessWidget {
     String str = number.toStringAsFixed(decimalDigits);
     List<String> parts = str.split('.');
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]}.');
+    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]},');
 
     if (parts.length > 1 && int.parse(parts[1]) > 0) {
-      return '$integerPart,${parts[1]}';
+      return '$integerPart.${parts[1]}';
     }
     return integerPart;
   }

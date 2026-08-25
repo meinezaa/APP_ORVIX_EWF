@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:app_pt_ewf/views/Kalkulator/detail_emasfisik.dart';
+import 'package:flutter/services.dart';
+import 'package:app_pt_ewf/Views/Kalkulator/detail_emasfisik.dart';
+import 'pivotpoin.dart';
 
 class KalkulatorEmasFisikView extends StatefulWidget {
   const KalkulatorEmasFisikView({super.key});
@@ -47,7 +49,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
               .toStringAsFixed(0)
               .replaceAllMapped(
                 RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                (Match m) => '${m[1]}.',
+                (Match m) => '${m[1]},',
               );
 
           if (mounted) {
@@ -67,8 +69,12 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   }
 
   double _parseInput(String text) {
-    String cleanText = text.replaceAll('.', '').replaceAll(',', '.');
-    return double.tryParse(cleanText) ?? 0.0;
+    final cleanText = text.trim();
+    final commaCount = ','.allMatches(cleanText).length;
+    final normalized = cleanText.contains('.') && cleanText.contains(',') || commaCount > 1
+      ? cleanText.replaceAll(',', '')
+      : cleanText.replaceAll(',', '.');
+    return double.tryParse(normalized) ?? 0.0;
   }
 
   String _formatNumber(double number, {int decimalDigits = 0}) {
@@ -76,10 +82,10 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     String str = number.toStringAsFixed(decimalDigits);
     List<String> parts = str.split('.');
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]}.');
+    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]},');
 
     if (parts.length > 1 && int.parse(parts[1]) > 0) {
-      return '$integerPart,${parts[1]}';
+      return '$integerPart.${parts[1]}';
     }
     return integerPart;
   }
@@ -87,7 +93,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   void _resetForm() {
     setState(() {
       _tozController.text = '31,1';
-      _modalController.clear();
+                      _modalController.clear();
       _hargaBeliController.clear();
       _hargaJualController.clear();
       _hasilController.clear();
@@ -261,8 +267,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
 
                 const SizedBox(height: 20),
 
-                // FORM INPUT CARD
-                Container(
+                if (_selectedTab == 1)
+                  const PivotPointView()
+                else ...[
+                  // FORM INPUT CARD
+                  Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -315,7 +324,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       ),
                       const SizedBox(height: 16),
 
-                      _buildFormRow('Modal', _modalController),
+                      _buildFormRow('Modal', _modalController, isInteger: true),
                       const SizedBox(height: 12),
 
                       _buildFormRow('Harga Beli', _hargaBeliController),
@@ -379,12 +388,12 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       ),
                     ],
                   ),
-                ),
+                  ),
 
-                const SizedBox(height: 30),
+                  const SizedBox(height: 30),
 
-                // HASIL CARD
-                Stack(
+                  // HASIL CARD
+                  Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.topCenter,
                   children: [
@@ -498,8 +507,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 20),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ],
             ),
           ),
@@ -508,7 +518,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     );
   }
 
-  Widget _buildFormRow(String label, TextEditingController controller) {
+  Widget _buildFormRow(
+    String label,
+    TextEditingController controller, {
+    bool isInteger = false,
+  }) {
     return Row(
       children: [
         SizedBox(
@@ -522,7 +536,14 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
             ),
           ),
         ),
-        Expanded(child: _buildTextField(controller)),
+        Expanded(
+          child: _buildTextField(
+            controller,
+            inputFormatters: isInteger
+                ? [ThousandsSeparatorFormatter()]
+                : null,
+          ),
+        ),
       ],
     );
   }
@@ -531,6 +552,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     TextEditingController controller, {
     TextAlign textAlign = TextAlign.start,
     bool isLoading = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return SizedBox(
       height: 38,
@@ -538,6 +560,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         controller: controller,
         textAlign: textAlign,
         keyboardType: TextInputType.number,
+        inputFormatters: inputFormatters,
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(
@@ -571,6 +594,26 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class ThousandsSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+
+    final formatted = digits.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]},',
+    );
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

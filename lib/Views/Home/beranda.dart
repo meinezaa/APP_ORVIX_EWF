@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/gold_data.dart';
+import '../../Models/gold_data.dart';
 import '../../Services/api_services.dart';
 
 class HomeView extends StatefulWidget {
@@ -129,6 +129,27 @@ class _HomeViewState extends State<HomeView> {
       }
     } catch (_) {}
     return null;
+  }
+
+  String _formatDisplayDate(String dateStr) {
+    final date = _parseDate(dateStr);
+    if (date == null) return dateStr;
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
 
   // 3. Filter Data Berdasarkan Rentang Tanggal yang Dipilih User[cite: 1]
@@ -537,7 +558,9 @@ class _HomeViewState extends State<HomeView> {
                                         ),
                                         child: Row(
                                           children: [
-                                            _buildTableCell(data.date),
+                                            _buildTableCell(
+                                              _formatDisplayDate(data.date),
+                                            ),
                                             _buildTableCell(
                                               data.open.toStringAsFixed(2),
                                             ),
