@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "49789057845",
+    "project_id": "database-app-orvix-ewf",
+    "storage_bucket": "database-app-orvix-ewf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49789057845:android:d8366ba683fcf9891aaa7c",
+        "android_client_info": {
+          "package_name": "com.company.appORVIX"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZdfSLO-cluPQbX-K8dmuH_bMWdQ22EOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49789057845:android:5c0c4861fcef2e861aaa7c",
+        "android_client_info": {
+          "package_name": "com.example.app_pt_ewf"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZdfSLO-cluPQbX-K8dmuH_bMWdQ22EOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
