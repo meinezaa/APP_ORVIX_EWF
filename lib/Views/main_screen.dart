@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'Home/beranda.dart';
 import 'package:app_pt_ewf/views/Kalkulator/emasfisik.dart';
 import 'package:app_pt_ewf/views/History/histori.dart'; // Import file histori
+import 'Profil/profil.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -11,7 +12,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late int _selectedNavIndex;
   late int _previousNavIndex;
 
@@ -28,14 +29,33 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedNavIndex = widget.initialIndex;
     _previousNavIndex = widget.initialIndex;
+    AppUsageTracker.start();
     _pages = [
       HomeView(onViewAllHistory: () => _selectNavIndex(2)), // Index 0
       const KalkulatorEmasFisikView(), // Index 1
       const HistoryScreen(), // Index 2
-      const Center(child: Text('Profil View')), // Index 3
+      const ProfileView(), // Index 3
     ];
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AppUsageTracker.stop();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      AppUsageTracker.start();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      AppUsageTracker.stop();
+    }
   }
 
   final List<Map<String, dynamic>> _navItems = [

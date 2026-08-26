@@ -5,6 +5,7 @@ class UserModel {
   final String phone;
   final String role;
   final String status;
+  final String? fotoProfilPath;
 
   UserModel({
     required this.userId,
@@ -13,6 +14,7 @@ class UserModel {
     required this.phone,
     required this.role,
     required this.status,
+    this.fotoProfilPath,
   });
 
   // Mengubah Map Firestore menjadi Objek UserModel
@@ -24,6 +26,7 @@ class UserModel {
       phone: map['phone'] ?? '',
       role: map['role'] ?? 'staff',
       status: map['status'] ?? 'active',
+      fotoProfilPath: map['foto_profil_path']?.toString(),
     );
   }
 
@@ -36,6 +39,7 @@ class UserModel {
       'phone': phone,
       'role': role,
       'status': status,
+      'foto_profil_path': fotoProfilPath,
     };
   }
 }

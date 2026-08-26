@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../Models/gold_data.dart';
 import '../../Models/histori_model.dart';
+import '../../Models/users_model.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
 import '../History/detail_histori.dart';
@@ -270,11 +273,30 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
+  Stream<UserModel?> _watchUser() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return Stream.value(null);
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          return data == null ? null : UserModel.fromMap(data);
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     final maxPagesToShow = _totalPages > 4 ? 4 : _totalPages;
 
-    return Scaffold(
+    return StreamBuilder<UserModel?>(
+      stream: _watchUser(),
+      builder: (context, snapshot) {
+        final name = snapshot.data?.nama.trim();
+        final displayName = name == null || name.isEmpty ? 'Pengguna' : name;
+
+        return Scaffold(
       backgroundColor: const Color(0xFFFBF8F5),
       body: SafeArea(
         child: Stack(
@@ -357,7 +379,7 @@ class _HomeViewState extends State<HomeView> {
                             ),
                             children: [
                               TextSpan(
-                                text: 'Meineza!',
+                                text: '$displayName!',
                                 style: TextStyle(
                                   fontFamily: 'sans-serif',
                                   fontWeight: FontWeight.bold,
@@ -733,6 +755,8 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
