@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:app_pt_ewf/Views/Kalkulator/detail_emasfisik.dart';
+import '../../Services/history_service.dart';
 import 'pivotpoin.dart';
 
 class KalkulatorEmasFisikView extends StatefulWidget {
@@ -49,7 +50,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
               .toStringAsFixed(0)
               .replaceAllMapped(
                 RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                (Match m) => '${m[1]},',
+                (Match m) => '${m[1]}.',
               );
 
           if (mounted) {
@@ -71,18 +72,29 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   double _parseInput(String text) {
     final cleanText = text.trim();
     final commaCount = ','.allMatches(cleanText).length;
-    final normalized = cleanText.contains('.') && cleanText.contains(',') || commaCount > 1
-      ? cleanText.replaceAll(',', '')
-      : cleanText.replaceAll(',', '.');
+    final dotCount = '.'.allMatches(cleanText).length;
+    final normalized = cleanText.contains('.') && cleanText.contains(',')
+        ? cleanText.replaceAll('.', '').replaceAll(',', '.')
+        : dotCount > 0 &&
+              cleanText.split('.').skip(1).every((part) => part.length == 3)
+        ? cleanText.replaceAll('.', '')
+        : commaCount > 1
+        ? cleanText.replaceAll(',', '')
+        : cleanText.replaceAll(',', '.');
     return double.tryParse(normalized) ?? 0.0;
   }
 
   String _formatNumber(double number, {int decimalDigits = 0}) {
     if (number.isNaN || number.isInfinite) return '0';
-    String str = number.toStringAsFixed(decimalDigits);
+    var factor = 1.0;
+    for (var index = 0; index < decimalDigits; index++) {
+      factor *= 10;
+    }
+    final truncated = (number * factor).truncate() / factor;
+    String str = truncated.toStringAsFixed(decimalDigits);
     List<String> parts = str.split('.');
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]},');
+    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]}.');
 
     if (parts.length > 1 && int.parse(parts[1]) > 0) {
       return '$integerPart.${parts[1]}';
@@ -90,10 +102,18 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     return integerPart;
   }
 
+  double _truncate(double value, {int decimals = 0}) {
+    var factor = 1.0;
+    for (var index = 0; index < decimals; index++) {
+      factor *= 10;
+    }
+    return (value * factor).truncate() / factor;
+  }
+
   void _resetForm() {
     setState(() {
       _tozController.text = '31,1';
-                      _modalController.clear();
+      _modalController.clear();
       _hargaBeliController.clear();
       _hargaJualController.clear();
       _hasilController.clear();
@@ -102,7 +122,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   }
 
   // RUMUS PERHITUNGAN YANG SUDAH DIPERBAIKI
-  void _hitung() {
+  Future<void> _hitung() async {
     double toz = _parseInput(_tozController.text);
     double kurs = _parseInput(_kursController.text);
     double modal = _parseInput(_modalController.text);
@@ -111,15 +131,39 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
 
     if (toz == 0) toz = 31.1;
 
-    double h1 = (hargaBeli * kurs) / toz; // Harga Beli per Gram
-    double h2 = (hargaJual * kurs) / toz; // Harga Jual per Gram
-    double h3 = h2 - h1; // Keuntungan per Gram
-    double h4 = (h1 == 0) ? 0 : modal / h1; // Quantity / Berat Emas dari Modal
-    double hasilAkhir = h3 * h4; // Total Keuntungan / Profit Real
+    final h1 = _truncate((hargaBeli * kurs) / toz);
+    final h2 = _truncate((hargaJual * kurs) / toz);
+    final h3 = _truncate(h2 - h1);
+    final h4 = h1 == 0 ? 0.0 : _truncate(modal / h1, decimals: 2);
+    final hasilAkhir = _truncate(h3 * h4);
 
     setState(() {
       _hasilController.text = 'Rp ${_formatNumber(hasilAkhir)}';
     });
+
+    try {
+      await HistoryService.saveCalculation(
+        jenisKalkulator: 'Emas Fisik',
+        hasil: hasilAkhir,
+        modal: modal,
+        hargaBeli: hargaBeli,
+        hargaJual: hargaJual,
+        toz: toz,
+        kurs: kurs,
+        hargaBeliPerGram: h1,
+        hargaJualPerGram: h2,
+        selisihPerGram: h3,
+        jumlahEmas: h4,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hasil tampil, tetapi histori gagal disimpan.'),
+          ),
+        );
+      }
+    }
   }
 
   void _bukaDetailPerhitungan() {
@@ -272,98 +316,204 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                 else ...[
                   // FORM INPUT CARD
                   Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'ToZ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF555555),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'ToZ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 85,
-                            child: _buildTextField(
-                              _tozController,
-                              textAlign: TextAlign.center,
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              width: 85,
+                              child: _buildTextField(
+                                _tozController,
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          const Text(
-                            'Kurs',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF555555),
+                            const Spacer(),
+                            const Text(
+                              'Kurs',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 100,
-                            child: _buildTextField(
-                              _kursController,
-                              textAlign: TextAlign.center,
-                              isLoading: _isLoadingKurs,
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              width: 100,
+                              child: _buildTextField(
+                                _kursController,
+                                textAlign: TextAlign.center,
+                                isLoading: _isLoadingKurs,
+                                inputFormatters: [
+                                  ThousandsSeparatorFormatter(),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
 
-                      _buildFormRow('Modal', _modalController, isInteger: true),
-                      const SizedBox(height: 12),
+                        _buildFormRow(
+                          'Modal',
+                          _modalController,
+                          isInteger: true,
+                        ),
+                        const SizedBox(height: 12),
 
-                      _buildFormRow('Harga Beli', _hargaBeliController),
-                      const SizedBox(height: 12),
+                        _buildFormRow('Harga Beli', _hargaBeliController),
+                        const SizedBox(height: 12),
 
-                      _buildFormRow('Harga Jual', _hargaJualController),
-                      const SizedBox(height: 24),
+                        _buildFormRow('Harga Jual', _hargaJualController),
+                        const SizedBox(height: 24),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 42,
-                              child: ElevatedButton(
-                                onPressed: _hitung,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryOrange,
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 42,
+                                child: ElevatedButton(
+                                  onPressed: _hitung,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryOrange,
+                                    elevation: 2,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
-                                ),
-                                child: const Text(
-                                  'Hitung',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: Colors.white,
+                                  child: const Text(
+                                    'Hitung',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: SizedBox(
-                              height: 42,
-                              child: OutlinedButton(
-                                onPressed: _resetForm,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: SizedBox(
+                                height: 42,
+                                child: OutlinedButton(
+                                  onPressed: _resetForm,
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(
+                                      color: primaryOrange,
+                                      width: 1.5,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Reset',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: primaryOrange,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // HASIL CARD
+                  Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 50,
+                              child: TextField(
+                                controller: _hasilController,
+                                readOnly: true,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: primaryOrange,
+                                ),
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF666666),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF666666),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: OutlinedButton.icon(
+                                onPressed: _bukaDetailPerhitungan,
+                                icon: const Icon(
+                                  Icons.toc_rounded,
+                                  color: primaryOrange,
+                                  size: 24,
+                                ),
+                                label: const Text(
+                                  'Detail Perhitungan',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: primaryOrange,
+                                  ),
+                                ),
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(
                                     color: primaryOrange,
@@ -373,140 +523,41 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Reset',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: primaryOrange,
-                                  ),
-                                ),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // HASIL CARD
-                  Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 50,
-                            child: TextField(
-                              controller: _hasilController,
-                              readOnly: true,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: primaryOrange,
-                              ),
-                              decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF666666),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF666666),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 44,
-                            child: OutlinedButton.icon(
-                              onPressed: _bukaDetailPerhitungan,
-                              icon: const Icon(
-                                Icons.toc_rounded,
-                                color: primaryOrange,
-                                size: 24,
-                              ),
-                              label: const Text(
-                                'Detail Perhitungan',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: primaryOrange,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: primaryOrange,
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Positioned(
-                      top: -16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primaryOrange,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: const Text(
-                          'Hasil Perhitungan',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 14,
+                      ),
+
+                      Positioned(
+                        top: -16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryOrange,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'Hasil Perhitungan',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -539,9 +590,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         Expanded(
           child: _buildTextField(
             controller,
-            inputFormatters: isInteger
-                ? [ThousandsSeparatorFormatter()]
-                : null,
+            inputFormatters: isInteger ? [ThousandsSeparatorFormatter()] : null,
           ),
         ),
       ],
@@ -609,7 +658,7 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
 
     final formatted = digits.replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (match) => '${match[1]},',
+      (match) => '${match[1]}.',
     );
     return newValue.copyWith(
       text: formatted,

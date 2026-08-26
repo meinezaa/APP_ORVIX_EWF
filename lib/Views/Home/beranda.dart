@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../Models/gold_data.dart';
+import '../../Models/histori_model.dart';
 import '../../Services/api_services.dart';
+import '../../Services/history_service.dart';
+import '../History/detail_histori.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  final VoidCallback? onViewAllHistory;
+
+  const HomeView({super.key, this.onViewAllHistory});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -116,8 +121,26 @@ class _HomeViewState extends State<HomeView> {
         'desember': 12,
       };
 
-      if (cleanStr.contains('-')) {
-        return DateTime.parse(cleanStr);
+      final isoDate = RegExp(
+        r'^(\d{4})-(\d{1,2})-(\d{1,2})',
+      ).firstMatch(cleanStr);
+      if (isoDate != null) {
+        return DateTime(
+          int.parse(isoDate.group(1)!),
+          int.parse(isoDate.group(2)!),
+          int.parse(isoDate.group(3)!),
+        );
+      }
+
+      final slashDate = RegExp(
+        r'^(\d{1,2})/(\d{1,2})/(\d{4})',
+      ).firstMatch(cleanStr);
+      if (slashDate != null) {
+        return DateTime(
+          int.parse(slashDate.group(3)!),
+          int.parse(slashDate.group(1)!),
+          int.parse(slashDate.group(2)!),
+        );
       }
 
       final parts = cleanStr.split(' ');
@@ -204,6 +227,17 @@ class _HomeViewState extends State<HomeView> {
     final total = _processedData.length;
     if (total == 0) return 1;
     return (total / _itemsPerPage).ceil();
+  }
+
+  String? get _dateRangeNotice {
+    if (_startDate == null || _endDate == null || _processedData.isEmpty) {
+      return null;
+    }
+
+    final firstDate = _parseDate(_processedData.first.date);
+    if (firstDate == null || !firstDate.isAfter(_startDate!)) return null;
+
+    return 'Tidak ada data pada tanggal ${_formatDisplayDate('${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}')} sampai sebelum ${_formatDisplayDate(_processedData.first.date)}. Menampilkan data pertama yang tersedia.';
   }
 
   void _goToPage(int page) {
@@ -473,6 +507,16 @@ class _HomeViewState extends State<HomeView> {
                       Expanded(child: _buildDateField(false)),
                     ],
                   ),
+                  if (_dateRangeNotice != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _dateRangeNotice!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A5A3B),
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
 
@@ -618,64 +662,6 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 24),
 
-                  // RINGKASAN AKTIVITAS[cite: 1]
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD36A28),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.article_outlined,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Ringkasan Aktivitas',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _buildStatCard(
-                        '12',
-                        'Total\nPerhitungan',
-                        Icons.grid_view_rounded,
-                        const Color(0xFFFCE1D1),
-                      ),
-                      _buildStatCard(
-                        '7',
-                        'Emas Fisik',
-                        Icons.format_list_bulleted_sharp,
-                        const Color(0xFFFCE1D1),
-                      ),
-                      _buildStatCard(
-                        '5',
-                        'Pivot Point',
-                        Icons.show_chart,
-                        const Color(0xFFFCE1D1),
-                      ),
-                      _buildStatCard(
-                        '+12%',
-                        'DARI KEMARIN',
-                        Icons.trending_up,
-                        const Color(0xFFE2F0D9),
-                        isGreen: true,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
                   // PERHITUNGAN TERAKHIR[cite: 1]
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -705,7 +691,7 @@ class _HomeViewState extends State<HomeView> {
                         ],
                       ),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: widget.onViewAllHistory,
                         child: const Text(
                           'Lihat Semua >',
                           style: TextStyle(
@@ -718,19 +704,28 @@ class _HomeViewState extends State<HomeView> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Column(
-                    children: List.generate(
-                      4,
-                      (index) => Container(
-                        width: double.infinity,
-                        height: 56,
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0E0E0),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
+                  StreamBuilder<List<HistoryModel>>(
+                    stream: HistoryService.watchHistory(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final recent = (snapshot.data ?? []).take(4).toList();
+                      if (recent.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: Text(
+                              'Belum ada perhitungan.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: recent.map(_buildRecentHistoryCard).toList(),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -772,6 +767,60 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  Widget _buildRecentHistoryCard(HistoryModel history) {
+    final date = history.createdAt;
+    final dateText =
+        '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DetailHistoryScreen(history: history),
+          ),
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE8E0D8)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    history.jenisKalkulator,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFD36A28),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Hasil: ${history.hasil.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              Text(
+                dateText,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPageBtn(
     String label, {
     required VoidCallback onTap,
@@ -802,65 +851,21 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildStatCard(
-    String val,
-    String title,
-    IconData icon,
-    Color bgColor, {
-    bool isGreen = false,
-  }) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isGreen ? Colors.green.shade200 : const Color(0xFFE8E0D8),
-          ),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isGreen ? Colors.green : Colors.black87,
-                ),
-                if (!isGreen) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    val,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              isGreen ? val : title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: isGreen ? FontWeight.bold : FontWeight.normal,
-                color: isGreen ? Colors.green : Colors.black87,
-              ),
-            ),
-            if (isGreen)
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 7, color: Colors.green),
-              ),
-          ],
-        ),
-      ),
-    );
+  String _monthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
   }
 }

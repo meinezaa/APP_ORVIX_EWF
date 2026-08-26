@@ -19,10 +19,15 @@ class DetailPerhitunganEmasFisikView extends StatelessWidget {
   // Helper Format Angka ke Rupiah / Ribuan
   String _formatNumber(double number, {int decimalDigits = 0}) {
     if (number.isNaN || number.isInfinite) return '0';
-    String str = number.toStringAsFixed(decimalDigits);
+    var factor = 1.0;
+    for (var index = 0; index < decimalDigits; index++) {
+      factor *= 10;
+    }
+    final truncated = (number * factor).truncate() / factor;
+    String str = truncated.toStringAsFixed(decimalDigits);
     List<String> parts = str.split('.');
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]},');
+    String integerPart = parts[0].replaceAllMapped(reg, (m) => '${m[1]}.');
 
     if (parts.length > 1 && int.parse(parts[1]) > 0) {
       return '$integerPart.${parts[1]}';
@@ -30,16 +35,24 @@ class DetailPerhitunganEmasFisikView extends StatelessWidget {
     return integerPart;
   }
 
+  double _truncate(double value, {int decimals = 0}) {
+    var factor = 1.0;
+    for (var index = 0; index < decimals; index++) {
+      factor *= 10;
+    }
+    return (value * factor).truncate() / factor;
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFD95B14);
 
     // LOGIKA PERHITUNGAN TAHAP 1 - 5
-    double h1 = (toz == 0) ? 0 : (hargaBeli * kurs) / toz;
-    double h2 = (toz == 0) ? 0 : (hargaJual * kurs) / toz;
-    double h3 = h2 - h1;
-    double h4 = (h1 == 0) ? 0 : modal / h1;
-    double hasilAkhir = h3 * h4;
+    final h1 = toz == 0 ? 0.0 : _truncate((hargaBeli * kurs) / toz);
+    final h2 = toz == 0 ? 0.0 : _truncate((hargaJual * kurs) / toz);
+    final h3 = _truncate(h2 - h1);
+    final h4 = h1 == 0 ? 0.0 : _truncate(modal / h1, decimals: 2);
+    final hasilAkhir = _truncate(h3 * h4);
 
     return Scaffold(
       body: Container(

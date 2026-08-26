@@ -23,6 +23,7 @@ class WelcomeView extends StatelessWidget {
           idToken: googleAuth.idToken,
         );
         await FirebaseAuth.instance.signInWithCredential(credential);
+        if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../Models/gold_data.dart';
 import '../../Services/api_services.dart';
+import '../../Services/history_service.dart';
 import 'detail_pivotpoin.dart';
 
 class PivotPointView extends StatefulWidget {
@@ -21,6 +22,7 @@ class _PivotPointViewState extends State<PivotPointView> {
   String? _historicalError;
   double _pp = 0, _r1 = 0, _r2 = 0, _r3 = 0, _r4 = 0;
   double _s1 = 0, _s2 = 0, _s3 = 0, _s4 = 0;
+  String? _lastSavedPivotInputs;
 
   @override
   void initState() {
@@ -48,9 +50,10 @@ class _PivotPointViewState extends State<PivotPointView> {
   double _parseNumber(String value) {
     final clean = value.trim();
     final commaCount = ','.allMatches(clean).length;
-    final normalized = clean.contains('.') && clean.contains(',') || commaCount > 1
-      ? clean.replaceAll(',', '')
-      : clean.replaceAll(',', '.');
+    final normalized =
+        clean.contains('.') && clean.contains(',') || commaCount > 1
+        ? clean.replaceAll(',', '')
+        : clean.replaceAll(',', '.');
     return double.tryParse(normalized) ?? 0;
   }
 
@@ -70,8 +73,18 @@ class _PivotPointViewState extends State<PivotPointView> {
       final parts = clean.split(RegExp(r'\s+'));
       if (parts.length != 3) return null;
       const months = {
-        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+        'jan': 1,
+        'feb': 2,
+        'mar': 3,
+        'apr': 4,
+        'may': 5,
+        'jun': 6,
+        'jul': 7,
+        'aug': 8,
+        'sep': 9,
+        'oct': 10,
+        'nov': 11,
+        'dec': 12,
       };
       final month = months[parts[1].toLowerCase().substring(0, 3)];
       return month == null
@@ -105,6 +118,7 @@ class _PivotPointViewState extends State<PivotPointView> {
       _highController.text = _formatNumber(selected.high);
       _lowController.text = _formatNumber(selected.low);
       _closeController.text = _formatNumber(selected.close);
+      await _savePivotHistory();
       if (mounted) setState(() => _isLoadingHistorical = false);
     } catch (_) {
       if (mounted) {
@@ -133,6 +147,33 @@ class _PivotPointViewState extends State<PivotPointView> {
       _s3 = _pp - range * 2;
       _s4 = _pp - range * 3;
     });
+    if (!_isAutoFromYesterday) _savePivotHistory();
+  }
+
+  Future<void> _savePivotHistory() async {
+    final open = _parseNumber(_openController.text);
+    final high = _parseNumber(_highController.text);
+    final low = _parseNumber(_lowController.text);
+    final close = _parseNumber(_closeController.text);
+    if (high == 0 || low == 0 || close == 0) return;
+
+    final inputKey = '$open|$high|$low|$close';
+    if (_lastSavedPivotInputs == inputKey) return;
+    _lastSavedPivotInputs = inputKey;
+
+    try {
+      await HistoryService.saveCalculation(
+        jenisKalkulator: 'Pivot Point',
+        hasil: _pp,
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        indikasi: close >= _pp ? 'BUY' : 'SELL',
+      );
+    } catch (_) {
+      _lastSavedPivotInputs = null;
+    }
   }
 
   void _toggleAuto(bool enabled) {
@@ -160,7 +201,7 @@ class _PivotPointViewState extends State<PivotPointView> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   spreadRadius: 2,
                   blurRadius: 10,
                   offset: const Offset(0, 3),
@@ -185,37 +226,37 @@ class _PivotPointViewState extends State<PivotPointView> {
                 ),
                 Column(
                   children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      _isLoadingHistorical
-                          ? 'Memuat data kemarin...'
-                          : 'Otomatis kemarin',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          _isLoadingHistorical
+                              ? 'Memuat data kemarin...'
+                              : 'Otomatis kemarin',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Switch(
+                          value: _isAutoFromYesterday,
+                          onChanged: _toggleAuto,
+                          activeThumbColor: const Color(0xFFD95B14),
+                        ),
+                      ],
+                    ),
+                    if (_historicalError != null)
+                      Text(
+                        _historicalError!,
+                        style: const TextStyle(fontSize: 10, color: Colors.red),
                       ),
-                    ),
-                    Switch(
-                      value: _isAutoFromYesterday,
-                      onChanged: _toggleAuto,
-                      activeColor: const Color(0xFFD95B14),
-                    ),
-                  ],
-                ),
-                if (_historicalError != null)
-                  Text(
-                    _historicalError!,
-                    style: const TextStyle(fontSize: 10, color: Colors.red),
-                  ),
-                _buildInputField("Open", _openController),
-                const SizedBox(height: 12),
-                _buildInputField("High", _highController),
-                const SizedBox(height: 12),
-                _buildInputField("Low", _lowController),
-                const SizedBox(height: 12),
-                _buildInputField("Close", _closeController),
+                    _buildInputField("Open", _openController),
+                    const SizedBox(height: 12),
+                    _buildInputField("High", _highController),
+                    const SizedBox(height: 12),
+                    _buildInputField("Low", _lowController),
+                    const SizedBox(height: 12),
+                    _buildInputField("Close", _closeController),
                   ],
                 ),
               ],
@@ -227,13 +268,16 @@ class _PivotPointViewState extends State<PivotPointView> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFE8833A).withOpacity(0.2),
+              color: const Color(0xFFE8833A).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8833A),
                     borderRadius: BorderRadius.circular(20),
@@ -258,11 +302,17 @@ class _PivotPointViewState extends State<PivotPointView> {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 24,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE8833A), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFFE8833A),
+                      width: 1.5,
+                    ),
                   ),
                   child: Text(
                     _formatNumber(_pp),
@@ -281,7 +331,9 @@ class _PivotPointViewState extends State<PivotPointView> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.brown.withOpacity(0.3)),
+                    border: Border.all(
+                      color: Colors.brown.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     _closeValue >= _pp ? "BUY" : "SELL",
@@ -340,10 +392,7 @@ class _PivotPointViewState extends State<PivotPointView> {
               inputFormatters: [ThousandsDecimalFormatter()],
               textAlign: TextAlign.left,
               textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 filled: true,

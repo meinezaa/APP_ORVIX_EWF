@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:app_pt_ewf/views/Home/beranda.dart';
+import 'Home/beranda.dart';
 import 'package:app_pt_ewf/views/Kalkulator/emasfisik.dart';
+import 'package:app_pt_ewf/views/History/histori.dart'; // Import file histori
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -14,13 +15,6 @@ class _MainScreenState extends State<MainScreen> {
   late int _selectedNavIndex;
   late int _previousNavIndex;
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedNavIndex = widget.initialIndex;
-    _previousNavIndex = widget.initialIndex;
-  }
-
   void _selectNavIndex(int index) {
     if (index == _selectedNavIndex) return;
     setState(() {
@@ -29,12 +23,20 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  final List<Widget> _pages = [
-    const HomeView(), // Index 0
-    const KalkulatorEmasFisikView(), // Index 1
-    const Center(child: Text('History View')), // Index 2
-    const Center(child: Text('Profil View')), // Index 3
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedNavIndex = widget.initialIndex;
+    _previousNavIndex = widget.initialIndex;
+    _pages = [
+      HomeView(onViewAllHistory: () => _selectNavIndex(2)), // Index 0
+      const KalkulatorEmasFisikView(), // Index 1
+      const HistoryScreen(), // Index 2
+      const Center(child: Text('Profil View')), // Index 3
+    ];
+  }
 
   final List<Map<String, dynamic>> _navItems = [
     {
