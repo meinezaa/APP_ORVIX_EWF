@@ -11,6 +11,7 @@ import '../../Services/auth_services.dart';
 import '../../Services/history_service.dart';
 import '../Auth/login.dart';
 import 'detail_profil.dart';
+import 'pengaturan.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -113,7 +114,16 @@ class _ProfileViewState extends State<ProfileView> {
               const Text('Profil', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700)),
             ],
           ),
-          Positioned(right: 0, child: _roundIcon(Icons.settings_outlined)),
+          Positioned(
+            right: 0,
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PengaturanView()),
+              ),
+              child: _roundIcon(Icons.settings_outlined),
+            ),
+          ),
         ],
       ),
     );
@@ -341,41 +351,51 @@ class _ProfileViewState extends State<ProfileView> {
 
   Widget _summaryCard(IconData icon, String label, String value) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFB17F), Color(0xFFFFE4D1)],
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFFB17F), Color(0xFFFFE4D1)],
+            ),
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 3,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2))],
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, size: 24, color: Colors.black),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Color(0xFFC84F15),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 30, color: Colors.black),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Color(0xFFC84F15),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF716761)),
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF716761),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -512,12 +532,11 @@ class _UsageChartPainter extends CustomPainter {
     const chartTop = 8.0;
     const chartBottom = 112.0;
     const labelWidth = 28.0;
-    const barColor = Color(0xFFE97B40);
+    const lineColor = Color(0xFFE87520);
     final chartWidth = size.width - labelWidth;
     final guidePaint = Paint()
       ..color = const Color(0xFF6C6866)
       ..strokeWidth = 1.3;
-    final barPaint = Paint()..color = barColor;
 
     const guideSpacing = 34.0;
     for (var guideIndex = 0; guideIndex < 3; guideIndex++) {
@@ -528,20 +547,46 @@ class _UsageChartPainter extends CustomPainter {
     }
 
     final slotWidth = chartWidth / 5;
-    for (var index = 0; index < 5; index++) {
+    final points = List<Offset>.generate(5, (index) {
       final value = values[index].clamp(0, maxValue);
-      final barHeight = value == 0 ? 3.0 : (chartBottom - chartTop) * value / maxValue;
-      final barWidth = slotWidth * 0.38;
-      final left = (slotWidth * index) + ((slotWidth - barWidth) / 2);
-      canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromLTWH(left, chartBottom - barHeight, barWidth, barHeight),
-          topLeft: const Radius.circular(11),
-          topRight: const Radius.circular(11),
-        ),
-        barPaint,
-      );
-      _drawText(canvas, _dayLabel(index), Offset(left + (barWidth / 2) - 11, chartBottom + 11));
+      final x = (slotWidth * index) + (slotWidth / 2);
+      final y = chartBottom - ((chartBottom - chartTop) * value / maxValue);
+      return Offset(x, y);
+    });
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var index = 1; index < points.length; index++) {
+      final previous = points[index - 1];
+      final current = points[index];
+      final middleX = (previous.dx + current.dx) / 2;
+      linePath.cubicTo(middleX, previous.dy, middleX, current.dy, current.dx, current.dy);
+    }
+
+    final areaPath = Path.from(linePath)
+      ..lineTo(points.last.dx, chartBottom)
+      ..lineTo(points.first.dx, chartBottom)
+      ..close();
+    canvas.drawPath(
+      areaPath,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x55F28A3C), Color(0x08F28A3C)],
+        ).createShader(Rect.fromLTWH(0, chartTop, chartWidth, chartBottom - chartTop)),
+    );
+    canvas.drawPath(
+      linePath,
+      Paint()
+        ..color = lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    for (var index = 0; index < points.length; index++) {
+      canvas.drawCircle(points[index], 4, Paint()..color = lineColor);
+      _drawText(canvas, _dayLabel(index), Offset(points[index].dx - 11, chartBottom + 11));
     }
   }
 

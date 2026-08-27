@@ -173,7 +173,7 @@ class _DetailProfilViewState extends State<DetailProfilView> {
 				Container(width: 34, height: 34, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.camera_alt, color: Color(0xFFA95208), size: 20)),
 			]),
 			const SizedBox(height: 22),
-			const Text('Ubah Foto Profil', style: TextStyle(color: Color(0xFFB51B16), fontSize: 20, fontWeight: FontWeight.w600)),
+			const Text('Ubah Foto Profil', style: TextStyle(color: Color(0xFFE87824), fontSize: 20, fontWeight: FontWeight.w600)),
 			]),
 		);
 	}
