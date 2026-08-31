@@ -75,6 +75,7 @@ flutter:
     - assets/onboarding2.png
     - assets/onboarding3.png
     - assets/pict_profil.png
+    - assets/bg_tentang_aplikasi.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

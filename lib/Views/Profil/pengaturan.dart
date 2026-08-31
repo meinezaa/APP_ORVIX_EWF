@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 
 import '../../Models/users_model.dart';
 import 'notifikasi.dart';
+import 'ganti_password.dart';
+import 'tentang_aplikasi.dart';
 
 class PengaturanView extends StatefulWidget {
 	const PengaturanView({super.key});
@@ -15,8 +17,6 @@ class PengaturanView extends StatefulWidget {
 }
 
 class _PengaturanViewState extends State<PengaturanView> {
-	bool _darkMode = false;
-
 	Stream<UserModel?> _watchUser() {
 		final user = FirebaseAuth.instance.currentUser;
 		if (user == null) return Stream.value(null);
@@ -26,18 +26,10 @@ class _PengaturanViewState extends State<PengaturanView> {
 		});
 	}
 
-	void _showMessage(String message) {
-		ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-	}
-
 	void _showAbout() {
-		showDialog<void>(
-			context: context,
-			builder: (context) => AlertDialog(
-				title: const Text('Tentang Aplikasi'),
-				content: const Text('ORVIX membantu perhitungan Emas Fisik dan Pivot Point dengan cepat dan akurat.'),
-				actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup'))],
-			),
+		Navigator.push(
+			context,
+			MaterialPageRoute(builder: (_) => const TentangAplikasiView()),
 		);
 	}
 
@@ -61,7 +53,11 @@ class _PengaturanViewState extends State<PengaturanView> {
 					gradient: LinearGradient(
 						begin: Alignment.topCenter,
 						end: Alignment.bottomCenter,
-						colors: [Color(0xFFF1A06D), Color(0xFFF8C9A9), Color(0xFFFFF8F3)],
+						colors: [
+							Color(0xFFF1A06D),
+							Color(0xFFF8C9A9),
+							Color(0xFFFFF8F3),
+						],
 						stops: [0.0, 0.38, 0.82],
 					),
 				),
@@ -80,9 +76,7 @@ class _PengaturanViewState extends State<PengaturanView> {
 									const SizedBox(height: 30),
 									_buildSettingTile(Icons.notifications_none, 'Notifikasi', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotifikasiView()))),
 									const SizedBox(height: 12),
-									_buildSettingTile(Icons.key_outlined, 'Ganti Password', onTap: () => _showMessage('Tautan ganti password akan dikirim ke email Anda.')),
-									const SizedBox(height: 28),
-									_buildSettingTile(Icons.auto_awesome, 'Tema', trailing: Switch.adaptive(value: _darkMode, activeThumbColor: const Color(0xFFE87824), onChanged: (value) => setState(() => _darkMode = value))),
+									_buildSettingTile(Icons.key_outlined, 'Ganti Password', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GantiPasswordView()))),
 									const SizedBox(height: 28),
 									_buildSettingTile(Icons.info_outline, 'Tentang Aplikasi', onTap: _showAbout),
 									const SizedBox(height: 12),
@@ -110,6 +104,7 @@ class _PengaturanViewState extends State<PengaturanView> {
 
 	Widget _buildAvatar(UserModel? user, String name) {
 		final photoPath = user?.fotoProfilPath;
+		
 		return Column(children: [
 			ClipOval(
 				child: SizedBox(
@@ -125,23 +120,38 @@ class _PengaturanViewState extends State<PengaturanView> {
 		]);
 	}
 
-	Widget _buildSettingTile(IconData icon, String title, {VoidCallback? onTap, Widget? trailing}) => Material(
-				color: Colors.transparent,
-				child: InkWell(
-					onTap: onTap,
-					borderRadius: BorderRadius.circular(11),
-					child: Container(
-								height: 54,
-						padding: const EdgeInsets.symmetric(horizontal: 22),
-						decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.78), borderRadius: BorderRadius.circular(11), boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2))]),
-						child: Row(children: [
+	Widget _buildSettingTile(IconData icon, String title, {VoidCallback? onTap, Widget? trailing}) {
+		return Material(
+			color: Colors.transparent,
+			child: InkWell(
+				onTap: onTap,
+				borderRadius: BorderRadius.circular(11),
+				child: Container(
+					height: 54,
+					padding: const EdgeInsets.symmetric(horizontal: 22),
+					decoration: BoxDecoration(
+						color: Colors.white.withValues(alpha: 0.80),
+						borderRadius: BorderRadius.circular(11),
+						boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 4))],
+					),
+					child: Row(
+						children: [
 							Icon(icon, color: const Color(0xFFFF7A1C), size: 23),
 							const SizedBox(width: 20),
-							Text(title, style: const TextStyle(color: Color(0xFF665E5A), fontSize: 15, fontWeight: FontWeight.w700)),
+							Text(
+								title,
+								style: const TextStyle(
+									color: Color(0xFF665E5A),
+									fontSize: 15,
+									fontWeight: FontWeight.w700,
+								),
+							),
 							const Spacer(),
 							trailing ?? const Icon(Icons.chevron_right, color: Color(0xFF171311), size: 25),
-						]),
+						],
 					),
 				),
-			);
+			),
+		);
+	}
 }
