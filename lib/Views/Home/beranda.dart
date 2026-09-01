@@ -7,6 +7,7 @@ import '../../Models/users_model.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
 import '../History/detail_histori.dart';
+import '../Profil/notifikasi.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback? onViewAllHistory;
@@ -351,7 +352,14 @@ class _HomeViewState extends State<HomeView> {
                                       Icons.notifications_none,
                                       color: Colors.black87,
                                     ),
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const NotifikasiView(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                                 const SizedBox(width: 8),
