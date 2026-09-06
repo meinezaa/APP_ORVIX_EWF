@@ -98,7 +98,18 @@ class AuthService {
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
-    await _auth.sendPasswordResetEmail(email: email.trim());
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) {
+      throw FirebaseAuthException(code: 'invalid-email');
+    }
+    await _auth.sendPasswordResetEmail(email: normalizedEmail);
+  }
+
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {
+    await _auth.confirmPasswordReset(code: code, newPassword: newPassword);
   }
 
   // HELPER ERROR
@@ -115,6 +126,10 @@ class AuthService {
         return 'Format email tidak valid.';
       case 'weak-password':
         return 'Password terlalu lemah.';
+      case 'operation-not-allowed':
+        return 'Login Email/Password belum diaktifkan di Firebase Console.';
+      case 'network-request-failed':
+        return 'Tidak ada koneksi internet. Periksa koneksi lalu coba lagi.';
       default:
         return e.message ?? 'Terjadi kesalahan autentikasi.';
     }

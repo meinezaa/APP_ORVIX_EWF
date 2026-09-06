@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Models/histori_model.dart';
+import '../../Models/historikalkulator_model.dart';
 
 class DetailHistoryScreen extends StatelessWidget {
   final HistoryModel history;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../Models/gold_data.dart';
+import '../../Models/historidata_model.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
 import 'detail_pivotpoin.dart';

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../Models/histori_model.dart';
+import '../Models/historikalkulator_model.dart';
 
 class HistoryService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;

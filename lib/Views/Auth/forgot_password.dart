@@ -1,95 +1,259 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../Services/auth_services.dart';
 
-class ForgotPasswordView extends StatefulWidget {
-  const ForgotPasswordView({super.key});
+class ForgetpasswordScreen extends StatefulWidget {
+  final String email; // Menerima email dinamis dari halaman sebelumnya
+
+  const ForgetpasswordScreen({
+    super.key,
+    required this.email, // Wajib diisi saat dipanggil
+  });
 
   @override
-  State<ForgotPasswordView> createState() => _ForgotPasswordViewState();
+  State<ForgetpasswordScreen> createState() => _ForgetpasswordScreenState();
 }
 
-class _ForgotPasswordViewState extends State<ForgotPasswordView> {
-  final _emailController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
-
-  Future<void> _sendResetEmail() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _showMessage('Masukkan email yang valid.', isError: true);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      await _authService.sendPasswordResetEmail(email);
-      if (!mounted) return;
-      _showMessage('Link reset password sudah dikirim ke email Anda.');
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      final message = switch (error.code) {
-        'user-not-found' => 'Email belum terdaftar.',
-        'invalid-email' => 'Format email tidak valid.',
-        _ => error.message ?? 'Gagal mengirim link reset password.',
-      };
-      _showMessage(message, isError: true);
-    } catch (error) {
-      if (!mounted) return;
-      _showMessage('Gagal mengirim link reset password: $error', isError: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
-  }
+class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
+  final AuthService _authService = AuthService();
+  bool _isSending = false;
+  String? _message;
+  bool _sentSuccessfully = false;
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sendResetEmail());
+  }
+
+  Future<void> _sendResetEmail() async {
+    if (_isSending) return;
+
+    setState(() {
+      _isSending = true;
+      _message = null;
+      _sentSuccessfully = false;
+    });
+
+    try {
+      await _authService.sendPasswordResetEmail(widget.email);
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _sentSuccessfully = true;
+        _message =
+            'Link reset password sudah dikirim. Periksa inbox atau folder spam email Anda.';
+      });
+    } on FirebaseAuthException catch (error) {
+      debugPrint(
+        'Password reset Firebase error: ${error.code} - ${error.message}',
+      );
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _message = _authErrorMessage(error.code);
+      });
+    } catch (error) {
+      debugPrint('Password reset unexpected error: $error');
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _message = 'Email reset password gagal dikirim. Silakan coba lagi.';
+      });
+    }
+  }
+
+  String _authErrorMessage(String code) {
+    switch (code) {
+      case 'invalid-email':
+        return 'Format email tidak valid.';
+      case 'user-not-found':
+        return 'Email tersebut belum terdaftar.';
+      case 'too-many-requests':
+        return 'Terlalu banyak permintaan. Coba lagi beberapa saat.';
+      case 'operation-not-allowed':
+        return 'Login Email/Password belum diaktifkan di Firebase Console.';
+      case 'network-request-failed':
+        return 'Tidak ada koneksi internet. Periksa koneksi lalu coba lagi.';
+      default:
+        return 'Email reset password gagal dikirim. Silakan coba lagi.';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lupa Password')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text(
-            'Masukkan email akun Anda untuk menerima link reset password.',
-            style: TextStyle(fontSize: 16),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFE27C3B), // Warna Oranye Atas
+              Color(0xFFEA9C68),
+              Color(0xFFFCF3EC), // Warna Krem Bawah
+            ],
+            stops: [0.0, 0.25, 1.0],
           ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _emailController,
-            enabled: !_isLoading,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-            ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER (Tombol Back & Judul)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.black87,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text(
+                      'Lupa Password',
+                      style: TextStyle(
+                        fontFamily: 'sans-serif',
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // KARTU UTAMA
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Reset Password',
+                        style: TextStyle(
+                          fontFamily: 'sans-serif',
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF221914),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // TEKS EMAIL DINAMIS
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          text:
+                              'Link untuk mengatur ulang password akan dikirimkan ke email ',
+                          style: const TextStyle(
+                            fontFamily: 'sans-serif',
+                            fontSize: 13,
+                            color: Color(0xFF8A827C),
+                            height: 1.4,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: widget.email, // <--- EMAIL DINAMIS USER
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF221914),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 36),
+                      Icon(
+                        _sentSuccessfully
+                            ? Icons.mark_email_read_outlined
+                            : Icons.mail_outline,
+                        size: 72,
+                        color: _sentSuccessfully
+                            ? const Color(0xFF3D9B60)
+                            : const Color(0xFFD36A28),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        _isSending
+                            ? 'Mengirim email reset password...'
+                            : (_message ?? 'Menyiapkan pengiriman email...'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8A827C),
+                          height: 1.4,
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _isSending ? null : _sendResetEmail,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDE631B),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            _isSending ? 'Mengirim...' : 'Kirim Ulang Email',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _sendResetEmail,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Kirim Link Reset'),
-          ),
-        ],
+        ),
       ),
     );
   }

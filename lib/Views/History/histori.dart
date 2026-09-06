@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Models/histori_model.dart';
+import '../../Models/historikalkulator_model.dart';
 import '../../Services/history_service.dart';
 import 'detail_histori.dart';
 

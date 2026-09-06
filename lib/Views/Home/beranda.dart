@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../Models/gold_data.dart';
-import '../../Models/histori_model.dart';
+import 'package:intl/intl.dart';
+import '../../Models/historidata_model.dart';
+import '../../Models/historikalkulator_model.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
 import '../History/detail_histori.dart';
@@ -24,6 +25,7 @@ class _HomeViewState extends State<HomeView> {
   String? _loadError;
   int _currentPage = 1;
   final int _itemsPerPage = 8;
+  String _selectedCategory = 'LGD';
 
   @override
   void initState() {
@@ -31,7 +33,7 @@ class _HomeViewState extends State<HomeView> {
     _loadData();
   }
 
-  // 1. Ambil seluruh data dari slide 1 hingga slide terakhir[cite: 1]
+  // 1. Ambil seluruh data dari slide 1 hingga slide terakhir
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
@@ -39,7 +41,10 @@ class _HomeViewState extends State<HomeView> {
     });
 
     try {
-      final data = await ApiService.getGoldHistory(maxPages: 10);
+      final data = await ApiService.getGoldHistory(
+        maxPages: 10,
+        category: _selectedCategory,
+      );
       setState(() {
         _rawHistoricalData = data;
         _isLoading = false;
@@ -58,31 +63,7 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
-  // 2. Parser Teks Tanggal ("08 Jul 2026" / "12 Aug 2026" -> DateTime)[cite: 1]
-  Widget _buildTableCell(String value, {bool isHeader = false}) {
-    return Expanded(
-      child: Center(
-        child: Text(
-          value,
-          textAlign: TextAlign.center,
-          style: isHeader
-              ? TextStyle(
-                  fontFamily: 'sans-serif',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF211A17),
-                )
-              : TextStyle(
-                  fontFamily: 'sans-serif-medium',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF302A27),
-                ),
-        ),
-      ),
-    );
-  }
-
+  // 2. Parser Teks Tanggal ("08 Jul 2026" / "12 Aug 2026" -> DateTime)
   DateTime? _parseDate(String dateStr) {
     try {
       String cleanStr = dateStr
@@ -175,7 +156,7 @@ class _HomeViewState extends State<HomeView> {
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
 
-  // 3. Filter Data Berdasarkan Rentang Tanggal yang Dipilih User[cite: 1]
+  // 3. Filter Data Berdasarkan Rentang Tanggal yang Dipilih User
   List<GoldHistory> get _processedData {
     List<GoldHistory> list = List.from(_rawHistoricalData);
 
@@ -194,7 +175,7 @@ class _HomeViewState extends State<HomeView> {
         59,
       );
 
-      // Hanya simpan data di antara Start dan End[cite: 1]
+      // Hanya simpan data di antara Start dan End
       list = list.where((item) {
         DateTime? dt = _parseDate(item.date);
         if (dt == null) return false;
@@ -202,7 +183,7 @@ class _HomeViewState extends State<HomeView> {
       }).toList();
     }
 
-    // Urutkan dari tanggal terlama ke terbaru (Ascending) agar Juli muncul paling atas[cite: 1]
+    // Urutkan dari tanggal terlama ke terbaru (Ascending)
     list.sort((a, b) {
       DateTime? dtA = _parseDate(a.date);
       DateTime? dtB = _parseDate(b.date);
@@ -213,7 +194,7 @@ class _HomeViewState extends State<HomeView> {
     return list;
   }
 
-  // 4. Paginasi Tampilan Aplikasi[cite: 1]
+  // 4. Paginasi Tampilan Aplikasi
   List<GoldHistory> get _paginatedData {
     final list = _processedData;
     int startIndex = (_currentPage - 1) * _itemsPerPage;
@@ -262,10 +243,16 @@ class _HomeViewState extends State<HomeView> {
       setState(() {
         if (isStart) {
           _startDate = picked;
+          if (_endDate != null && picked.isAfter(_endDate!)) {
+            _endDate = picked;
+          }
         } else {
           _endDate = picked;
+          if (_startDate != null && picked.isBefore(_startDate!)) {
+            _startDate = picked;
+          }
         }
-        _currentPage = 1; // Reset ke halaman 1 setiap ganti filter[cite: 1]
+        _currentPage = 1; // Reset ke halaman 1 setiap ganti filter
       });
     }
   }
@@ -347,7 +334,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         const SizedBox(height: 12),
                         RichText(
-                          text: TextSpan(
+                          text: const TextSpan(
                             text: 'Halo, ',
                             style: TextStyle(
                               fontFamily: 'sans-serif',
@@ -368,13 +355,13 @@ class _HomeViewState extends State<HomeView> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
+                        const Text(
                           'Siap melakukan perhitungan hari ini?',
                           style: TextStyle(
                             fontFamily: 'sans-serif-medium',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF9E4E27),
+                            color: Color(0xFF9E4E27),
                           ),
                         ),
                       ],
@@ -383,7 +370,7 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 20),
 
-                  // BANNER[cite: 1]
+                  // BANNER
                   Container(
                     width: double.infinity,
                     height: 146,
@@ -405,7 +392,7 @@ class _HomeViewState extends State<HomeView> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               RichText(
-                                text: TextSpan(
+                                text: const TextSpan(
                                   text: 'Hitung dengan ',
                                   style: TextStyle(
                                     fontFamily: 'sans-serif',
@@ -418,7 +405,7 @@ class _HomeViewState extends State<HomeView> {
                                       text: 'Cepat ',
                                       style: TextStyle(
                                         fontFamily: 'sans-serif',
-                                        color: const Color(0xFFD36A28),
+                                        color: Color(0xFFD36A28),
                                       ),
                                     ),
                                     TextSpan(text: 'dan '),
@@ -426,14 +413,14 @@ class _HomeViewState extends State<HomeView> {
                                       text: 'Akurat',
                                       style: TextStyle(
                                         fontFamily: 'sans-serif',
-                                        color: const Color(0xFFD36A28),
+                                        color: Color(0xFFD36A28),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
+                              const Text(
                                 'ORVIX membantu perhitungan emas fisik dan pivot poin lebih mudah',
                                 style: TextStyle(
                                   fontFamily: 'sans-serif-medium',
@@ -458,7 +445,7 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 24),
 
-                  // HISTORICAL DATA HEADER & FILTER TANGGAL[cite: 1]
+                  // HISTORICAL DATA HEADER & FILTER TANGGAL
                   Row(
                     children: [
                       Container(
@@ -474,9 +461,9 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
+                      const Text(
                         'Historical Data',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'sans-serif',
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -486,6 +473,60 @@ class _HomeViewState extends State<HomeView> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ApiService.supportedCategories.map((
+                          category,
+                        ) {
+                          final selected = _selectedCategory == category;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (selected) return;
+                                setState(() {
+                                  _selectedCategory = category;
+                                  _currentPage = 1;
+                                });
+                                _loadData();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? const Color(0xFFD36A28)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: selected
+                                        ? const Color(0xFFD36A28)
+                                        : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Text(
+                                  category,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       const Text(
@@ -520,7 +561,7 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 16),
 
-                  // TABEL DATA (Realtime API)[cite: 1]
+                  // TABEL DATA (Realtime API)
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -606,16 +647,16 @@ class _HomeViewState extends State<HomeView> {
                                               _formatDisplayDate(data.date),
                                             ),
                                             _buildTableCell(
-                                              data.open.toStringAsFixed(2),
+                                              _formatDisplayNumber(data.open),
                                             ),
                                             _buildTableCell(
-                                              data.high.toStringAsFixed(2),
+                                              _formatDisplayNumber(data.high),
                                             ),
                                             _buildTableCell(
-                                              data.low.toStringAsFixed(2),
+                                              _formatDisplayNumber(data.low),
                                             ),
                                             _buildTableCell(
-                                              data.close.toStringAsFixed(2),
+                                              _formatDisplayNumber(data.close),
                                             ),
                                           ],
                                         ),
@@ -637,7 +678,7 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 12),
 
-                  // PAGINASI TABEL[cite: 1]
+                  // PAGINASI TABEL
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -662,7 +703,7 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 24),
 
-                  // PERHITUNGAN TERAKHIR[cite: 1]
+                  // PERHITUNGAN TERAKHIR
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -736,6 +777,31 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  // WIDGET HELPER
+  Widget _buildTableCell(String value, {bool isHeader = false}) {
+    return Expanded(
+      child: Center(
+        child: Text(
+          value,
+          textAlign: TextAlign.center,
+          style: isHeader
+              ? const TextStyle(
+                  fontFamily: 'sans-serif',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF211A17),
+                )
+              : const TextStyle(
+                  fontFamily: 'sans-serif-medium',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF302A27),
+                ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDateField(bool isStart) {
     DateTime? date = isStart ? _startDate : _endDate;
     String text = date == null
@@ -765,6 +831,11 @@ class _HomeViewState extends State<HomeView> {
         ),
       ),
     );
+  }
+
+  String _formatDisplayNumber(double value) {
+    final formatter = NumberFormat('#,##0.##', 'en_US');
+    return formatter.format(value);
   }
 
   Widget _buildRecentHistoryCard(HistoryModel history) {

@@ -59,6 +59,26 @@ class _LoginViewState extends State<LoginView>
     );
   }
 
+  void _onLupaPasswordPressed() {
+    final inputEmail = _emailController.text.trim();
+
+    if (inputEmail.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan masukkan email Anda terlebih dahulu'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ForgetpasswordScreen(email: inputEmail),
+      ),
+    );
+  }
+
   // Fungsi penanganan login Manual (Email & Password)
   Future<void> _handleManualLogin() async {
     final email = _emailController.text.trim();
@@ -330,13 +350,7 @@ class _LoginViewState extends State<LoginView>
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const ForgotPasswordView(),
-                          ),
-                        );
-                      },
+                      onTap: _onLupaPasswordPressed,
                       child: const Text(
                         'Lupa Password?',
                         style: TextStyle(

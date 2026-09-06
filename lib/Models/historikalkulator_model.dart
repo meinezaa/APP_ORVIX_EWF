@@ -41,16 +41,25 @@ class HistoryModel {
     this.jumlahEmas,
   });
 
-  // Konversi dari data Firestore ke Object Model Dart
   factory HistoryModel.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data() ?? {};
+    return HistoryModel.fromMap(doc.data() ?? {}, id: doc.id);
+  }
+
+  factory HistoryModel.fromMap(Map<String, dynamic> data, {String id = ''}) {
+    DateTime parseDate(dynamic date) {
+      if (date is Timestamp) return date.toDate();
+      if (date is String) return DateTime.tryParse(date) ?? DateTime.now();
+      if (date is DateTime) return date;
+      return DateTime.now();
+    }
+
     return HistoryModel(
-      id: doc.id,
+      id: id,
       jenisKalkulator: data['jenis_kalkulator']?.toString() ?? '',
       hasil: (data['hasil'] as num?)?.toDouble() ?? 0,
-      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: parseDate(data['created_at']),
       open: (data['open'] as num?)?.toDouble(),
       high: (data['high'] as num?)?.toDouble(),
       low: (data['low'] as num?)?.toDouble(),
@@ -68,7 +77,6 @@ class HistoryModel {
     );
   }
 
-  // Konversi dari Object Model Dart ke Map Firebase
   Map<String, dynamic> toMap() {
     return {
       'jenis_kalkulator': jenisKalkulator,
@@ -89,5 +97,47 @@ class HistoryModel {
       'selisih_per_gram': selisihPerGram,
       'jumlah_emas': jumlahEmas,
     };
+  }
+
+  HistoryModel copyWith({
+    String? id,
+    String? jenisKalkulator,
+    double? hasil,
+    DateTime? createdAt,
+    double? open,
+    double? high,
+    double? low,
+    double? close,
+    String? indikasi,
+    double? modal,
+    double? hargaBeli,
+    double? hargaJual,
+    double? toz,
+    double? kurs,
+    double? hargaBeliPerGram,
+    double? hargaJualPerGram,
+    double? selisihPerGram,
+    double? jumlahEmas,
+  }) {
+    return HistoryModel(
+      id: id ?? this.id,
+      jenisKalkulator: jenisKalkulator ?? this.jenisKalkulator,
+      hasil: hasil ?? this.hasil,
+      createdAt: createdAt ?? this.createdAt,
+      open: open ?? this.open,
+      high: high ?? this.high,
+      low: low ?? this.low,
+      close: close ?? this.close,
+      indikasi: indikasi ?? this.indikasi,
+      modal: modal ?? this.modal,
+      hargaBeli: hargaBeli ?? this.hargaBeli,
+      hargaJual: hargaJual ?? this.hargaJual,
+      toz: toz ?? this.toz,
+      kurs: kurs ?? this.kurs,
+      hargaBeliPerGram: hargaBeliPerGram ?? this.hargaBeliPerGram,
+      hargaJualPerGram: hargaJualPerGram ?? this.hargaJualPerGram,
+      selisihPerGram: selisihPerGram ?? this.selisihPerGram,
+      jumlahEmas: jumlahEmas ?? this.jumlahEmas,
+    );
   }
 }
