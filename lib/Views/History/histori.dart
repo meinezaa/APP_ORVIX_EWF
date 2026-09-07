@@ -36,7 +36,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -46,8 +46,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       'History',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],

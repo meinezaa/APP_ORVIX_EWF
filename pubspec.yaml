@@ -41,6 +41,7 @@ dependencies:
   firebase_core: ^4.13.0
   firebase_auth: ^6.5.7
   cloud_firestore: ^6.8.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +69,7 @@ flutter:
     - assets/icon_logo.png
     - assets/orvix_logo.png
     - assets/home_page.png
+    - assets/bg_tentang_aplikasi.png
     - assets/goldencoin.png
     - assets/google.png
     - assets/ewf_logo.png

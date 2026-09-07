@@ -29,7 +29,7 @@ class DetailHistoryScreen extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+                  horizontal: 24,
                   vertical: 12,
                 ),
                 child: Row(
@@ -40,14 +40,18 @@ class DetailHistoryScreen extends StatelessWidget {
                         backgroundColor: Colors.white,
                         shape: const CircleBorder(),
                       ),
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFFE07856),
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Text(
                       'Detail History',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],

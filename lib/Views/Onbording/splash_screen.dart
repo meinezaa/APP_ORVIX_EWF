@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../main_screen.dart';
 import 'onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
 
 class SplashScreen extends StatefulWidget {
@@ -62,13 +64,15 @@ class _SplashScreenState extends State<SplashScreen>
     // 2. Tahan sebentar agar splash terasa selesai sebelum berpindah halaman
     await Future.delayed(const Duration(milliseconds: 4200));
 
-    // 3. Pindah ke OnboardingScreen (Induk dari Onboarding 1 & 2)
+    // 3. Pertahankan sesi login jika pengguna masih terautentikasi.
     if (mounted) {
+      final nextPage = FirebaseAuth.instance.currentUser != null
+          ? const MainScreen()
+          : const OnboardingScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 850),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const OnboardingScreen(), // Diarahkan ke OnboardingScreen
+          pageBuilder: (context, animation, secondaryAnimation) => nextPage,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 0.08);
             const end = Offset.zero;

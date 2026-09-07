@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../Models/historidata_model.dart';
@@ -8,8 +12,15 @@ import '../History/detail_histori.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback? onViewAllHistory;
+  final VoidCallback? onViewNotifications;
+  final VoidCallback? onViewProfile;
 
-  const HomeView({super.key, this.onViewAllHistory});
+  const HomeView({
+    super.key,
+    this.onViewAllHistory,
+    this.onViewNotifications,
+    this.onViewProfile,
+  });
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -26,11 +37,44 @@ class _HomeViewState extends State<HomeView> {
   int _currentPage = 1;
   final int _itemsPerPage = 8;
   String _selectedCategory = 'LGD';
+  String _userName = 'Pengguna';
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
 
   @override
   void initState() {
     super.initState();
+    _watchCurrentUser();
     _loadData();
+  }
+
+  void _watchCurrentUser() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final emailName = currentUser.email?.split('@').first.trim();
+    final fallbackName = currentUser.displayName?.trim().isNotEmpty == true
+        ? currentUser.displayName!.trim()
+        : (emailName?.isNotEmpty == true ? emailName! : 'Pengguna');
+
+    _userSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .snapshots()
+        .listen((snapshot) {
+          if (!mounted) return;
+          final savedName = snapshot.data()?['nama']?.toString().trim();
+          setState(() {
+            _userName = savedName?.isNotEmpty == true
+                ? savedName!
+                : fallbackName;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    super.dispose();
   }
 
   // 1. Ambil seluruh data dari slide 1 hingga slide terakhir
@@ -301,31 +345,42 @@ class _HomeViewState extends State<HomeView> {
                           children: [
                             Image.asset(
                               'assets/orvix_logo.png',
-                              width: 92,
+                              width: 105,
                               fit: BoxFit.contain,
                             ),
                             Row(
                               children: [
-                                Container(
-                                  decoration: const BoxDecoration(
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: Material(
                                     color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.notifications_none,
-                                      color: Colors.black87,
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: widget.onViewNotifications,
+                                      child: const Icon(
+                                        Icons.notifications_none,
+                                        color: Colors.black87,
+                                      ),
                                     ),
-                                    onPressed: () {},
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: Color(0xFFE8E0D8),
-                                  child: Icon(
-                                    Icons.person,
-                                    color: Color(0xFFD36A28),
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: Material(
+                                    color: const Color(0xFFE8E0D8),
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: widget.onViewProfile,
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: Color(0xFFD36A28),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -334,7 +389,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         const SizedBox(height: 12),
                         RichText(
-                          text: const TextSpan(
+                          text: TextSpan(
                             text: 'Halo, ',
                             style: TextStyle(
                               fontFamily: 'sans-serif',
@@ -344,7 +399,7 @@ class _HomeViewState extends State<HomeView> {
                             ),
                             children: [
                               TextSpan(
-                                text: 'Meineza!',
+                                text: '$_userName!',
                                 style: TextStyle(
                                   fontFamily: 'sans-serif',
                                   fontWeight: FontWeight.bold,

@@ -8,7 +8,10 @@ class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
 
   // Inisialisasi instance GoogleSignIn
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId:
+        '49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com',
+  );
 
   // Fungsi untuk menangani proses login Google
   Future<void> _handleGoogleSignIn(BuildContext context) async {

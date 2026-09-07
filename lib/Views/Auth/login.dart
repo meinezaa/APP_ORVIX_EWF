@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../main_screen.dart';
 import '../../Models/users_model.dart';
@@ -29,7 +30,10 @@ class _LoginViewState extends State<LoginView>
   late Animation<Offset> _offsetAnimation;
 
   // Inisialisasi GoogleSignIn
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId:
+        '49789057845-osbscsknt070uaqj2ru8mj7il13ug1qc.apps.googleusercontent.com',
+  );
 
   @override
   void initState() {
@@ -138,6 +142,14 @@ class _LoginViewState extends State<LoginView>
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser != null && mounted) {
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Berhasil masuk sebagai ${googleUser.email}'),
