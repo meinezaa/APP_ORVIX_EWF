@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../Models/histori_model.dart';
@@ -162,7 +163,7 @@ class _ProfileViewState extends State<ProfileView> {
             child: SizedBox(
               width: 70,
               height: 70,
-              child: photoPath != null && photoPath.isNotEmpty
+                child: !kIsWeb && photoPath != null && photoPath.isNotEmpty
                   ? Image.file(File(photoPath), fit: BoxFit.cover)
                   : Container(
                       color: const Color(0xFF192D4B),

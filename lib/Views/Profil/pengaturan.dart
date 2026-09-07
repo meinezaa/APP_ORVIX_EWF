@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../Models/users_model.dart';
@@ -110,7 +111,7 @@ class _PengaturanViewState extends State<PengaturanView> {
 				child: SizedBox(
 					width: 132,
 					height: 132,
-					child: photoPath != null && photoPath.isNotEmpty
+					child: !kIsWeb && photoPath != null && photoPath.isNotEmpty
 							? Image.file(File(photoPath), fit: BoxFit.cover)
 							: Container(color: const Color(0xFF192D4B), alignment: Alignment.center, child: Text(name.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w500))),
 				),

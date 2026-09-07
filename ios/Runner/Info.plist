@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>App ini perlu akses untuk menyimpan hasil pivot point ke galeri foto Anda.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>App ini perlu akses galeri untuk menyimpan hasil pivot point ke foto perangkat Anda.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

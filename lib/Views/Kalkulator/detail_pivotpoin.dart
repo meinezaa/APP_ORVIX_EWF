@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class DetailPivotPoint extends StatelessWidget {
   final double pp, r1, r2, r3, r4, s1, s2, s3, s4;
   final VoidCallback onReset;
+  final VoidCallback onDownload;
 
   const DetailPivotPoint({
     super.key,
@@ -16,6 +17,7 @@ class DetailPivotPoint extends StatelessWidget {
     required this.s3,
     required this.s4,
     required this.onReset,
+    required this.onDownload,
   });
 
   String _format(double value) {
@@ -135,23 +137,53 @@ class DetailPivotPoint extends StatelessWidget {
           const Color(0xFFFF7A00),
         ),
         const SizedBox(height: 15),
-        OutlinedButton(
-          onPressed: onReset,
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: onReset,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size.fromHeight(56),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'Reset',
+                    style: TextStyle(
+                      color: Color(0xFFD67236),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-          ),
-          child: const Text(
-            'Reset',
-            style: TextStyle(
-              color: Color(0xFFD67236),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: onDownload,
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Download'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD67236),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size.fromHeight(56),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );

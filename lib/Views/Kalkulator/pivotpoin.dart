@@ -1,9 +1,18 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../Models/gold_data.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
 import 'detail_pivotpoin.dart';
+
+const MethodChannel _downloadChannel = MethodChannel('pivot_point_downloader');
 
 class PivotPointView extends StatefulWidget {
   const PivotPointView({super.key});
@@ -23,6 +32,73 @@ class _PivotPointViewState extends State<PivotPointView> {
   double _pp = 0, _r1 = 0, _r2 = 0, _r3 = 0, _r4 = 0;
   double _s1 = 0, _s2 = 0, _s3 = 0, _s4 = 0;
   String? _lastSavedPivotInputs;
+  final GlobalKey _pivotReportKey = GlobalKey();
+
+  Future<void> _downloadPivotReport() async {
+    try {
+      if (!Platform.isAndroid) {
+        throw UnsupportedError('Fitur download saat ini hanya didukung untuk Android.');
+      }
+
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = androidInfo.version.sdkInt ?? 0;
+      final permission = sdkInt >= 33 ? Permission.photos : Permission.storage;
+      final status = await permission.status;
+
+      if (!status.isGranted && !status.isLimited) {
+        final requested = await permission.request();
+        if (!requested.isGranted && !requested.isLimited) {
+          if (!mounted) return;
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Izin akses galeri ditolak. Silakan izinkan untuk menyimpan gambar.',
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      final renderObject = _pivotReportKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) {
+        throw Exception('Area hasil tidak dapat diproses.');
+      }
+
+      final image = await renderObject.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('File gambar gagal dibuat.');
+      }
+
+      final bytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final sourceFile = File(
+        '${tempDir.path}/pivot_point_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await sourceFile.writeAsBytes(bytes);
+
+      final saved = await _downloadChannel.invokeMethod<bool>(
+        'saveImageToGallery',
+        {'path': sourceFile.path},
+      );
+
+      if (saved == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('Gambar pivot point berhasil disimpan ke galeri.')),
+        );
+        return;
+      }
+
+      throw Exception('Gagal menyimpan gambar ke galeri.');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Download gagal: $e')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -190,180 +266,184 @@ class _PivotPointViewState extends State<PivotPointView> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Input Form Box
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
-                  spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Transform.translate(
-                      offset: const Offset(18, 0),
-                      child: Opacity(
-                        opacity: 0.50,
-                        child: Image.asset(
-                          'assets/ewf_logo.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+      child: RepaintBoundary(
+        key: _pivotReportKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Input Form Box
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    spreadRadius: 2,
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
-                ),
-                Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          _isLoadingHistorical
-                              ? 'Memuat data kemarin...'
-                              : 'Otomatis kemarin',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Transform.translate(
+                        offset: const Offset(18, 0),
+                        child: Opacity(
+                          opacity: 0.50,
+                          child: Image.asset(
+                            'assets/ewf_logo.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        Switch(
-                          value: _isAutoFromYesterday,
-                          onChanged: _toggleAuto,
-                          activeThumbColor: const Color(0xFFD95B14),
-                        ),
-                      ],
-                    ),
-                    if (_historicalError != null)
-                      Text(
-                        _historicalError!,
-                        style: const TextStyle(fontSize: 10, color: Colors.red),
                       ),
-                    _buildInputField("Open", _openController),
-                    const SizedBox(height: 12),
-                    _buildInputField("High", _highController),
-                    const SizedBox(height: 12),
-                    _buildInputField("Low", _lowController),
-                    const SizedBox(height: 12),
-                    _buildInputField("Close", _closeController),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Indikasi / Hasil Akhir Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8833A).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8833A),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    "Indikasi",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "Hasil Pivot Point",
-                  style: TextStyle(
-                    color: Colors.brown,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            _isLoadingHistorical
+                                ? 'Memuat data kemarin...'
+                                : 'Otomatis kemarin',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Switch(
+                            value: _isAutoFromYesterday,
+                            onChanged: _toggleAuto,
+                            activeThumbColor: const Color(0xFFD95B14),
+                          ),
+                        ],
+                      ),
+                      if (_historicalError != null)
+                        Text(
+                          _historicalError!,
+                          style: const TextStyle(fontSize: 10, color: Colors.red),
+                        ),
+                      _buildInputField("Open", _openController),
+                      const SizedBox(height: 12),
+                      _buildInputField("High", _highController),
+                      const SizedBox(height: 12),
+                      _buildInputField("Low", _lowController),
+                      const SizedBox(height: 12),
+                      _buildInputField("Close", _closeController),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 24,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Indikasi / Hasil Akhir Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8833A).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
                       color: const Color(0xFFE8833A),
-                      width: 1.5,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Indikasi",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    _formatNumber(_pp),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF8B2500),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.brown.withValues(alpha: 0.3),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Hasil Pivot Point",
+                    style: TextStyle(
+                      color: Colors.brown,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  child: Text(
-                    _closeValue >= _pp ? "BUY" : "SELL",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF8B2500),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 24,
                     ),
-                    textAlign: TextAlign.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFE8833A),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      _formatNumber(_pp),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B2500),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.brown.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      _closeValue >= _pp ? "BUY" : "SELL",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B2500),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Tombol untuk memanggil Detail / Formula R4-S4
-          DetailPivotPoint(
-            pp: _pp,
-            r1: _r1,
-            r2: _r2,
-            r3: _r3,
-            r4: _r4,
-            s1: _s1,
-            s2: _s2,
-            s3: _s3,
-            s4: _s4,
-            onReset: _resetToYesterday,
-          ),
-        ],
+            // Tombol untuk memanggil Detail / Formula R4-S4
+            DetailPivotPoint(
+              pp: _pp,
+              r1: _r1,
+              r2: _r2,
+              r3: _r3,
+              r4: _r4,
+              s1: _s1,
+              s2: _s2,
+              s3: _s3,
+              s4: _s4,
+              onReset: _resetToYesterday,
+              onDownload: _downloadPivotReport,
+            ),
+          ],
+        ),
       ),
     );
   }

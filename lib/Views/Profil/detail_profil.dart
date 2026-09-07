@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -164,9 +165,9 @@ class _DetailProfilViewState extends State<DetailProfilView> {
 				Container(
 					width: 132,
 					height: 132,
-					decoration: BoxDecoration(color: const Color(0xFF192D4B), shape: BoxShape.circle, border: photoPath == null ? Border.all(color: Colors.white, width: 2) : null),
+					decoration: BoxDecoration(color: const Color(0xFF192D4B), shape: BoxShape.circle, border: kIsWeb || photoPath == null ? Border.all(color: Colors.white, width: 2) : null),
 					alignment: Alignment.center,
-					child: photoPath != null && photoPath.isNotEmpty
+					child: !kIsWeb && photoPath != null && photoPath.isNotEmpty
 						? ClipOval(child: Image.file(File(photoPath), fit: BoxFit.cover, width: 132, height: 132))
 						: Text(name.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w500)),
 				),
