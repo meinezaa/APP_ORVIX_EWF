@@ -20,6 +20,7 @@ class _PivotPointViewState extends State<PivotPointView> {
   bool _isAutoFromYesterday = true;
   bool _isLoadingHistorical = false;
   String? _historicalError;
+  String _selectedCategory = 'LGD';
   double _pp = 0, _r1 = 0, _r2 = 0, _r3 = 0, _r4 = 0;
   double _s1 = 0, _s2 = 0, _s3 = 0, _s4 = 0;
   String? _lastSavedPivotInputs;
@@ -101,7 +102,10 @@ class _PivotPointViewState extends State<PivotPointView> {
       _historicalError = null;
     });
     try {
-      final records = await ApiService.getGoldHistory(maxPages: 10);
+      final records = await ApiService.getGoldHistory(
+        maxPages: 10,
+        category: _selectedCategory,
+      );
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
       GoldHistory? selected;
       DateTime? selectedDate;
@@ -157,7 +161,7 @@ class _PivotPointViewState extends State<PivotPointView> {
     final close = _parseNumber(_closeController.text);
     if (high == 0 || low == 0 || close == 0) return;
 
-    final inputKey = '$open|$high|$low|$close';
+    final inputKey = '$_selectedCategory|$open|$high|$low|$close';
     if (_lastSavedPivotInputs == inputKey) return;
     _lastSavedPivotInputs = inputKey;
 
@@ -169,7 +173,7 @@ class _PivotPointViewState extends State<PivotPointView> {
         high: high,
         low: low,
         close: close,
-        indikasi: close >= _pp ? 'BUY' : 'SELL',
+        indikasi: _indication,
       );
     } catch (_) {
       _lastSavedPivotInputs = null;
@@ -177,8 +181,16 @@ class _PivotPointViewState extends State<PivotPointView> {
   }
 
   void _toggleAuto(bool enabled) {
-    setState(() => _isAutoFromYesterday = enabled);
-    if (enabled) _loadYesterdayData();
+    setState(() {
+      _isAutoFromYesterday = enabled;
+      if (!enabled) {
+        _openController.clear();
+        _lastSavedPivotInputs = null;
+      }
+    });
+    if (enabled) {
+      _loadYesterdayData();
+    }
   }
 
   void _resetToYesterday() {
@@ -250,6 +262,8 @@ class _PivotPointViewState extends State<PivotPointView> {
                         _historicalError!,
                         style: const TextStyle(fontSize: 10, color: Colors.red),
                       ),
+                    _buildCategorySelector(),
+                    const SizedBox(height: 12),
                     _buildInputField("Open", _openController),
                     const SizedBox(height: 12),
                     _buildInputField("High", _highController),
@@ -336,7 +350,7 @@ class _PivotPointViewState extends State<PivotPointView> {
                     ),
                   ),
                   child: Text(
-                    _closeValue >= _pp ? "BUY" : "SELL",
+                    _indication,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -420,7 +434,66 @@ class _PivotPointViewState extends State<PivotPointView> {
     );
   }
 
-  double get _closeValue => _parseNumber(_closeController.text);
+  String get _indication {
+    final isOpenBelowPivot = _openValue < _pp;
+    final isBuy = _selectedCategory == 'HSI'
+        ? !isOpenBelowPivot
+        : isOpenBelowPivot;
+    return isBuy ? 'BUY' : 'SELL';
+  }
+
+  double get _openValue => _parseNumber(_openController.text);
+
+  Widget _buildCategorySelector() {
+    return Row(
+      children: [
+        const SizedBox(
+          width: 60,
+          child: Text(
+            'Kategori',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: _selectedCategory,
+            isDense: true,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              constraints: const BoxConstraints.tightFor(height: 42),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF888888)),
+              ),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'LGD', child: Text('LGD')),
+              DropdownMenuItem(value: 'HSI', child: Text('HSI')),
+            ],
+            onChanged: _isLoadingHistorical
+                ? null
+                : (value) {
+                    if (value == null || value == _selectedCategory) return;
+                    setState(() {
+                      _selectedCategory = value;
+                      _isAutoFromYesterday = true;
+                    });
+                    _loadYesterdayData();
+                  },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class ThousandsDecimalFormatter extends TextInputFormatter {

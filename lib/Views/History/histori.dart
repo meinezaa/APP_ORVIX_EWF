@@ -96,9 +96,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final periods = _buildPeriods(history);
                         final filteredHistory = _filterHistory(history);
                         return ListView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 24,
+                          padding: const EdgeInsets.fromLTRB(
+                            20,
+                            24,
+                            20,
+                            120,
                           ),
                           children: [
                             _buildFilters(periods),
