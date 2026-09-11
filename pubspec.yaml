@@ -44,6 +44,9 @@ dependencies:
   image_picker: ^1.1.2
   cloudinary_public: ^0.23.1
   app_links: ^6.4.0
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+  pdf: ^3.11.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

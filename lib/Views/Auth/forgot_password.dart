@@ -258,7 +258,7 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                            onPressed: _isSending || _cooldownSeconds > 0
+                          onPressed: _isSending || _cooldownSeconds > 0
                               ? null
                               : _sendResetEmail,
                           style: ElevatedButton.styleFrom(
@@ -270,10 +270,10 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
                           ),
                           child: Text(
                             _isSending
-                              ? 'Mengirim...'
-                              : _cooldownSeconds > 0
-                              ? 'Tunggu ${_cooldownSeconds}s'
-                              : 'Kirim Ulang Email',
+                                ? 'Mengirim...'
+                                : _cooldownSeconds > 0
+                                ? 'Tunggu ${_cooldownSeconds}s'
+                                : 'Kirim Ulang Email',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

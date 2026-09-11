@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class DetailPivotPoint extends StatelessWidget {
   final double pp, r1, r2, r3, r4, s1, s2, s3, s4;
   final VoidCallback onReset;
+  final VoidCallback onDownload;
 
   const DetailPivotPoint({
     super.key,
@@ -16,6 +17,7 @@ class DetailPivotPoint extends StatelessWidget {
     required this.s3,
     required this.s4,
     required this.onReset,
+    required this.onDownload,
   });
 
   String _format(double value) {
@@ -135,23 +137,42 @@ class DetailPivotPoint extends StatelessWidget {
           const Color(0xFFFF7A00),
         ),
         const SizedBox(height: 15),
-        OutlinedButton(
-          onPressed: onReset,
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onDownload,
+              icon: const Icon(Icons.download_outlined, size: 19),
+              label: const Text('Download'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFD67236),
+                side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-          ),
-          child: const Text(
-            'Reset',
-            style: TextStyle(
-              color: Color(0xFFD67236),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+            const SizedBox(width: 12),
+            OutlinedButton(
+              onPressed: onReset,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFD67236),
+                side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Reset'),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -222,17 +243,25 @@ class DetailPivotPoint extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    _box(
-                      'midpoint',
-                      height: 48,
-                      textColor: isPP ? const Color(0xFFEF2020) : midpointColor,
-                      fontSize: 16,
+                    Flexible(
+                      child: _box(
+                        'midpoint',
+                        height: 48,
+                        textColor: isPP
+                            ? const Color(0xFFEF2020)
+                            : midpointColor,
+                        fontSize: 14,
+                        maxLines: 1,
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_forward,
-                      color: isPP ? Colors.white : midpointColor,
-                      size: 22,
+                    SizedBox(
+                      width: 22,
+                      child: Icon(
+                        Icons.arrow_forward,
+                        color: isPP ? Colors.white : midpointColor,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
@@ -261,6 +290,7 @@ class DetailPivotPoint extends StatelessWidget {
     Color? backgroundColor,
     Color? borderColor,
     double fontSize = 14,
+    int maxLines = 2,
   }) {
     return Container(
       width: width,
@@ -276,6 +306,8 @@ class DetailPivotPoint extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
         style: TextStyle(
           color: textColor,

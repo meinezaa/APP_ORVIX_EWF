@@ -44,6 +44,12 @@ class _DetailProfilViewState extends State<DetailProfilView> {
         user?.email ?? FirebaseAuth.instance.currentUser?.email ?? '';
     _phoneController.text = user?.phone ?? '';
     _savedPhotoPath = user?.fotoProfilPath;
+    if (user?.tanggalLahir != null && user!.tanggalLahir!.isNotEmpty) {
+      _birthDate = user.tanggalLahir!;
+    }
+    if (user?.jenisKelamin != null && user!.jenisKelamin!.isNotEmpty) {
+      _gender = user.jenisKelamin!;
+    }
     return user;
   }
 
@@ -122,6 +128,10 @@ class _DetailProfilViewState extends State<DetailProfilView> {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'nama': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
+        'tanggal_lahir': _birthDate == 'Pilih tanggal lahir'
+            ? null
+            : _birthDate,
+        'jenis_kelamin': _gender == 'Pilih jenis kelamin' ? null : _gender,
         ...?photoUrl == null
             ? null
             : <String, String>{'foto_profil_path': photoUrl},

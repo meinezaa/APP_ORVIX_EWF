@@ -40,10 +40,7 @@ class _PengaturanViewState extends State<PengaturanView> {
   }
 
   void _showFaq() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const FaqView()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqView()));
   }
 
   @override
@@ -148,20 +145,7 @@ class _PengaturanViewState extends State<PengaturanView> {
           child: SizedBox(
             width: 132,
             height: 132,
-            child: !kIsWeb && photoPath != null && photoPath.isNotEmpty
-                ? Image.file(File(photoPath), fit: BoxFit.cover)
-                : Container(
-                    color: const Color(0xFF192D4B),
-                    alignment: Alignment.center,
-                    child: Text(
-                      name.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 48,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+            child: _buildAvatarImage(photoPath, name),
           ),
         ),
         const SizedBox(height: 18),
@@ -174,6 +158,41 @@ class _PengaturanViewState extends State<PengaturanView> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAvatarImage(String? photoPath, String name) {
+    if (photoPath != null && photoPath.startsWith('http')) {
+      return Image.network(
+        photoPath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildInitials(name),
+      );
+    }
+
+    if (!kIsWeb && photoPath != null && photoPath.isNotEmpty) {
+      return Image.file(
+        File(photoPath),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildInitials(name),
+      );
+    }
+
+    return _buildInitials(name);
+  }
+
+  Widget _buildInitials(String name) {
+    return Container(
+      color: const Color(0xFF192D4B),
+      alignment: Alignment.center,
+      child: Text(
+        name.substring(0, 1).toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 48,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 

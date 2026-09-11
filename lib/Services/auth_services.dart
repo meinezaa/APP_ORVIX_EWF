@@ -34,7 +34,10 @@ class AuthService {
       );
 
       // Simpan ke Firestore menggunakan .toMap()
-      await _firestore.collection('users').doc(uid).set(newUser.toMap());
+      await _firestore.collection('users').doc(uid).set({
+        ...newUser.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       return null;
     } on FirebaseAuthException catch (e) {
@@ -77,6 +80,7 @@ class AuthService {
         phone: authUser.phoneNumber ?? '',
         role: 'staff',
         status: 'active',
+        createdAt: DateTime.now(),
       );
       await _firestore
           .collection('users')

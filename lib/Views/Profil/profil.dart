@@ -99,7 +99,11 @@ class _ProfileViewState extends State<ProfileView> {
         .snapshots()
         .map((snapshot) {
           final data = snapshot.data();
-          return data == null ? null : UserModel.fromMap(data);
+          if (data == null) return null;
+          if (data['createdAt'] == null && user.metadata.creationTime != null) {
+            data['createdAt'] = user.metadata.creationTime!.toIso8601String();
+          }
+          return UserModel.fromMap(data);
         });
   }
 
@@ -209,7 +213,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        _monthYear(DateTime.now()),
+                        _monthYear(user?.createdAt ?? DateTime.now()),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -528,7 +532,8 @@ class _ProfileViewState extends State<ProfileView> {
         });
   }
 
-  String _monthYear(DateTime date) => '${_monthName(date.month)} ${date.year}';
+  String _monthYear(DateTime date) =>
+      '${date.day} ${_monthName(date.month)} ${date.year}';
   String _monthName(int month) => const [
     'Januari',
     'Februari',
@@ -550,6 +555,7 @@ class AppUsageTracker {
 
   static void start() {
     if (_timer != null) return;
+    _recordMinute();
     _timer = Timer.periodic(const Duration(minutes: 1), (_) => _recordMinute());
   }
 

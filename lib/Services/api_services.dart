@@ -75,6 +75,45 @@ class ApiService {
     }
   }
 
+  static Future<double> getTradingViewOpen(String category) async {
+    final normalizedCategory = normalizeCategoryName(category);
+    final ticker = normalizedCategory == 'LGD' ? 'OANDA:XAUUSD' : 'TVC:HSI';
+
+    final response = await http
+        .post(
+          Uri.parse('https://scanner.tradingview.com/global/scan'),
+          headers: const {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'symbols': {
+              'tickers': [ticker],
+              'query': {'types': []},
+            },
+            'columns': ['open'],
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'TradingView mengembalikan status ${response.statusCode}',
+      );
+    }
+
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = payload['data'];
+    if (data is! List || data.isEmpty) {
+      throw Exception('Harga real-time TradingView tidak tersedia');
+    }
+
+    final row = data.first as Map<String, dynamic>;
+    final open = parseNumber((row['d'] as List?)?.first);
+    if (open <= 0) throw Exception('Nilai open TradingView tidak valid');
+    return open;
+  }
+
   static List<GoldHistory> collapseDuplicateDates(List<GoldHistory> rows) {
     final byDate = <String, GoldHistory>{};
 

@@ -29,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _selectedNavIndex = widget.initialIndex;
+    AppUsageTracker.start();
     _pages = [
       HomeView(
         onViewAllHistory: () => _selectNavIndex(2),
@@ -39,6 +40,12 @@ class _MainScreenState extends State<MainScreen> {
       const HistoryScreen(),
       const ProfileView(),
     ];
+  }
+
+  @override
+  void dispose() {
+    AppUsageTracker.stop();
+    super.dispose();
   }
 
   void _openNotifications() {
