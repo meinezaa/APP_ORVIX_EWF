@@ -9,6 +9,7 @@ import '../../Models/users_model.dart';
 import 'notifikasi.dart';
 import 'ganti_password.dart';
 import 'tentang_aplikasi.dart';
+import 'faq.dart';
 
 class PengaturanView extends StatefulWidget {
   const PengaturanView({super.key});
@@ -39,20 +40,9 @@ class _PengaturanViewState extends State<PengaturanView> {
   }
 
   void _showFaq() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('FAQ'),
-        content: const Text(
-          'Gunakan menu Calculate untuk melakukan perhitungan. Semua hasil perhitungan tersimpan di menu History.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const FaqView()),
     );
   }
 
