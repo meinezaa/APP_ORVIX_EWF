@@ -337,7 +337,7 @@ class _FaqViewState extends State<FaqView> {
 				child: SizedBox(
 					width: 40,
 					height: 40,
-					child: Icon(icon, color: _ink, size: 24),
+					child: Icon(icon, color: _orange, size: 24),
 				),
 			),
 		);
