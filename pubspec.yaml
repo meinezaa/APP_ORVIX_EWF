@@ -42,7 +42,8 @@ dependencies:
   firebase_auth: ^6.5.7
   cloud_firestore: ^6.8.0
   image_picker: ^1.1.2
-
+  cloudinary_public: ^0.23.1
+  app_links: ^6.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

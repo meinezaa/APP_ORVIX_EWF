@@ -38,6 +38,7 @@ class _HomeViewState extends State<HomeView> {
   final int _itemsPerPage = 8;
   String _selectedCategory = 'LGD';
   String _userName = 'Pengguna';
+  String? _userPhotoPath;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
 
   @override
@@ -63,10 +64,14 @@ class _HomeViewState extends State<HomeView> {
         .listen((snapshot) {
           if (!mounted) return;
           final savedName = snapshot.data()?['nama']?.toString().trim();
+          final savedPhotoPath =
+              snapshot.data()?['foto_profil_path']?.toString() ??
+              snapshot.data()?['photoUrl']?.toString();
           setState(() {
             _userName = savedName?.isNotEmpty == true
                 ? savedName!
                 : fallbackName;
+            _userPhotoPath = savedPhotoPath;
           });
         });
   }
@@ -376,10 +381,7 @@ class _HomeViewState extends State<HomeView> {
                                     child: InkWell(
                                       customBorder: const CircleBorder(),
                                       onTap: widget.onViewProfile,
-                                      child: const Icon(
-                                        Icons.person,
-                                        color: Color(0xFFD36A28),
-                                      ),
+                                      child: _buildProfilePhoto(),
                                     ),
                                   ),
                                 ),
@@ -830,6 +832,24 @@ class _HomeViewState extends State<HomeView> {
         ),
       ),
     );
+  }
+
+  Widget _buildProfilePhoto() {
+    final photoPath = _userPhotoPath;
+    if (photoPath != null && photoPath.startsWith('http')) {
+      return ClipOval(
+        child: Image.network(
+          photoPath,
+          width: 45,
+          height: 45,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.person, color: Color(0xFFD36A28)),
+        ),
+      );
+    }
+
+    return const Icon(Icons.person, color: Color(0xFFD36A28));
   }
 
   // WIDGET HELPER

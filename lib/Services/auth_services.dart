@@ -65,9 +65,24 @@ class AuthService {
       if (userDoc.exists) {
         // Konversi Map dari Firestore langsung ke UserModel
         return UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
-      } else {
-        throw "Data pengguna tidak ditemukan di database.";
       }
+
+      // Auth berhasil, tetapi profil Firestore belum ada. Buat profil dasar
+      // agar pengguna tetap dapat masuk setelah reset password.
+      final authUser = userCred.user!;
+      final fallbackUser = UserModel(
+        userId: uid,
+        nama: authUser.displayName ?? email.trim().split('@').first,
+        email: authUser.email ?? email.trim(),
+        phone: authUser.phoneNumber ?? '',
+        role: 'staff',
+        status: 'active',
+      );
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .set(fallbackUser.toMap(), SetOptions(merge: true));
+      return fallbackUser;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
@@ -102,7 +117,17 @@ class AuthService {
     if (normalizedEmail.isEmpty) {
       throw FirebaseAuthException(code: 'invalid-email');
     }
-    await _auth.sendPasswordResetEmail(email: normalizedEmail);
+    await _auth.sendPasswordResetEmail(
+      email: normalizedEmail,
+      actionCodeSettings: ActionCodeSettings(
+        // URL HTTPS ini diterima Firebase sebagai continue URL.
+        url: 'https://database-app-orvix-ewf.firebaseapp.com/reset-password',
+        handleCodeInApp: true,
+        androidPackageName: 'com.example.app_pt_ewf',
+        androidInstallApp: true,
+        androidMinimumVersion: '21',
+      ),
+    );
   }
 
   Future<void> confirmPasswordReset({

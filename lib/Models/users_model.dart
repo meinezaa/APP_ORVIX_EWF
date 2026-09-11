@@ -26,7 +26,8 @@ class UserModel {
       phone: map['phone'] ?? '',
       role: map['role'] ?? 'staff',
       status: map['status'] ?? 'active',
-      fotoProfilPath: map['foto_profil_path']?.toString(),
+      fotoProfilPath:
+          map['foto_profil_path']?.toString() ?? map['photoUrl']?.toString(),
     );
   }
 

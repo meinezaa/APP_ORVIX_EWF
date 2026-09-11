@@ -172,19 +172,7 @@ class _ProfileViewState extends State<ProfileView> {
               child: SizedBox(
                 width: 70,
                 height: 70,
-                child: !kIsWeb && photoPath != null && photoPath.isNotEmpty
-                    ? Image.file(File(photoPath), fit: BoxFit.cover)
-                    : Container(
-                        color: const Color(0xFF192D4B),
-                        alignment: Alignment.center,
-                        child: Text(
-                          name.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                          ),
-                        ),
-                      ),
+                child: _buildProfilePhoto(photoPath, name),
               ),
             ),
             const SizedBox(width: 18),
@@ -234,6 +222,37 @@ class _ProfileViewState extends State<ProfileView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfilePhoto(String? photoPath, String name) {
+    if (photoPath != null && photoPath.startsWith('http')) {
+      return Image.network(
+        photoPath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildInitials(name),
+      );
+    }
+
+    if (!kIsWeb && photoPath != null && photoPath.isNotEmpty) {
+      return Image.file(
+        File(photoPath),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildInitials(name),
+      );
+    }
+
+    return _buildInitials(name);
+  }
+
+  Widget _buildInitials(String name) {
+    return Container(
+      color: const Color(0xFF192D4B),
+      alignment: Alignment.center,
+      child: Text(
+        name.substring(0, 1).toUpperCase(),
+        style: const TextStyle(color: Colors.white, fontSize: 28),
       ),
     );
   }

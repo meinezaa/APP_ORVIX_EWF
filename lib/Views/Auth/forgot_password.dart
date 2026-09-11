@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../Services/auth_services.dart';
@@ -19,6 +21,8 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
   bool _isSending = false;
   String? _message;
   bool _sentSuccessfully = false;
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
 
   @override
   void initState() {
@@ -27,7 +31,7 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
   }
 
   Future<void> _sendResetEmail() async {
-    if (_isSending) return;
+    if (_isSending || _cooldownSeconds > 0) return;
 
     setState(() {
       _isSending = true;
@@ -44,6 +48,7 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
         _message =
             'Link reset password sudah dikirim. Periksa inbox atau folder spam email Anda.';
       });
+      _startCooldown();
     } on FirebaseAuthException catch (error) {
       debugPrint(
         'Password reset Firebase error: ${error.code} - ${error.message}',
@@ -53,6 +58,7 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
         _isSending = false;
         _message = _authErrorMessage(error.code);
       });
+      _startCooldown();
     } catch (error) {
       debugPrint('Password reset unexpected error: $error');
       if (!mounted) return;
@@ -60,7 +66,27 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
         _isSending = false;
         _message = 'Email reset password gagal dikirim. Silakan coba lagi.';
       });
+      _startCooldown();
     }
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownSeconds = 60);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _cooldownSeconds--);
+      if (_cooldownSeconds <= 0) timer.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
   }
 
   String _authErrorMessage(String code) {
@@ -70,11 +96,14 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
       case 'user-not-found':
         return 'Email tersebut belum terdaftar.';
       case 'too-many-requests':
-        return 'Terlalu banyak permintaan. Coba lagi beberapa saat.';
+        return 'Terlalu banyak permintaan dari Firebase. Tunggu beberapa menit sebelum mencoba lagi.';
       case 'operation-not-allowed':
         return 'Login Email/Password belum diaktifkan di Firebase Console.';
       case 'network-request-failed':
         return 'Tidak ada koneksi internet. Periksa koneksi lalu coba lagi.';
+      case 'invalid-continue-uri':
+      case 'unauthorized-continue-uri':
+        return 'Konfigurasi link reset Firebase belum diizinkan. Periksa Authorized domains.';
       default:
         return 'Email reset password gagal dikirim. Silakan coba lagi.';
     }
@@ -229,7 +258,9 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _isSending ? null : _sendResetEmail,
+                            onPressed: _isSending || _cooldownSeconds > 0
+                              ? null
+                              : _sendResetEmail,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFDE631B),
                             elevation: 0,
@@ -238,7 +269,11 @@ class _ForgetpasswordScreenState extends State<ForgetpasswordScreen> {
                             ),
                           ),
                           child: Text(
-                            _isSending ? 'Mengirim...' : 'Kirim Ulang Email',
+                            _isSending
+                              ? 'Mengirim...'
+                              : _cooldownSeconds > 0
+                              ? 'Tunggu ${_cooldownSeconds}s'
+                              : 'Kirim Ulang Email',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
