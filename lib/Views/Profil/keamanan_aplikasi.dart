@@ -888,7 +888,7 @@ const _securityPages = [
         _SecurityCardData(
           title: 'Authentication',
           status: true,
-          description: 'MFA & Verifikasi OTP aktif.',
+          description: 'Verifikasi melalui link email reset password aktif.',
         ),
         _SecurityCardData(
           title: 'Role Authorization',
