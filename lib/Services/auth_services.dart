@@ -67,7 +67,9 @@ class AuthService {
 
       if (userDoc.exists) {
         // Konversi Map dari Firestore langsung ke UserModel
-        return UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+        final user = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+        await recordLogin(user: user);
+        return user;
       }
 
       // Auth berhasil, tetapi profil Firestore belum ada. Buat profil dasar
@@ -86,6 +88,7 @@ class AuthService {
           .collection('users')
           .doc(uid)
           .set(fallbackUser.toMap(), SetOptions(merge: true));
+      await recordLogin(user: fallbackUser);
       return fallbackUser;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -109,6 +112,36 @@ class AuthService {
     } catch (e) {
       return null;
     }
+  }
+
+  // Catat login agar admin dapat melihat riwayat sesi di dashboard.
+  // Kegagalan pencatatan tidak boleh menghalangi pengguna masuk aplikasi.
+  Future<void> recordLogin({UserModel? user}) async {
+    final authUser = currentUser;
+    if (authUser == null) return;
+
+    try {
+      final profile = user ?? await getCurrentUserData();
+      final loginName = profile?.nama.isNotEmpty == true
+          ? profile!.nama
+          : (authUser.displayName ??
+                authUser.email?.split('@').first ??
+                'Pengguna');
+
+      await _firestore
+          .collection('users')
+          .doc(authUser.uid)
+          .collection('login_history')
+          .add({
+            'user_id': authUser.uid,
+            'nama': loginName,
+            'name': loginName,
+            'role': profile?.role ?? 'staff',
+            'email': authUser.email ?? profile?.email ?? '',
+            'logged_in_at': FieldValue.serverTimestamp(),
+            'loggedInAt': FieldValue.serverTimestamp(),
+          });
+    } catch (_) {}
   }
 
   // 4. LOGOUT

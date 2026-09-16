@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../main_screen.dart';
+import '../Home/beranda_admin.dart';
+import '../../Services/auth_services.dart';
 import 'onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
 
 class SplashScreen extends StatefulWidget {
@@ -66,9 +68,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     // 3. Pertahankan sesi login jika pengguna masih terautentikasi.
     if (mounted) {
-      final nextPage = FirebaseAuth.instance.currentUser != null
-          ? const MainScreen()
-          : const OnboardingScreen();
+      final hasActiveSession = FirebaseAuth.instance.currentUser != null;
+      final user = hasActiveSession
+          ? await AuthService().getCurrentUserData()
+          : null;
+      if (!mounted) return;
+
+      final nextPage = !hasActiveSession
+          ? const OnboardingScreen()
+          : user?.role.trim().toLowerCase() == 'admin'
+          ? const DashboardScreen()
+          : const MainScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 850),

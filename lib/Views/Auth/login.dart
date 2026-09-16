@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../main_screen.dart';
+import '../Home/beranda_admin.dart';
 import '../../Models/users_model.dart';
 import '../../Services/auth_services.dart';
 import 'register.dart';
@@ -55,11 +56,15 @@ class _LoginViewState extends State<LoginView>
         );
   }
 
-  // Fungsi navigasi ke shell utama aplikasi
-  void _navigateToHome() {
+  // Arahkan pengguna berdasarkan role yang tersimpan di Firestore.
+  void _navigateAfterLogin(UserModel? user) {
+    final isAdmin = user?.role.trim().toLowerCase() == 'admin';
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MainScreen()),
+      MaterialPageRoute(
+        builder: (context) =>
+            isAdmin ? const DashboardScreen() : const MainScreen(),
+      ),
     );
   }
 
@@ -120,7 +125,7 @@ class _LoginViewState extends State<LoginView>
             duration: const Duration(seconds: 1),
           ),
         );
-        _navigateToHome();
+        _navigateAfterLogin(user);
       }
     } catch (e) {
       if (!mounted) return;
@@ -148,6 +153,8 @@ class _LoginViewState extends State<LoginView>
           idToken: googleAuth.idToken,
         );
         await FirebaseAuth.instance.signInWithCredential(credential);
+        final user = await _authService.getCurrentUserData();
+        await _authService.recordLogin(user: user);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -158,8 +165,7 @@ class _LoginViewState extends State<LoginView>
           ),
         );
 
-        // Pindah ke HomeView setelah berhasil Login Google
-        _navigateToHome();
+        _navigateAfterLogin(user);
       }
     } catch (error) {
       if (mounted) {

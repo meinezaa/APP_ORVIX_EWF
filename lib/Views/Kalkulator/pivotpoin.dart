@@ -227,6 +227,7 @@ class _PivotPointViewState extends State<PivotPointView> {
     try {
       await HistoryService.saveCalculation(
         jenisKalkulator: 'Pivot Point',
+        category: _selectedCategory,
         hasil: _pp,
         open: open,
         high: high,

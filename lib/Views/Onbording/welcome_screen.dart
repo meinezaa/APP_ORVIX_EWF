@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../Auth/login.dart'; // Import halaman Login
 import '../main_screen.dart';
+import '../Home/beranda_admin.dart';
+import '../../Services/auth_services.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -26,6 +28,9 @@ class WelcomeView extends StatelessWidget {
           idToken: googleAuth.idToken,
         );
         await FirebaseAuth.instance.signInWithCredential(credential);
+        final authService = AuthService();
+        final user = await authService.getCurrentUserData();
+        await authService.recordLogin(user: user);
         if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -36,7 +41,11 @@ class WelcomeView extends StatelessWidget {
         );
 
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (context) => const MainScreen()),
+          MaterialPageRoute<void>(
+            builder: (context) => user?.role.trim().toLowerCase() == 'admin'
+                ? const DashboardScreen()
+                : const MainScreen(),
+          ),
         );
       }
     } catch (error) {

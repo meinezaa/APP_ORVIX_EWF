@@ -32,6 +32,7 @@ class HistoryService {
   static Future<void> saveCalculation({
     required String jenisKalkulator,
     required double hasil,
+    String? category,
     double? open,
     double? high,
     double? low,
@@ -50,11 +51,31 @@ class HistoryService {
     final collection = _userHistory;
     if (collection == null) return;
 
+    final currentUser = _auth.currentUser;
+    String userName = currentUser?.displayName ?? '';
+    String role = 'staff';
+    String? email = currentUser?.email;
+
+    if (currentUser != null) {
+      final profile = await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      final data = profile.data();
+      userName = (data?['nama'] ?? currentUser.displayName ?? '').toString();
+      role = (data?['role'] ?? 'staff').toString();
+      email = (data?['email'] ?? currentUser.email)?.toString();
+    }
+
     final history = HistoryModel(
       id: '',
       jenisKalkulator: jenisKalkulator,
       hasil: hasil,
       createdAt: DateTime.now(),
+      userId: currentUser?.uid ?? '',
+      userName: userName,
+      role: role,
+      email: email,
       open: open,
       high: high,
       low: low,
@@ -69,7 +90,15 @@ class HistoryService {
       hargaJualPerGram: hargaJualPerGram,
       selisihPerGram: selisihPerGram,
       jumlahEmas: jumlahEmas,
+      kategori: category,
     );
-    await collection.add(history.toMap());
+
+    final payload = history.toMap();
+    payload['jenisKalkulator'] = jenisKalkulator;
+    payload['createdAt'] = Timestamp.fromDate(history.createdAt);
+    payload['category'] = category;
+    payload['kategori'] = category;
+
+    await collection.add(payload);
   }
 }
