@@ -1,5 +1,11 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import '../Models/users_model.dart'; // Import UserModel
 
 class AuthService {
@@ -127,6 +133,7 @@ class AuthService {
           : (authUser.displayName ??
                 authUser.email?.split('@').first ??
                 'Pengguna');
+      final metadata = await _loginMetadata();
 
       await _firestore
           .collection('users')
@@ -138,10 +145,60 @@ class AuthService {
             'name': loginName,
             'role': profile?.role ?? 'staff',
             'email': authUser.email ?? profile?.email ?? '',
+            'foto_profil_path': profile?.fotoProfilPath,
             'logged_in_at': FieldValue.serverTimestamp(),
             'loggedInAt': FieldValue.serverTimestamp(),
+            ...metadata,
           });
     } catch (_) {}
+  }
+
+  Future<Map<String, String>> _loginMetadata() async {
+    var device = 'Tidak tersedia';
+    var platform = 'Tidak tersedia';
+    var appVersion = 'Tidak tersedia';
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      appVersion = 'ORVIX App v${packageInfo.version}';
+      final deviceInfo = DeviceInfoPlugin();
+
+      if (kIsWeb) {
+        final web = await deviceInfo.webBrowserInfo;
+        device = web.browserName.name;
+        platform = web.platform ?? 'Web';
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        final android = await deviceInfo.androidInfo;
+        device = '${android.manufacturer} ${android.model}'.trim();
+        platform = 'Android ${android.version.release}';
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final ios = await deviceInfo.iosInfo;
+        device = ios.name;
+        platform = 'iOS ${ios.systemVersion}';
+      } else {
+        platform = defaultTargetPlatform.name;
+      }
+    } catch (_) {}
+
+    var ipAddress = 'Tidak tersedia';
+    try {
+      final response = await http
+          .get(Uri.parse('https://api.ipify.org?format=json'))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        ipAddress = body['ip']?.toString() ?? ipAddress;
+      }
+    } catch (_) {}
+
+    return {
+      'device': device,
+      'device_name': device,
+      'platform': platform,
+      'browser': '$platform / $appVersion',
+      'app_version': appVersion,
+      'ip_address': ipAddress,
+    };
   }
 
   // 4. LOGOUT

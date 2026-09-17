@@ -33,6 +33,15 @@ class LoginDetailScreen extends StatelessWidget {
       .map((part) => part[0].toUpperCase())
       .join();
 
+  String? _validPhotoUrl(Object? value) {
+    final url = value?.toString().trim();
+    if (url == null || url.isEmpty) return null;
+    final uri = Uri.tryParse(url);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https')
+        ? url
+        : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayData = loginData ?? const <String, dynamic>{};
@@ -59,6 +68,13 @@ class LoginDetailScreen extends StatelessWidget {
       'metode_verifikasi',
       'method',
     ], 'Email / Password');
+    final userId = _text(displayData, [
+      'userId',
+      'user_id',
+    ], _text(raw, ['userId', 'user_id'], ''));
+    final savedPhoto = _validPhotoUrl(
+      _value(raw, ['foto_profil_path', 'photoUrl']),
+    );
     final duration = date == null
         ? 'Tidak tersedia'
         : _duration(date, DateTime.now());
@@ -73,7 +89,7 @@ class LoginDetailScreen extends StatelessWidget {
             children: [
               _header(context),
               const SizedBox(height: 20),
-              _userCard(name, role, date, duration),
+              _userCard(name, role, date, duration, userId, savedPhoto),
               const SizedBox(height: 16),
               _infoCard('INFORMASI SESI LOGIN', [
                 _infoRow(
@@ -97,7 +113,7 @@ class LoginDetailScreen extends StatelessWidget {
                 _infoRow(Icons.location_on_outlined, 'Alamat IP', ip),
               ]),
               const SizedBox(height: 16),
-              _activityCard(date),
+              _activitySection(date, displayData),
             ],
           ),
         ),
@@ -141,7 +157,14 @@ class LoginDetailScreen extends StatelessWidget {
     ],
   );
 
-  Widget _userCard(String name, String role, DateTime? date, String duration) {
+  Widget _userCard(
+    String name,
+    String role,
+    DateTime? date,
+    String duration,
+    String userId,
+    String? savedPhoto,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -152,16 +175,7 @@ class LoginDetailScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: const Color(0xFFFDE8E0),
-                child: Text(
-                  _initials(name),
-                  style: const TextStyle(
-                    color: Color(0xFFD97706),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              _profileAvatar(userId, savedPhoto, name),
               const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,6 +209,59 @@ class LoginDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _profileAvatar(String userId, String? savedPhoto, String name) {
+    if (savedPhoto != null || userId.isEmpty) {
+      return _avatarContent(savedPhoto, name);
+    }
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        final photo = _validPhotoUrl(
+          data?['foto_profil_path'] ?? data?['photoUrl'],
+        );
+        return _avatarContent(photo, name);
+      },
+    );
+  }
+
+  Widget _avatarContent(String? photoUrl, String name) {
+    final initials = _initials(name).isEmpty ? 'P' : _initials(name);
+    return Container(
+      width: 48,
+      height: 48,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDE8E0),
+        shape: BoxShape.circle,
+      ),
+      child: photoUrl == null
+          ? Center(
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: Color(0xFFD97706),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : Image.network(
+              photoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Center(
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Color(0xFFD97706),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 
@@ -271,7 +338,51 @@ class LoginDetailScreen extends StatelessWidget {
     ),
   );
 
-  Widget _activityCard(DateTime? date) => Container(
+  Widget _activitySection(DateTime? date, Map<String, dynamic> displayData) {
+    final userId = displayData['userId']?.toString();
+    final documentId = displayData['documentId']?.toString();
+    if (userId == null ||
+        userId.isEmpty ||
+        documentId == null ||
+        documentId.isEmpty) {
+      return _activityCard(date, const []);
+    }
+
+    final stream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('login_history')
+        .doc(documentId)
+        .collection('activities')
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final activities = [...?snapshot.data?.docs];
+        activities.sort((first, second) {
+          final firstDate = _activityDate(first.data());
+          final secondDate = _activityDate(second.data());
+          return (firstDate ?? DateTime(1970)).compareTo(
+            secondDate ?? DateTime(1970),
+          );
+        });
+        return _activityCard(date, activities);
+      },
+    );
+  }
+
+  DateTime? _activityDate(Map<String, dynamic> data) {
+    final value = data['created_at'] ?? data['createdAt'];
+    if (value is Timestamp) return value.toDate().toLocal();
+    if (value is DateTime) return value.toLocal();
+    return null;
+  }
+
+  Widget _activityCard(
+    DateTime? date,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> activities,
+  ) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -280,14 +391,27 @@ class LoginDetailScreen extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'AKTIVITAS DALAM SESI INI',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Colors.black45,
-            letterSpacing: .5,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'AKTIVITAS DALAM SESI INI',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.black45,
+                letterSpacing: .5,
+              ),
+            ),
+            Text(
+              '${activities.length + 1} Log Tercatat',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFEE6C3A),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         _activity(
@@ -296,32 +420,58 @@ class LoginDetailScreen extends StatelessWidget {
               ? 'Waktu login tidak tersedia'
               : DateFormat('HH:mm WIB').format(date),
         ),
+        ...activities.map((doc) {
+          final data = doc.data();
+          final activityDate = _activityDate(data);
+          return _activity(
+            data['title']?.toString() ?? 'Aktivitas Kalkulasi',
+            activityDate == null
+                ? 'Waktu belum tersedia'
+                : DateFormat('HH:mm WIB').format(activityDate),
+            subtitle: data['subtitle']?.toString(),
+          );
+        }),
       ],
     ),
   );
 
-  Widget _activity(String title, String time) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Icon(Icons.circle, size: 10, color: Color(0xFFEE6C3A)),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+  Widget _activity(String title, String time, {String? subtitle}) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.circle, size: 10, color: Color(0xFFEE6C3A)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Text(
+                    time,
+                    style: const TextStyle(color: Colors.black45, fontSize: 11),
+                  ),
+                ],
               ),
-            ),
-            Text(
-              time,
-              style: const TextStyle(color: Colors.black45, fontSize: 11),
-            ),
-          ],
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.black45, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }

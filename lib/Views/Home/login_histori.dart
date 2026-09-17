@@ -129,7 +129,77 @@ class LoginHistoryScreen extends StatelessWidget {
       'timestamp': date,
       'rawData': data,
       'documentId': document.id,
+      'userId':
+          data['user_id']?.toString() ?? document.reference.parent.parent?.id,
+      'photoUrl':
+          data['foto_profil_path']?.toString() ?? data['photoUrl']?.toString(),
     };
+  }
+
+  String? _photoUrl(Map<String, dynamic> data) {
+    final value = data['photoUrl']?.toString().trim();
+    if (value == null || value.isEmpty) return null;
+    final uri = Uri.tryParse(value);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https')
+        ? value
+        : null;
+  }
+
+  Widget _profileAvatar(Map<String, dynamic> log) {
+    final existingPhoto = _photoUrl(log);
+    final userId = log['userId']?.toString();
+    if (existingPhoto != null || userId == null || userId.isEmpty) {
+      return _initialsAvatar(log, existingPhoto);
+    }
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        final photo = data == null
+            ? null
+            : _photoUrl({
+                'photoUrl':
+                    data['foto_profil_path']?.toString() ??
+                    data['photoUrl']?.toString(),
+              });
+        return _initialsAvatar(log, photo);
+      },
+    );
+  }
+
+  Widget _initialsAvatar(Map<String, dynamic> log, String? photoUrl) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(color: log['avatarBg'], shape: BoxShape.circle),
+      clipBehavior: Clip.antiAlias,
+      child: photoUrl == null
+          ? Center(
+              child: Text(
+                log['initials'],
+                style: TextStyle(
+                  color: log['avatarTextColor'],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            )
+          : Image.network(
+              photoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Center(
+                child: Text(
+                  log['initials'],
+                  style: TextStyle(
+                    color: log['avatarTextColor'],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+    );
   }
 
   // --- HEADER SECTION ---
@@ -145,7 +215,7 @@ class LoginHistoryScreen extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -200,7 +270,7 @@ class LoginHistoryScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -286,7 +356,7 @@ class LoginHistoryScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: const Color(0xFFE5E7EB).withOpacity(0.6),
+            color: const Color(0xFFE5E7EB).withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Text(
@@ -320,7 +390,7 @@ class LoginHistoryScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.015),
+              color: Colors.black.withValues(alpha: 0.015),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -328,25 +398,7 @@ class LoginHistoryScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Initials Avatar
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: log['avatarBg'],
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  log['initials'],
-                  style: TextStyle(
-                    color: log['avatarTextColor'],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
+            _profileAvatar(log),
             const SizedBox(width: 12),
 
             // Content Details

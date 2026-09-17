@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_histori.dart';
 import 'gold_detail.dart';
+import 'nest_detail.dart';
 import 'pp_detailLGD.dart';
 
 void main() {
@@ -743,12 +744,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final timestamp = data['created_at'];
           final date = timestamp is Timestamp ? timestamp.toDate() : null;
 
-          final title = jenis == 'Emas Fisik' ? 'Emas Fisik' : 'Pivot Point';
-          final tagText = jenis == 'Emas Fisik' ? 'Gold' : 'Chart';
-          final tagColor = jenis == 'Emas Fisik'
+          final isGold = jenis == 'Emas Fisik';
+          final isPivot = jenis == 'Pivot Point';
+          final title = isGold
+              ? 'Emas Fisik'
+              : isPivot
+              ? 'Pivot Point'
+              : 'NEST';
+          final tagText = isGold
+              ? 'Gold'
+              : isPivot
+              ? 'Chart'
+              : 'Nest';
+          final tagColor = isGold
               ? const Color(0xFFFEF3C7)
               : const Color(0xFFEFF6FF);
-          final tagTextColor = jenis == 'Emas Fisik'
+          final tagTextColor = isGold
               ? const Color(0xFFD97706)
               : const Color(0xFF2563EB);
 
@@ -775,27 +786,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     builder: (context) => const PivotPointListScreen(),
                   ),
                 );
+              } else if (jenis.toLowerCase() == 'nest') {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const NestDetailScreen(),
+                  ),
+                );
               }
             },
             'iconWidget': Container(
               width: jenis == 'Emas Fisik' ? 36 : 40,
               height: jenis == 'Emas Fisik' ? 36 : 40,
               decoration: BoxDecoration(
-                color: jenis == 'Emas Fisik'
+                color: isGold
                     ? const Color(0xFFEAB308)
-                    : const Color(0xFF2563EB),
+                    : isPivot
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFF16A34A),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                jenis == 'Emas Fisik' ? Icons.pie_chart_sharp : Icons.bar_chart,
+                isGold
+                    ? Icons.pie_chart_sharp
+                    : isPivot
+                    ? Icons.bar_chart
+                    : Icons.calculate_rounded,
                 color: Colors.white,
-                size: jenis == 'Emas Fisik' ? 20 : 22,
+                size: isGold ? 20 : 22,
               ),
             ),
-            'tagTexts': jenis == 'Pivot Point' ? const ['LGD', 'HSI'] : null,
-            'tagBorderColor': jenis == 'Pivot Point'
-                ? const Color(0xFFBFDBFE)
-                : null,
+            'tagTexts': isPivot ? const ['LGD', 'HSI'] : null,
+            'tagBorderColor': isPivot ? const Color(0xFFBFDBFE) : null,
           };
         }).toList();
 
@@ -972,55 +993,89 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- 5. JENIS PERHITUNGAN ---
   Widget _buildCalculationTypesCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          _buildProgressRow(
-            iconWidget: Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAB308),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.pie_chart_sharp,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-            title: 'Emas Fisik',
-            count: '156',
-            percentage: '63%',
-            progress: 0.63,
-            progressColor: const Color(0xFFEE6C3A),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collectionGroup('calculation_history')
+          .snapshots(),
+      builder: (context, snapshot) {
+        final docs =
+            snapshot.data?.docs ??
+            const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        int countFor(String type) => docs.where((doc) {
+          final data = doc.data();
+          return (data['jenis_kalkulator'] ?? data['jenisKalkulator'] ?? '')
+                  .toString()
+                  .toLowerCase() ==
+              type.toLowerCase();
+        }).length;
+
+        final counts = [
+          countFor('Emas Fisik'),
+          countFor('Pivot Point'),
+          countFor('NEST'),
+        ];
+        final total = counts.fold<int>(0, (totalCount, itemCount) {
+          return totalCount + itemCount;
+        });
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(height: 16),
-          _buildProgressRow(
-            iconWidget: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                borderRadius: BorderRadius.circular(14),
+          child: Column(
+            children: [
+              _buildProgressRow(
+                iconWidget: _typeIcon(
+                  Icons.pie_chart_sharp,
+                  const Color(0xFFEAB308),
+                ),
+                title: 'Emas Fisik',
+                count: '${counts[0]}',
+                percentage: _percentage(counts[0], total),
+                progress: _progress(counts[0], total),
+                progressColor: const Color(0xFFEE6C3A),
               ),
-              child: const Icon(Icons.bar_chart, color: Colors.white, size: 16),
-            ),
-            title: 'Pivot Point',
-            count: '92',
-            percentage: '37%',
-            progress: 0.37,
-            progressColor: const Color(0xFF2563EB),
+              const SizedBox(height: 16),
+              _buildProgressRow(
+                iconWidget: _typeIcon(Icons.bar_chart, const Color(0xFF2563EB)),
+                title: 'Pivot Point',
+                count: '${counts[1]}',
+                percentage: _percentage(counts[1], total),
+                progress: _progress(counts[1], total),
+                progressColor: const Color(0xFF2563EB),
+              ),
+              const SizedBox(height: 16),
+              _buildProgressRow(
+                iconWidget: _typeIcon(
+                  Icons.calculate_rounded,
+                  const Color(0xFF16A34A),
+                ),
+                title: 'NEST',
+                count: '${counts[2]}',
+                percentage: _percentage(counts[2], total),
+                progress: _progress(counts[2], total),
+                progressColor: const Color(0xFF16A34A),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+  Widget _typeIcon(IconData icon, Color color) => Container(
+    width: 28,
+    height: 28,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    child: Icon(icon, color: Colors.white, size: 16),
+  );
+
+  double _progress(int count, int total) => total == 0 ? 0 : count / total;
+
+  String _percentage(int count, int total) =>
+      '${(_progress(count, total) * 100).round()}%';
 
   Widget _buildProgressRow({
     required Widget iconWidget,

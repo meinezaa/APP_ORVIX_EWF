@@ -75,42 +75,42 @@ class ApiService {
     }
   }
 
-  static Future<double> getTradingViewOpen(String category) async {
+  /// Reads today's live session open directly from News Maker.
+  static Future<double> getTodayOpenFromNewsMaker(String category) async {
     final normalizedCategory = normalizeCategoryName(category);
-    final ticker = normalizedCategory == 'LGD' ? 'OANDA:XAUUSD' : 'TVC:HSI';
+    final symbol = normalizedCategory == 'LGD' ? 'XUL10' : 'HKK50_BBJ';
+    const rawUrl = 'https://www.newsmaker.id/api/live-quotes';
+    final url = kIsWeb
+        ? Uri.parse('https://corsproxy.io/?${Uri.encodeComponent(rawUrl)}')
+        : Uri.parse(rawUrl);
 
     final response = await http
-        .post(
-          Uri.parse('https://scanner.tradingview.com/global/scan'),
-          headers: const {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'symbols': {
-              'tickers': [ticker],
-              'query': {'types': []},
-            },
-            'columns': ['open'],
-          }),
-        )
+        .get(url, headers: const {'Accept': 'application/json'})
         .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw Exception(
-        'TradingView mengembalikan status ${response.statusCode}',
+        'News Maker live-quotes mengembalikan status ${response.statusCode}',
       );
     }
 
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
-    final data = payload['data'];
-    if (data is! List || data.isEmpty) {
-      throw Exception('Harga real-time TradingView tidak tersedia');
+    final rows = payload['data'];
+    if (rows is! List) {
+      throw Exception('Open hari ini dari News Maker tidak tersedia');
     }
 
-    final row = data.first as Map<String, dynamic>;
-    final open = parseNumber((row['d'] as List?)?.first);
-    if (open <= 0) throw Exception('Nilai open TradingView tidak valid');
+    final matchingRows = rows.whereType<Map<String, dynamic>>().where(
+      (row) => row['symbol']?.toString().toUpperCase() == symbol,
+    );
+    if (matchingRows.isEmpty) {
+      throw Exception(
+        'Simbol $symbol tidak tersedia di News Maker live-quotes',
+      );
+    }
+
+    final open = parseNumber(matchingRows.first['open']);
+    if (open <= 0) throw Exception('Open hari ini dari News Maker tidak valid');
     return open;
   }
 

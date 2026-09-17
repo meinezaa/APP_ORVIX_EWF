@@ -4,10 +4,18 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:app_pt_ewf/Views/Kalkulator/detail_emasfisik.dart';
 import '../../Services/history_service.dart';
+import '../main_screen.dart';
 import 'pivotpoin.dart';
 
 class KalkulatorEmasFisikView extends StatefulWidget {
-  const KalkulatorEmasFisikView({super.key});
+  final int initialTab;
+  final bool showBottomNavigation;
+
+  const KalkulatorEmasFisikView({
+    super.key,
+    this.initialTab = 0,
+    this.showBottomNavigation = true,
+  });
 
   @override
   State<KalkulatorEmasFisikView> createState() =>
@@ -15,7 +23,7 @@ class KalkulatorEmasFisikView extends StatefulWidget {
 }
 
 class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
-  int _selectedTab = 0;
+  late int _selectedTab = widget.initialTab;
   bool _isLoadingKurs = false;
 
   final TextEditingController _tozController = TextEditingController(
@@ -194,6 +202,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     const primaryOrange = Color(0xFFD95B14);
 
     return Scaffold(
+      bottomNavigationBar: widget.showBottomNavigation
+          ? _buildBottomNavigationBar()
+          : null,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -299,6 +310,41 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                   color: _selectedTab == 1
                                       ? Colors.white
                                       : primaryOrange,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pushReplacement(
+                            PageRouteBuilder<void>(
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
+                              pageBuilder:
+                                  (context, animation, secondaryAnimation) =>
+                                      const MainScreen(
+                                        initialIndex: 1,
+                                        calculatorTab: 2,
+                                      ),
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(25),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Nest',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: primaryOrange,
                                 ),
                               ),
                             ),
@@ -564,6 +610,95 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    const primaryOrange = Color(0xFFD95B14);
+    const navItems = [
+      (icon: Icons.home_outlined, label: 'Home'),
+      (icon: Icons.calculate_outlined, label: 'Calculate'),
+      (icon: Icons.history_toggle_off, label: 'History'),
+      (icon: Icons.person_outline, label: 'Profil'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: primaryOrange,
+          borderRadius: BorderRadius.circular(35),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List.generate(navItems.length, (index) {
+            final item = navItems[index];
+            final isSelected = index == 1;
+            return Expanded(
+              child: InkWell(
+                onTap: () {
+                  if (index == 1) return;
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MainScreen(initialIndex: index),
+                    ),
+                  );
+                },
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isSelected)
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: primaryOrange, width: 3),
+                        ),
+                        child: Icon(item.icon, color: primaryOrange, size: 26),
+                      )
+                    else
+                      Icon(
+                        item.icon,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        size: 22,
+                      ),
+                    if (!isSelected) const SizedBox(height: 4),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 11,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    if (isSelected)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        width: 14,
+                        height: 2.5,
+                        color: Colors.white,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

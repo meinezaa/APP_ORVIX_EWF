@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
@@ -28,9 +29,11 @@ class _PivotPointViewState extends State<PivotPointView> {
   bool _isLoadingHistorical = false;
   String? _historicalError;
   String _selectedCategory = 'LGD';
+  Timer? _liveOpenTimer;
   double _pp = 0, _r1 = 0, _r2 = 0, _r3 = 0, _r4 = 0;
   double _s1 = 0, _s2 = 0, _s3 = 0, _s4 = 0;
   bool _resultsVisible = true;
+  bool _isExportingPng = false;
   String? _lastSavedPivotInputs;
   final GlobalKey _resultsKey = GlobalKey();
 
@@ -46,15 +49,34 @@ class _PivotPointViewState extends State<PivotPointView> {
       controller.addListener(_calculatePivot);
     }
     _loadYesterdayData();
+    _liveOpenTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _refreshLiveOpen(),
+    );
   }
 
   @override
   void dispose() {
+    _liveOpenTimer?.cancel();
     _openController.dispose();
     _highController.dispose();
     _lowController.dispose();
     _closeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshLiveOpen() async {
+    if (!_isAutoFromYesterday || _isLoadingHistorical || !mounted) return;
+    try {
+      final todayOpen = await ApiService.getTodayOpenFromNewsMaker(
+        _selectedCategory,
+      );
+      if (!mounted || !_isAutoFromYesterday) return;
+      final formattedOpen = _formatNumber(todayOpen);
+      if (_openController.text != formattedOpen) {
+        _openController.text = formattedOpen;
+      }
+    } catch (_) {}
   }
 
   double _parseNumber(String value) {
@@ -149,14 +171,10 @@ class _PivotPointViewState extends State<PivotPointView> {
       _highController.text = _formatNumber(selected.high);
       _lowController.text = _formatNumber(selected.low);
       _closeController.text = _formatNumber(selected.close);
-      try {
-        final realtimeOpen = await ApiService.getTradingViewOpen(
-          _selectedCategory,
-        );
-        _openController.text = _formatNumber(realtimeOpen);
-      } catch (_) {
-        _openController.text = _formatNumber(selected.open);
-      }
+      final todayOpen = await ApiService.getTodayOpenFromNewsMaker(
+        _selectedCategory,
+      );
+      _openController.text = _formatNumber(todayOpen);
       await _savePivotHistory();
       if (mounted) setState(() => _isLoadingHistorical = false);
     } catch (_) {
@@ -294,20 +312,26 @@ class _PivotPointViewState extends State<PivotPointView> {
     final directory = await getTemporaryDirectory();
     File file;
     if (format == 'png') {
-      final boundary =
-          _resultsKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final image = await boundary.toImage(pixelRatio: 6);
-      final exportImage = await _addPngBackground(image);
-      final bytes = await exportImage.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      image.dispose();
-      exportImage.dispose();
-      if (bytes == null) return;
-      file = File('${directory.path}/hasil_pivot_point.png');
-      await file.writeAsBytes(bytes.buffer.asUint8List());
+      setState(() => _isExportingPng = true);
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+        final boundary =
+            _resultsKey.currentContext?.findRenderObject()
+                as RenderRepaintBoundary?;
+        if (boundary == null) return;
+        final image = await boundary.toImage(pixelRatio: 6);
+        final exportImage = await _addPngBackground(image);
+        final bytes = await exportImage.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        image.dispose();
+        exportImage.dispose();
+        if (bytes == null) return;
+        file = File('${directory.path}/hasil_pivot_point.png');
+        await file.writeAsBytes(bytes.buffer.asUint8List());
+      } finally {
+        if (mounted) setState(() => _isExportingPng = false);
+      }
     } else {
       final document = pw.Document();
       document.addPage(
@@ -657,20 +681,53 @@ class _PivotPointViewState extends State<PivotPointView> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: _indication == 'BUY'
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFFEBEE),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.brown.withValues(alpha: 0.3),
+                            color: _indication == 'BUY'
+                                ? const Color(0xFF4CAF50)
+                                : const Color(0xFFE53935),
                           ),
                         ),
-                        child: Text(
-                          _indication,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF8B2500),
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Action',
+                              style: TextStyle(
+                                color: Colors.brown,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _indication,
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                                color: _indication == 'BUY'
+                                    ? const Color(0xFF2E7D32)
+                                    : const Color(0xFFC62828),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _indication == 'BUY'
+                                  ? 'Open dibawah Pivot = BUY'
+                                  : 'Open diatas Pivot = SELL',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: _indication == 'BUY'
+                                    ? const Color(0xFF4B7F43)
+                                    : const Color(0xFF8B4545),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -691,6 +748,7 @@ class _PivotPointViewState extends State<PivotPointView> {
                   s4: _s4,
                   onReset: _resetToYesterday,
                   onDownload: _downloadAndShareResults,
+                  showActions: !_isExportingPng,
                 ),
               ],
             ],
@@ -754,10 +812,7 @@ class _PivotPointViewState extends State<PivotPointView> {
 
   String get _indication {
     final isOpenBelowPivot = _openValue < _pp;
-    final isBuy = _selectedCategory == 'HSI'
-        ? !isOpenBelowPivot
-        : isOpenBelowPivot;
-    return isBuy ? 'BUY' : 'SELL';
+    return isOpenBelowPivot ? 'BUY' : 'SELL';
   }
 
   double get _openValue => _parseNumber(_openController.text);

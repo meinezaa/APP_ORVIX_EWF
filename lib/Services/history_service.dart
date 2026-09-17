@@ -49,7 +49,9 @@ class HistoryService {
     double? jumlahEmas,
   }) async {
     final collection = _userHistory;
-    if (collection == null) return;
+    if (collection == null) {
+      throw StateError('Pengguna belum login.');
+    }
 
     final currentUser = _auth.currentUser;
     String userName = currentUser?.displayName ?? '';
@@ -99,6 +101,38 @@ class HistoryService {
     payload['category'] = category;
     payload['kategori'] = category;
 
-    await collection.add(payload);
+    final savedDocument = await collection.add(payload);
+    await _recordSessionActivity(
+      title:
+          'Perhitungan $jenisKalkulator${category == null ? '' : ' ($category)'}',
+      subtitle: 'Hasil: ${hasil.toStringAsFixed(2)}',
+      calculationId: savedDocument.id,
+    );
+  }
+
+  static Future<void> _recordSessionActivity({
+    required String title,
+    required String subtitle,
+    required String calculationId,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+      final loginSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('login_history')
+          .orderBy('logged_in_at', descending: true)
+          .limit(1)
+          .get();
+      if (loginSnapshot.docs.isEmpty) return;
+      await loginSnapshot.docs.first.reference.collection('activities').add({
+        'title': title,
+        'subtitle': subtitle,
+        'calculation_id': calculationId,
+        'created_at': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
   }
 }
