@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Home/beranda_admin.dart';
 import '../Auth/login.dart';
 import '../../Services/auth_services.dart';
+import '../Analitik/analisis_perhitungan.dart';
 import 'edit_profil_admin.dart';
+import 'ganti_password_admin.dart';
 import 'perangkat_terhubung_admin.dart';
 
 void main() {
@@ -667,6 +669,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             iconColor: const Color(0xFFEE6C3A),
             title: 'Ubah Kata Sandi & PIN',
             subtitle: 'Terakhir diperbarui 28 hari lalu',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ChangePasswordScreen(),
+              ),
+            ),
           ),
           const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
           _buildMenuItem(
@@ -910,16 +917,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             icon: Icons.home_rounded,
             label: 'Home',
             isSelected: _selectedNavIndex == 0,
-            onTap: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
-            ),
+            onTap: () => Navigator.of(
+              context,
+            ).pushReplacement(_smoothRoute(const DashboardScreen())),
           ),
           // Analistik Tab
           _buildNavItem(
             icon: Icons.bar_chart_rounded,
-            label: 'Analistik',
+            label: 'Analitik',
             isSelected: _selectedNavIndex == 1,
-            onTap: () => setState(() => _selectedNavIndex = 1),
+            onTap: () => Navigator.of(
+              context,
+            ).pushReplacement(_smoothRoute(const AnalisisPerhitunganView())),
           ),
           // Profil Tab
           _buildNavItem(
@@ -993,6 +1002,30 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  PageRoute<void> _smoothRoute(Widget page) {
+    return PageRouteBuilder<void>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, animation, secondaryAnimation) => page,
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

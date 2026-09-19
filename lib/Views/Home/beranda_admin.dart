@@ -5,6 +5,7 @@ import 'gold_detail.dart';
 import 'nest_detail.dart';
 import 'pp_detailLGD.dart';
 import '../Profil/profil_admin.dart';
+import '../Analitik/analisis_perhitungan.dart';
 
 void main() {
   runApp(const MyApp());
@@ -1149,7 +1150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(0, Icons.home_rounded, 'Home'),
-          _buildNavItem(1, Icons.bar_chart_rounded, 'Analistik'),
+          _buildNavItem(1, Icons.bar_chart_rounded, 'Analitik'),
           _buildNavItem(2, Icons.person_rounded, 'Profil'),
         ],
       ),
@@ -1161,10 +1162,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (index == 1) {
+          Navigator.of(
+            context,
+          ).pushReplacement(_smoothRoute(const AnalisisPerhitunganView()));
+          return;
+        }
         if (index == 2) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute<void>(builder: (_) => const AdminProfileScreen()),
-          );
+          Navigator.of(
+            context,
+          ).pushReplacement(_smoothRoute(const AdminProfileScreen()));
           return;
         }
         setState(() {
@@ -1209,6 +1216,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  PageRoute<void> _smoothRoute(Widget page) {
+    return PageRouteBuilder<void>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, animation, secondaryAnimation) => page,
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
