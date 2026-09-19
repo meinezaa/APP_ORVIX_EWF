@@ -287,7 +287,7 @@ class _ProfileViewState extends State<ProfileView> {
                         children: [
                           TextSpan(text: 'Hitung '),
                           TextSpan(
-                            text: 'Emas Fisik & Pivot\nPoint',
+                            text: 'Emas Fisik, Pivot\nPoint & NEST',
                             style: TextStyle(color: Color(0xFFE75D1C)),
                           ),
                           TextSpan(text: ' dengan mudah'),
@@ -383,65 +383,122 @@ class _ProfileViewState extends State<ProfileView> {
           ],
         ),
         const SizedBox(height: 12),
+        _summaryCard(
+          Icons.analytics_rounded,
+          'Total Perhitungan',
+          '${counts['total']}',
+          fullWidth: true,
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
-            _summaryCard(
-              Icons.calculate,
-              'Total Perhitungan',
-              '${counts['total']}',
-            ),
-            const SizedBox(width: 10),
             _summaryCard(Icons.balance, 'Emas Fisik', '${counts['emas']}'),
             const SizedBox(width: 10),
             _summaryCard(Icons.show_chart, 'Pivot Point', '${counts['pivot']}'),
+            const SizedBox(width: 10),
+            _summaryCard(Icons.calculate_rounded, 'NEST', '${counts['nest']}'),
           ],
         ),
       ],
     );
   }
 
-  Widget _summaryCard(IconData icon, String label, String value) {
-    return Expanded(
-      child: AspectRatio(
-        aspectRatio: 0.82,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFFB17F), Color(0xFFFFE4D1)],
-            ),
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 3,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 30, color: Colors.black),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFFC84F15),
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
+  Widget _summaryCard(
+    IconData icon,
+    String label,
+    String value, {
+    bool fullWidth = false,
+  }) {
+    final card = fullWidth
+        ? SizedBox(
+            height: 96,
+            child: _summaryCardContent(icon, label, value, horizontal: true),
+          )
+        : AspectRatio(
+            aspectRatio: 0.82,
+            child: _summaryCardContent(icon, label, value),
+          );
+    return fullWidth
+        ? SizedBox(width: double.infinity, child: card)
+        : Expanded(child: card);
+  }
+
+  Widget _summaryCardContent(
+    IconData icon,
+    String label,
+    String value, {
+    bool horizontal = false,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontal ? 24 : 8,
+        vertical: horizontal ? 12 : 9,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFB17F), Color(0xFFFFE4D1)],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2)),
+        ],
+      ),
+      child: horizontal
+          ? Row(
+              children: [
+                Icon(icon, size: 54, color: Colors.black),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF716761),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFC84F15),
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Expanded(
-                child: Center(
+              ],
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 30, color: Colors.black),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color(0xFFC84F15),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Center(
                   child: Text(
                     label,
-                    maxLines: 2,
+                    maxLines: 1,
+                    softWrap: false,
                     textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF716761),
@@ -449,11 +506,8 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+              ],
+            ),
     );
   }
 
@@ -507,6 +561,9 @@ class _ProfileViewState extends State<ProfileView> {
         .length,
     'pivot': history
         .where((item) => item.jenisKalkulator.toLowerCase().contains('pivot'))
+        .length,
+    'nest': history
+        .where((item) => item.jenisKalkulator.toLowerCase().contains('nest'))
         .length,
   };
 

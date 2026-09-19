@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../Models/historikalkulator_model.dart';
-import '../../Services/history_service.dart';
+import 'kelola_staff.dart';
+import 'laporan.dart';
 
 class AnalisisPerhitunganView extends StatefulWidget {
   const AnalisisPerhitunganView({super.key});
@@ -15,19 +18,74 @@ class AnalisisPerhitunganView extends StatefulWidget {
       _AnalisisPerhitunganViewState();
 }
 
+class CalculationTypeSummary {
+  final int total;
+  final int physical;
+  final int pivot;
+  final int nest;
+
+  const CalculationTypeSummary({
+    required this.total,
+    required this.physical,
+    required this.pivot,
+    required this.nest,
+  });
+}
+
+CalculationTypeSummary summarizeCalculationTypes(List<HistoryModel> history) {
+  int physical = 0;
+  int pivot = 0;
+  int nest = 0;
+
+  for (final item in history) {
+    final type = item.jenisKalkulator.toLowerCase();
+    if (type.contains('nest')) {
+      nest++;
+    } else if (type.contains('pivot')) {
+      pivot++;
+    } else if (type.contains('emas') || type.contains('fisik')) {
+      physical++;
+    }
+  }
+
+  return CalculationTypeSummary(
+    total: history.length,
+    physical: physical,
+    pivot: pivot,
+    nest: nest,
+  );
+}
+
 class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _tabScrollController = ScrollController();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _historyStream;
+  Timer? _searchDebounce;
   DateTimeRange? _selectedRange;
   String _searchText = '';
+  bool _isSearching = false;
+  bool _showStaff = false;
+  bool _showReport = false;
+  List<HistoryModel> _cachedHistory = const [];
 
   static const _orange = Color(0xFFF26422);
   static const _blue = Color(0xFF4385F4);
-  static const _purple = Color(0xFF7657D9);
+  static const _green = Color(0xFF22C55E);
   static const _pageBackground = Color(0xFFFFF9F4);
 
   @override
+  void initState() {
+    super.initState();
+    _historyStream = FirebaseFirestore.instance
+        .collectionGroup('calculation_history')
+        .snapshots();
+  }
+
+  @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _tabScrollController.dispose();
     super.dispose();
   }
 
@@ -52,119 +110,364 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     if (range != null && mounted) setState(() => _selectedRange = range);
   }
 
+  List<HistoryModel> _sortHistory(List<HistoryModel> history) {
+    final sorted = List<HistoryModel>.from(history);
+    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+
   List<HistoryModel> _filterHistory(List<HistoryModel> history) {
     final query = _searchText.trim().toLowerCase();
-    return history.where((item) {
-      final inRange =
-          _selectedRange == null ||
-          (!item.createdAt.isBefore(_selectedRange!.start) &&
-              !item.createdAt.isAfter(
-                _selectedRange!.end.add(const Duration(days: 1)),
-              ));
-      final matchesSearch =
-          query.isEmpty || item.jenisKalkulator.toLowerCase().contains(query);
-      return inRange && matchesSearch;
-    }).toList();
+    return _sortHistory(
+      history.where((item) {
+        final inRange =
+            _selectedRange == null ||
+            (!item.createdAt.isBefore(_selectedRange!.start) &&
+                !item.createdAt.isAfter(
+                  _selectedRange!.end.add(const Duration(days: 1)),
+                ));
+        final matchesSearch =
+            query.isEmpty ||
+            item.userName.toLowerCase().contains(query) ||
+            (item.email ?? '').toLowerCase().contains(query);
+        return inRange && matchesSearch;
+      }).toList(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _pageBackground,
-      body: SafeArea(
-        child: StreamBuilder<List<HistoryModel>>(
-          stream: HistoryService.watchHistory(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: Text('Gagal memuat analisis: ${snapshot.error}'),
-              );
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: _orange),
-              );
-            }
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: _pageBackground,
+        body: SafeArea(
+          top: false,
+          child: _showReport
+              ? _buildReportContent()
+              : _showStaff
+              ? _buildStaffContent()
+              : _buildAnalysisStream(),
+        ),
+      ),
+    );
+  }
 
-            final history = _filterHistory(snapshot.data ?? const []);
+  Widget _buildAnalysisStream() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _historyStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Gagal memuat analisis: ${snapshot.error}'),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          if (_cachedHistory.isNotEmpty) return _buildContent(_cachedHistory);
+          return const Center(child: CircularProgressIndicator(color: _orange));
+        }
+
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance.collection('users').snapshots(),
+          builder: (context, usersSnapshot) {
+            final profiles = <String, Map<String, dynamic>>{
+              for (final doc in usersSnapshot.data?.docs ?? const [])
+                doc.id: doc.data(),
+            };
+            final profilesByEmail = <String, Map<String, dynamic>>{
+              for (final profile in profiles.values)
+                if (_profileValue(profile, ['email', 'user_email'], null) !=
+                    null)
+                  _profileValue(profile, [
+                    'email',
+                    'user_email',
+                  ], null)!.toLowerCase(): profile,
+            };
+            final normalized = (snapshot.data?.docs ?? const []).map((doc) {
+              final item = HistoryModel.fromFirestore(doc);
+              final uid = item.userId.isNotEmpty
+                  ? item.userId
+                  : doc.reference.parent.parent?.id ?? '';
+              final profile =
+                  profiles[uid] ??
+                  profilesByEmail[item.email?.trim().toLowerCase()];
+              if (profile == null) return item;
+              return item.copyWith(
+                userId: uid,
+                userName:
+                    _profileValue(profile, ['nama', 'name'], item.userName) ??
+                    item.userName,
+                email: _profileValue(profile, [
+                  'email',
+                  'user_email',
+                ], item.email),
+              );
+            }).toList();
+            final history = _filterHistory(normalized);
+            _cachedHistory = history;
             return _buildContent(history);
           },
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildContent(List<HistoryModel> history) {
-    final physical = history.where((item) => _isPhysical(item)).length;
-    final pivot = history.length - physical;
-    final total = history.length;
-    final physicalRate = total == 0 ? 0.0 : physical / total * 100;
-    final pivotRate = total == 0 ? 0.0 : pivot / total * 100;
-    final userName =
-        FirebaseAuth.instance.currentUser?.displayName ??
-        FirebaseAuth.instance.currentUser?.email?.split('@').first ??
-        'Pengguna';
-
-    return RefreshIndicator(
-      color: _orange,
-      onRefresh: () async => setState(() {}),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 110),
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 18),
-          _buildFilters(),
-          const SizedBox(height: 12),
-          _buildSummaryCards(total, physical, pivot, physicalRate, pivotRate),
-          const SizedBox(height: 16),
-          _buildTrendCard(history),
-          const SizedBox(height: 16),
-          _buildBreakdownCard(physical, pivot, total, physicalRate, pivotRate),
-          const SizedBox(height: 16),
-          _buildPerformanceCard(history, userName),
-        ],
-      ),
-    );
+  String? _profileValue(
+    Map<String, dynamic> data,
+    List<String> keys,
+    String? fallback,
+  ) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return fallback;
   }
 
-  Widget _buildHeader() {
-    return Row(
+  Widget _buildStaffContent() {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 110),
       children: [
-        const Expanded(
-          child: Text(
-            'Analisis Perhitungan',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-        ),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.notifications_none_rounded, color: _orange),
+        _buildHeader(showStaff: true),
+        const SizedBox(height: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: KelolaStaffContent(),
         ),
       ],
     );
   }
 
+  Widget _buildReportContent() {
+    return Column(
+      children: [
+        _buildHeader(showReport: true),
+        const Expanded(child: LaporanView(embedded: true)),
+      ],
+    );
+  }
+
+  Widget _buildContent(List<HistoryModel> history) {
+    final summary = summarizeCalculationTypes(history);
+    final total = summary.total;
+    final physical = summary.physical;
+    final pivot = summary.pivot;
+    final nest = summary.nest;
+    final physicalRate = total == 0 ? 0.0 : physical / total * 100;
+    final pivotRate = total == 0 ? 0.0 : pivot / total * 100;
+    final nestRate = total == 0 ? 0.0 : nest / total * 100;
+    return RefreshIndicator(
+      color: _orange,
+      onRefresh: () async => setState(() {}),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 110),
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                _buildFilters(),
+                const SizedBox(height: 12),
+                _buildSummaryCards(
+                  total,
+                  physical,
+                  pivot,
+                  nest,
+                  physicalRate,
+                  pivotRate,
+                  nestRate,
+                ),
+                const SizedBox(height: 16),
+                _buildTrendCard(history),
+                const SizedBox(height: 16),
+                _buildBreakdownCard(
+                  physical,
+                  pivot,
+                  nest,
+                  total,
+                  physicalRate,
+                  pivotRate,
+                  nestRate,
+                ),
+                const SizedBox(height: 16),
+                _buildPerformanceCard(history),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader({bool showStaff = false, bool showReport = false}) {
+    return SizedBox(
+      height: 182,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 38),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFD0A5), Color(0xFFFFA05B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              children: [
+                SizedBox(height: MediaQuery.of(context).padding.top + 4),
+                Center(
+                  child: Image.asset(
+                    'assets/orvix_logo.png',
+                    height: 34,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 34,
+                  child: SingleChildScrollView(
+                    controller: _tabScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _adminMenu(
+                          'Analisis Perhitungan',
+                          !showStaff && !showReport,
+                          Icons.analytics_outlined,
+                          onTap: (!showStaff && !showReport)
+                              ? null
+                              : () => setState(() {
+                                  _showStaff = false;
+                                  _showReport = false;
+                                }),
+                        ),
+                        _adminMenu(
+                          'Kelola Staff',
+                          showStaff,
+                          Icons.groups_outlined,
+                          onTap: showStaff
+                              ? null
+                              : () => setState(() {
+                                  _showStaff = true;
+                                  _showReport = false;
+                                }),
+                        ),
+                        _adminMenu(
+                          'Laporan',
+                          showReport,
+                          Icons.description_outlined,
+                          onTap: showReport
+                              ? null
+                              : () => setState(() {
+                                  _showReport = true;
+                                  _showStaff = false;
+                                }),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: -24,
+            child: Container(
+              height: 48,
+              decoration: const BoxDecoration(
+                color: _pageBackground,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _adminMenu(
+    String label,
+    bool selected,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFFE75E14)
+              : Colors.white.withValues(alpha: .9),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: selected ? Colors.white : const Color(0xFF8D7265),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                color: selected ? Colors.white : const Color(0xFF8D7265),
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilters() {
     final rangeText = _selectedRange == null
-        ? 'Bulan ini'
-        : '${DateFormat('dd MMM').format(_selectedRange!.start)} - ${DateFormat('dd MMM yyyy').format(_selectedRange!.end)}';
+        ? 'Pilih tanggal'
+        : '${DateFormat('dd MMM yyyy').format(_selectedRange!.start)} - ${DateFormat('dd MMM yyyy').format(_selectedRange!.end)}';
     return Row(
       children: [
         Expanded(
           child: TextField(
             controller: _searchController,
-            onChanged: (value) => setState(() => _searchText = value),
+            onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Cari jenis perhitungan...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 21),
+              hintText: 'Cari nama staff...',
+              hintStyle: const TextStyle(fontSize: 12),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: _isSearching
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _orange,
+                        ),
+                      ),
+                    )
+                  : null,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(vertical: 11),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -200,12 +503,34 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     );
   }
 
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _searchText = '';
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() => _isSearching = true);
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      setState(() {
+        _searchText = value;
+        _isSearching = false;
+      });
+    });
+  }
+
   Widget _buildSummaryCards(
     int total,
     int physical,
     int pivot,
+    int nest,
     double physicalRate,
     double pivotRate,
+    double nestRate,
   ) {
     return GridView.count(
       crossAxisCount: 2,
@@ -237,11 +562,11 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
           Icons.bar_chart_rounded,
         ),
         _summaryCard(
-          'Rata-rata per Hari',
-          _averagePerDay(total).toStringAsFixed(1),
-          'Periode terpilih',
-          _purple,
-          Icons.timeline_rounded,
+          'NEST',
+          '$nest',
+          '${nestRate.toStringAsFixed(1)}% dari total',
+          _green,
+          Icons.insights_rounded,
         ),
       ],
     );
@@ -309,16 +634,19 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
       trailing: '7 hari terakhir',
       child: Column(
         children: [
-          Row(
-            children: const [
+          const Wrap(
+            spacing: 18,
+            runSpacing: 6,
+            children: [
               _Legend(color: _orange, label: 'Emas Fisik'),
-              SizedBox(width: 18),
               _Legend(color: _blue, label: 'Pivot Point'),
+              _Legend(color: _green, label: 'NEST'),
             ],
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 190,
+            width: double.infinity,
+            height: 210,
             child: CustomPaint(painter: _LineChartPainter(values)),
           ),
         ],
@@ -329,9 +657,11 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
   Widget _buildBreakdownCard(
     int physical,
     int pivot,
+    int nest,
     int total,
     double physicalRate,
     double pivotRate,
+    double nestRate,
   ) {
     return _panel(
       title: 'Perbandingan Jenis Perhitungan',
@@ -341,7 +671,9 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
           SizedBox(
             width: 145,
             height: 145,
-            child: CustomPaint(painter: _DonutChartPainter(physical, pivot)),
+            child: CustomPaint(
+              painter: _DonutChartPainter(physical, pivot, nest),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -350,6 +682,8 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
                 _breakdownRow(_orange, 'Emas Fisik', physical, physicalRate),
                 const SizedBox(height: 18),
                 _breakdownRow(_blue, 'Pivot Point', pivot, pivotRate),
+                const SizedBox(height: 18),
+                _breakdownRow(_green, 'NEST', nest, nestRate),
               ],
             ),
           ),
@@ -372,60 +706,92 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     );
   }
 
-  Widget _buildPerformanceCard(List<HistoryModel> history, String userName) {
-    final count = history.length;
-    final maxValue = count == 0 ? 1 : count;
+  Widget _buildPerformanceCard(List<HistoryModel> history) {
+    final staffCounts = <String, int>{};
+    final staffNames = <String, String>{};
+    for (final item in history) {
+      if (item.role.toLowerCase() == 'admin') continue;
+      final name = item.userName.trim();
+      if (name.isEmpty) continue;
+      final identity = item.userId.trim().isNotEmpty
+          ? item.userId.trim()
+          : (item.email ?? '').trim().toLowerCase().isNotEmpty
+          ? item.email!.trim().toLowerCase()
+          : name.toLowerCase();
+      staffNames.putIfAbsent(identity, () => name);
+      staffCounts[identity] = (staffCounts[identity] ?? 0) + 1;
+    }
+    final sortedStaff =
+        staffCounts.entries
+            .map(
+              (entry) =>
+                  MapEntry(staffNames[entry.key] ?? entry.key, entry.value),
+            )
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+    final maxValue = sortedStaff.isEmpty ? 1 : sortedStaff.first.value;
+    final namedHistoryCount = history
+        .where(
+          (item) =>
+              item.role.toLowerCase() != 'admin' &&
+              item.userName.trim().isNotEmpty,
+        )
+        .length;
     return _panel(
       title: 'Performa Staff',
       trailing: 'Periode terpilih',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF5EE),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: _orange.withValues(alpha: .15),
-                  child: const Icon(Icons.person, color: _orange),
+          if (sortedStaff.isEmpty)
+            const Text(
+              'Belum ada data staff pada periode ini',
+              style: TextStyle(color: Colors.black54),
+            )
+          else
+            ...sortedStaff.take(5).map((entry) {
+              final percentage = namedHistoryCount == 0
+                  ? 0.0
+                  : entry.value / namedHistoryCount * 100;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.key,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${entry.value} · ${percentage.toStringAsFixed(1)}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: LinearProgressIndicator(
+                        value: entry.value / maxValue,
+                        minHeight: 7,
+                        color: _orange,
+                        backgroundColor: const Color(0xFFFFE7DA),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    userName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                Text(
-                  '$count',
-                  style: const TextStyle(
-                    color: _orange,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '$count perhitungan pada periode ini',
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(5),
-            child: LinearProgressIndicator(
-              value: count / maxValue,
-              minHeight: 7,
-              color: _orange,
-              backgroundColor: const Color(0xFFFFE7DA),
-            ),
-          ),
+              );
+            }),
         ],
       ),
     );
@@ -474,16 +840,12 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     return type.contains('emas') || type.contains('fisik');
   }
 
-  double _averagePerDay(int total) {
-    if (_selectedRange == null) return total.toDouble();
-    final days = _selectedRange!.duration.inDays + 1;
-    return days == 0 ? total.toDouble() : total / days;
-  }
-
   List<List<double>> _dailyValues(List<HistoryModel> history) {
     final now = DateTime.now();
     final physical = List<double>.filled(7, 0);
     final pivot = List<double>.filled(7, 0);
+    final nest = List<double>.filled(7, 0);
+
     for (final item in history) {
       final daysAgo = DateTime(now.year, now.month, now.day)
           .difference(
@@ -496,10 +858,26 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
           .inDays;
       if (daysAgo >= 0 && daysAgo < 7) {
         final index = 6 - daysAgo;
-        (_isPhysical(item) ? physical : pivot)[index]++;
+        if (_isNest(item)) {
+          nest[index]++;
+        } else if (_isPivot(item)) {
+          pivot[index]++;
+        } else if (_isPhysical(item)) {
+          physical[index]++;
+        }
       }
     }
-    return [physical, pivot];
+    return [physical, pivot, nest];
+  }
+
+  bool _isNest(HistoryModel item) {
+    final type = item.jenisKalkulator.toLowerCase();
+    return type.contains('nest');
+  }
+
+  bool _isPivot(HistoryModel item) {
+    final type = item.jenisKalkulator.toLowerCase();
+    return type.contains('pivot');
   }
 }
 
@@ -524,6 +902,10 @@ class _LineChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final highestValue = series
+        .expand((line) => line)
+        .fold<double>(1, (value, item) => item > value ? item : value);
+    final max = (highestValue / 5).ceil() * 5.0;
     final grid = Paint()
       ..color = const Color(0xFFEEDDD3)
       ..strokeWidth = 1;
@@ -535,7 +917,7 @@ class _LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(28, y), Offset(size.width, y), grid);
       final label = TextPainter(
         text: TextSpan(
-          text: '${(4 - i) * 25}',
+          text: '${(max / 4 * (4 - i)).round()}',
           style: const TextStyle(fontSize: 9, color: Colors.black45),
         ),
         textDirection: ui.TextDirection.ltr,
@@ -548,12 +930,10 @@ class _LineChartPainter extends CustomPainter {
       Offset(size.width, size.height),
       axis,
     );
-    final max = series
-        .expand((line) => line)
-        .fold<double>(1, (value, item) => item > value ? item : value);
     final colors = [
       _AnalisisPerhitunganViewState._orange,
       _AnalisisPerhitunganViewState._blue,
+      _AnalisisPerhitunganViewState._green,
     ];
     for (var lineIndex = 0; lineIndex < series.length; lineIndex++) {
       final points = <Offset>[];
@@ -576,6 +956,18 @@ class _LineChartPainter extends CustomPainter {
         canvas.drawCircle(point, 3, dotPaint);
       }
     }
+    const labels = ['-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'Hari ini'];
+    for (var i = 0; i < labels.length; i++) {
+      final label = TextPainter(
+        text: TextSpan(
+          text: labels[i],
+          style: const TextStyle(fontSize: 8, color: Colors.black45),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
+      final x = 28 + i * (size.width - 28) / 6 - label.width / 2;
+      label.paint(canvas, Offset(x, size.height + 4));
+    }
   }
 
   @override
@@ -586,11 +978,12 @@ class _LineChartPainter extends CustomPainter {
 class _DonutChartPainter extends CustomPainter {
   final int first;
   final int second;
-  const _DonutChartPainter(this.first, this.second);
+  final int third;
+  const _DonutChartPainter(this.first, this.second, [this.third = 0]);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final total = first + second;
+    final total = first + second + third;
     final center = size.center(Offset.zero);
     final radius = size.shortestSide / 2 - 9;
     final base = Paint()
@@ -598,25 +991,31 @@ class _DonutChartPainter extends CustomPainter {
       ..strokeWidth = 24
       ..color = const Color(0xFFEAF0FA);
     canvas.drawCircle(center, radius, base);
-    if (total == 0) return;
-    var start = -1.5708;
-    for (final data in [first, second]) {
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.butt
-        ..strokeWidth = 24
-        ..color = data == first
-            ? _AnalisisPerhitunganViewState._orange
-            : _AnalisisPerhitunganViewState._blue;
-      final sweep = data / total * 6.2832;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        start,
-        sweep,
-        false,
-        paint,
-      );
-      start += sweep;
+    if (total > 0) {
+      var start = -1.5708;
+      final segments = [
+        MapEntry(first, _AnalisisPerhitunganViewState._orange),
+        MapEntry(second, _AnalisisPerhitunganViewState._blue),
+        MapEntry(third, _AnalisisPerhitunganViewState._green),
+      ];
+      for (final segment in segments) {
+        final value = segment.key;
+        if (value <= 0) continue;
+        final paint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.butt
+          ..strokeWidth = 24
+          ..color = segment.value;
+        final sweep = value / total * 6.2832;
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: radius),
+          start,
+          sweep,
+          false,
+          paint,
+        );
+        start += sweep;
+      }
     }
     final text = TextPainter(
       text: TextSpan(
@@ -634,5 +1033,7 @@ class _DonutChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutChartPainter oldDelegate) =>
-      oldDelegate.first != first || oldDelegate.second != second;
+      oldDelegate.first != first ||
+      oldDelegate.second != second ||
+      oldDelegate.third != third;
 }

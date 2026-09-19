@@ -4,6 +4,7 @@ class DetailPivotPoint extends StatelessWidget {
   final double pp, r1, r2, r3, r4, s1, s2, s3, s4;
   final VoidCallback onReset;
   final VoidCallback onDownload;
+  final bool showActions;
 
   const DetailPivotPoint({
     super.key,
@@ -18,6 +19,7 @@ class DetailPivotPoint extends StatelessWidget {
     required this.s4,
     required this.onReset,
     required this.onDownload,
+    this.showActions = true,
   });
 
   String _format(double value) {
@@ -136,44 +138,46 @@ class DetailPivotPoint extends StatelessWidget {
           const Color(0xFF10A83A),
           const Color(0xFFFF7A00),
         ),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed: onDownload,
-              icon: const Icon(Icons.download_outlined, size: 19),
-              label: const Text('Download'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD67236),
-                side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: onReset,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD67236),
-                side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 12,
+        if (showActions) ...[
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: onDownload,
+                icon: const Icon(Icons.download_outlined, size: 19),
+                label: const Text('Download'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD67236),
+                  side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
-              child: const Text('Reset'),
-            ),
-          ],
-        ),
+              const SizedBox(width: 12),
+              OutlinedButton(
+                onPressed: onReset,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD67236),
+                  side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Reset'),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

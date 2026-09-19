@@ -5,6 +5,10 @@ class HistoryModel {
   final String jenisKalkulator;
   final double hasil;
   final DateTime createdAt;
+  final String userId;
+  final String userName;
+  final String role;
+  final String? email;
   final double? open;
   final double? high;
   final double? low;
@@ -19,12 +23,17 @@ class HistoryModel {
   final double? hargaJualPerGram;
   final double? selisihPerGram;
   final double? jumlahEmas;
+  final String? kategori;
 
   HistoryModel({
     required this.id,
     required this.jenisKalkulator,
     required this.hasil,
     required this.createdAt,
+    this.userId = '',
+    this.userName = '',
+    this.role = 'staff',
+    this.email,
     this.open,
     this.high,
     this.low,
@@ -39,6 +48,7 @@ class HistoryModel {
     this.hargaJualPerGram,
     this.selisihPerGram,
     this.jumlahEmas,
+    this.kategori,
   });
 
   factory HistoryModel.fromFirestore(
@@ -60,6 +70,10 @@ class HistoryModel {
       jenisKalkulator: data['jenis_kalkulator']?.toString() ?? '',
       hasil: (data['hasil'] as num?)?.toDouble() ?? 0,
       createdAt: parseDate(data['created_at']),
+      userId: data['user_id']?.toString() ?? '',
+      userName: data['user_name']?.toString() ?? '',
+      role: data['role']?.toString() ?? 'staff',
+      email: data['email']?.toString(),
       open: (data['open'] as num?)?.toDouble(),
       high: (data['high'] as num?)?.toDouble(),
       low: (data['low'] as num?)?.toDouble(),
@@ -74,14 +88,23 @@ class HistoryModel {
       hargaJualPerGram: (data['harga_jual_per_gram'] as num?)?.toDouble(),
       selisihPerGram: (data['selisih_per_gram'] as num?)?.toDouble(),
       jumlahEmas: (data['jumlah_emas'] as num?)?.toDouble(),
+      kategori: data['kategori']?.toString() ?? data['category']?.toString(),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'user_id': userId,
+      'user_name': userName,
+      'role': role,
+      'email': email,
       'jenis_kalkulator': jenisKalkulator,
+      'jenisKalkulator': jenisKalkulator,
+      'kategori': kategori,
+      'category': kategori,
       'hasil': hasil,
       'created_at': Timestamp.fromDate(createdAt),
+      'createdAt': Timestamp.fromDate(createdAt),
       'open': open,
       'high': high,
       'low': low,
@@ -104,6 +127,10 @@ class HistoryModel {
     String? jenisKalkulator,
     double? hasil,
     DateTime? createdAt,
+    String? userId,
+    String? userName,
+    String? role,
+    String? email,
     double? open,
     double? high,
     double? low,
@@ -118,12 +145,17 @@ class HistoryModel {
     double? hargaJualPerGram,
     double? selisihPerGram,
     double? jumlahEmas,
+    String? kategori,
   }) {
     return HistoryModel(
       id: id ?? this.id,
       jenisKalkulator: jenisKalkulator ?? this.jenisKalkulator,
       hasil: hasil ?? this.hasil,
       createdAt: createdAt ?? this.createdAt,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      role: role ?? this.role,
+      email: email ?? this.email,
       open: open ?? this.open,
       high: high ?? this.high,
       low: low ?? this.low,
@@ -138,6 +170,7 @@ class HistoryModel {
       hargaJualPerGram: hargaJualPerGram ?? this.hargaJualPerGram,
       selisihPerGram: selisihPerGram ?? this.selisihPerGram,
       jumlahEmas: jumlahEmas ?? this.jumlahEmas,
+      kategori: kategori ?? this.kategori,
     );
   }
 }

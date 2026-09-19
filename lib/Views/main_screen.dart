@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'Home/beranda.dart';
-import 'package:app_pt_ewf/views/Kalkulator/emasfisik.dart';
-import 'package:app_pt_ewf/views/History/histori.dart';
+import 'Kalkulator/emasfisik.dart';
+import 'Kalkulator/nest.dart';
+import 'History/histori.dart';
 import 'Profil/profil.dart';
 import 'Profil/notifikasi.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
-  const MainScreen({super.key, this.initialIndex = 0});
+  final int calculatorTab;
+
+  const MainScreen({super.key, this.initialIndex = 0, this.calculatorTab = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -36,7 +39,13 @@ class _MainScreenState extends State<MainScreen> {
         onViewNotifications: _openNotifications,
         onViewProfile: () => _selectNavIndex(3),
       ),
-      const KalkulatorEmasFisikView(),
+      if (widget.calculatorTab == 2)
+        const OrvixKalkulatorScreen(showBottomNavigation: false)
+      else
+        KalkulatorEmasFisikView(
+          initialTab: widget.calculatorTab,
+          showBottomNavigation: false,
+        ),
       const HistoryScreen(),
       const ProfileView(),
     ];
