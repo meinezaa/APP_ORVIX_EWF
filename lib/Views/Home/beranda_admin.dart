@@ -4,6 +4,7 @@ import 'login_histori.dart';
 import 'gold_detail.dart';
 import 'nest_detail.dart';
 import 'pp_detailLGD.dart';
+import '../Profil/profil_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -1160,6 +1161,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (index == 2) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute<void>(builder: (_) => const AdminProfileScreen()),
+          );
+          return;
+        }
         setState(() {
           _selectedIndex = index;
         });

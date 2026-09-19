@@ -132,12 +132,6 @@ class NestDetailScreen extends StatelessWidget {
   );
 
   Widget _summary(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
-    final average = docs.isEmpty
-        ? 0.0
-        : docs
-                  .map((doc) => _number(doc.data(), 'hasil'))
-                  .reduce((a, b) => a + b) /
-              docs.length;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -154,16 +148,6 @@ class NestDetailScreen extends StatelessWidget {
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              '${NumberFormat('#,##0.00').format(average)} Hasil',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),

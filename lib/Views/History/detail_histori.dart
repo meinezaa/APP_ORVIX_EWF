@@ -169,6 +169,10 @@ class DetailHistoryScreen extends StatelessWidget {
             'Jenis proses',
             isPivot ? 'Perhitungan Pivot Point' : 'Perhitungan Emas Fisik',
           ),
+          if (isPivot && history.kategori != null) ...[
+            const Divider(height: 20),
+            _buildInfoRow('Kategori', history.kategori!.toUpperCase()),
+          ],
           const Divider(height: 20),
           _buildInfoRow('Status', 'Selesai'),
           const SizedBox(height: 12),

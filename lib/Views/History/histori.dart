@@ -96,12 +96,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final periods = _buildPeriods(history);
                         final filteredHistory = _filterHistory(history);
                         return ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            20,
-                            24,
-                            20,
-                            120,
-                          ),
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                           children: [
                             _buildFilters(periods),
                             const SizedBox(height: 18),
@@ -179,6 +174,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Text('Pivot Point'),
               ),
               DropdownMenuItem(value: 'Emas Fisik', child: Text('Emas Fisik')),
+              DropdownMenuItem(value: 'NEST', child: Text('NEST')),
             ],
             onChanged: (value) {
               if (value != null) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,11 +7,14 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Models/users_model.dart'; // Import UserModel
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+  _sessionRevocationSubscription;
 
   User? get currentUser => _auth.currentUser;
 
@@ -135,7 +139,7 @@ class AuthService {
                 'Pengguna');
       final metadata = await _loginMetadata();
 
-      await _firestore
+      final loginRef = await _firestore
           .collection('users')
           .doc(authUser.uid)
           .collection('login_history')
@@ -150,6 +154,26 @@ class AuthService {
             'loggedInAt': FieldValue.serverTimestamp(),
             ...metadata,
           });
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(
+        'active_login_session_${authUser.uid}',
+        loginRef.id,
+      );
+      await preferences.setString(
+        'active_login_device_${authUser.uid}',
+        metadata['device'] ?? '',
+      );
+      await preferences.setString(
+        'active_login_platform_${authUser.uid}',
+        metadata['platform'] ?? '',
+      );
+      _sessionRevocationSubscription?.cancel();
+      _sessionRevocationSubscription = loginRef.snapshots().listen((snapshot) {
+        if (snapshot.data()?['revoked'] == true) {
+          _sessionRevocationSubscription?.cancel();
+          _auth.signOut();
+        }
+      });
     } catch (_) {}
   }
 
@@ -203,6 +227,8 @@ class AuthService {
 
   // 4. LOGOUT
   Future<void> logout() async {
+    await _sessionRevocationSubscription?.cancel();
+    _sessionRevocationSubscription = null;
     await _auth.signOut();
   }
 
