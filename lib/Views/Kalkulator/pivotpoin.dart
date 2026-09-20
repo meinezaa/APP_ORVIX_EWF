@@ -431,12 +431,10 @@ class _PivotPointViewState extends State<PivotPointView> {
       await file.writeAsBytes(await document.save());
     }
 
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path)],
-        subject: 'Hasil Pivot Point ${format.toUpperCase()}',
-        text: 'Hasil kalkulasi Pivot Point ORVIX',
-      ),
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Hasil Pivot Point ${format.toUpperCase()}',
+      text: 'Hasil kalkulasi Pivot Point ORVIX',
     );
   }
 

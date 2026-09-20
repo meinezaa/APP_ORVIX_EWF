@@ -51,6 +51,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   String _adminEmail = '-';
   String _adminPhoto = '';
   String _activeDeviceName = 'Perangkat utama';
+  int _activeStaffCount = 0;
   DateTime? _joinedDate;
 
   @override
@@ -67,6 +68,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           .collection('users')
           .doc(authUser.uid)
           .get();
+      final staffSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      final staffCount = staffSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final role = (data['role'] ?? '').toString().trim().toLowerCase();
+        final name = (data['nama'] ?? data['name'] ?? '').toString().trim();
+        return role != 'admin' && name.isNotEmpty;
+      }).length;
       final data = userSnapshot.data() ?? <String, dynamic>{};
       final loginSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -126,6 +136,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     'Admin ORVIX')
                 .toString();
         _adminEmail = (data['email'] ?? authUser.email ?? '-').toString();
+        _activeStaffCount = staffCount;
         _adminPhoto = (data['foto_profil_path'] ?? data['photoUrl'] ?? '')
             .toString();
         final savedDevice = preferences.getString(
@@ -153,6 +164,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             authUser.email?.split('@').first ??
             'Admin ORVIX';
         _adminEmail = authUser.email ?? '-';
+        _activeStaffCount = 0;
         _activeDeviceName = 'Perangkat utama';
         _joinedDate = authUser.metadata.creationTime;
       });
@@ -530,10 +542,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       ),
                       const SizedBox(height: 2),
                       RichText(
-                        text: const TextSpan(
+                        text: TextSpan(
                           children: [
                             TextSpan(
-                              text: '12 ',
+                              text: '$_activeStaffCount ',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -774,14 +786,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildMenuItem(
-            icon: Icons.help_outline_rounded,
-            iconBg: const Color(0xFFECFDF5),
-            iconColor: const Color(0xFF10B981),
-            title: 'Pusat Bantuan & Panduan ORVIX',
-            subtitle: 'FAQ, manual staff, dan kontak IT',
-          ),
-          const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
           _buildMenuItem(
             icon: Icons.rotate_right_rounded,
             iconBg: const Color(0xFFECFDF5),

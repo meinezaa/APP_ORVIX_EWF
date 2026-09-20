@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'package:app_pt_ewf/Views/Onbording/splash_screen.dart';
+import 'package:app_pt_ewf/Views/Onbording/onboarding_screen.dart';
 import 'package:app_pt_ewf/Views/Auth/reset_password.dart';
+import 'package:app_pt_ewf/Services/auth_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,16 +28,108 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final AppLinks _appLinks = AppLinks();
+  AuthService? _authService;
   StreamSubscription<Uri>? _linkSubscription;
+  StreamSubscription<User?>? _authSubscription;
+  Timer? _inactivityTimer;
+  DateTime? _lastActivityAt;
+  bool _isAdminSession = false;
+  bool _isLoggingOutForInactivity = false;
+  bool _hasReceivedInitialAuthState = false;
   String? _handledResetCode;
+
+  static const _adminInactivityTimeout = Duration(minutes: 30);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _listenForPasswordResetLinks();
+    _startAuthSessionTracking();
+  }
+
+  AuthService get _sessionAuthService => _authService ??= AuthService();
+
+  void _startAuthSessionTracking() {
+    try {
+      _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+        _updateSessionForUser,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _updateSessionForUser(User? user) async {
+    _stopInactivityTracking();
+    if (user == null) {
+      final wasInitialized = _hasReceivedInitialAuthState;
+      _hasReceivedInitialAuthState = true;
+      if (wasInitialized && mounted) {
+        _navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          (_) => false,
+        );
+      }
+      return;
+    }
+    _hasReceivedInitialAuthState = true;
+
+    final profile = await _sessionAuthService.getCurrentUserData();
+    if (!mounted || FirebaseAuth.instance.currentUser?.uid != user.uid) {
+      return;
+    }
+
+    await _sessionAuthService.monitorCurrentSession();
+
+    _isAdminSession = profile?.role.trim().toLowerCase() == 'admin';
+    if (_isAdminSession) _recordActivity();
+  }
+
+  void _recordActivity() {
+    if (!_isAdminSession || _isLoggingOutForInactivity) return;
+
+    _lastActivityAt = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(_adminInactivityTimeout, _logoutForInactivity);
+  }
+
+  void _stopInactivityTracking() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = null;
+    _lastActivityAt = null;
+    _isAdminSession = false;
+  }
+
+  Future<void> _logoutForInactivity() async {
+    if (!_isAdminSession || _isLoggingOutForInactivity) return;
+
+    _isLoggingOutForInactivity = true;
+    _stopInactivityTracking();
+    await _sessionAuthService.logout();
+
+    if (!mounted) return;
+    _navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (_) => false,
+    );
+    _isLoggingOutForInactivity = false;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_isAdminSession) return;
+
+    if (state == AppLifecycleState.resumed) {
+      final lastActivity = _lastActivityAt;
+      if (lastActivity != null &&
+          DateTime.now().difference(lastActivity) >= _adminInactivityTimeout) {
+        _logoutForInactivity();
+      } else {
+        _recordActivity();
+      }
+    }
   }
 
   Future<void> _listenForPasswordResetLinks() async {
@@ -80,18 +175,33 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    _inactivityTimer?.cancel();
     _linkSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Orvix App',
-      navigatorKey: _navigatorKey,
-      theme: ThemeData(useMaterial3: true),
-      home: const SplashScreen(), // Memanggil SplashScreen sebagai halaman awal
+    return Focus(
+      onKeyEvent: (_, _) {
+        _recordActivity();
+        return KeyEventResult.ignored;
+      },
+      child: Listener(
+        onPointerDown: (_) => _recordActivity(),
+        onPointerMove: (_) => _recordActivity(),
+        onPointerSignal: (_) => _recordActivity(),
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Orvix App',
+          navigatorKey: _navigatorKey,
+          theme: ThemeData(useMaterial3: true),
+          home:
+              const SplashScreen(), // Memanggil SplashScreen sebagai halaman awal
+        ),
+      ),
     );
   }
 }

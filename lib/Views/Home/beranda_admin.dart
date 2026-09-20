@@ -332,8 +332,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
                 final totalStaff = users.where((doc) {
-                  final role = doc.data()['role']?.toString().toLowerCase();
-                  return role == 'staff';
+                  final data = doc.data();
+                  final role = (data['role'] ?? '')
+                      .toString()
+                      .trim()
+                      .toLowerCase();
+                  final name = (data['nama'] ?? data['name'] ?? '')
+                      .toString()
+                      .trim();
+                  return role != 'admin' && name.isNotEmpty;
                 }).length;
                 final todayCalculations = histories.where((doc) {
                   final date = _timestampFromMap(doc.data(), [

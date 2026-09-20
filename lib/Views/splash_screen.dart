@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
+import 'package:firebase_auth/firebase_auth.dart';
+import 'main_screen.dart';
+import 'Home/beranda_admin.dart';
+import '../Services/auth_services.dart';
+import 'Onbording/onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,6 +16,10 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _fallController;
   late Animation<Offset> _fallAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<double> _wordmarkScaleAnimation;
+  late Animation<double> _wordmarkOpacityAnimation;
 
   @override
   void initState() {
@@ -19,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Animasi Jatuh dengan efek membal (bounce)
     _fallController = AnimationController(
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1300),
       vsync: this,
     );
 
@@ -27,6 +35,26 @@ class _SplashScreenState extends State<SplashScreen>
         Tween<Offset>(begin: const Offset(0.0, -3.0), end: Offset.zero).animate(
           CurvedAnimation(parent: _fallController, curve: Curves.bounceOut),
         );
+    _scaleAnimation = Tween<double>(begin: 0.72, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fallController,
+        curve: const Interval(0.0, 0.72, curve: Curves.easeOutBack),
+      ),
+    );
+    _opacityAnimation = CurvedAnimation(
+      parent: _fallController,
+      curve: const Interval(0.0, 0.35, curve: Curves.easeIn),
+    );
+    _wordmarkScaleAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fallController,
+        curve: const Interval(0.42, 1.0, curve: Curves.easeOutBack),
+      ),
+    );
+    _wordmarkOpacityAnimation = CurvedAnimation(
+      parent: _fallController,
+      curve: const Interval(0.42, 0.72, curve: Curves.easeIn),
+    );
 
     _startAnimation();
   }
@@ -35,16 +63,26 @@ class _SplashScreenState extends State<SplashScreen>
     // 1. Jalankan animasi logo jatuh
     await _fallController.forward();
 
-    // 2. Beri jeda sejenak (400ms) agar logo mendarat dengan mulus
-    await Future.delayed(const Duration(milliseconds: 400));
+    // 2. Tahan sebentar agar splash terasa selesai sebelum berpindah halaman
+    await Future.delayed(const Duration(milliseconds: 4200));
 
-    // 3. Pindah ke OnboardingScreen (Induk dari Onboarding 1 & 2)
+    // 3. Pertahankan sesi login jika pengguna masih terautentikasi.
     if (mounted) {
+      final hasActiveSession = FirebaseAuth.instance.currentUser != null;
+      final user = hasActiveSession
+          ? await AuthService().getCurrentUserData()
+          : null;
+      if (!mounted) return;
+
+      final nextPage = !hasActiveSession
+          ? const OnboardingScreen()
+          : user?.role.trim().toLowerCase() == 'admin'
+          ? const DashboardScreen()
+          : const MainScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const OnboardingScreen(), // Diarahkan ke OnboardingScreen
+          transitionDuration: const Duration(milliseconds: 850),
+          pageBuilder: (context, animation, secondaryAnimation) => nextPage,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 0.08);
             const end = Offset.zero;
@@ -58,7 +96,13 @@ class _SplashScreenState extends State<SplashScreen>
 
             return SlideTransition(
               position: offsetAnimation,
-              child: FadeTransition(opacity: animation, child: child),
+              child: FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
+                ),
+                child: child,
+              ),
             );
           },
         ),
@@ -88,43 +132,56 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Center(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
+              const Spacer(flex: 4),
+
               // LOGO BERLIAN DENGAN ANIMASI JATUH
               RepaintBoundary(
                 child: SlideTransition(
                   position: _fallAnimation,
-                  child: Image.asset(
-                    'assets/graphic_logo.png',
-                    width: 140,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.diamond,
-                      size: 100,
-                      color: Color(0xFFC05C1D),
+                  child: FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Image.asset(
+                        'assets/icon_logo.png',
+                        width: 200,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.diamond,
+                              size: 140,
+                              color: Color(0xFFC05C1D),
+                            ),
+                      ),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const Spacer(flex: 5),
 
               // LOGO TULISAN ORVIX
-              Transform.translate(
-                offset: const Offset(0, 26),
-                child: Image.asset(
-                  'assets/text_logo.png',
-                  width: 160,
-                  errorBuilder: (context, error, stackTrace) => const Text(
-                    'ORVIX',
-                    style: TextStyle(
-                      color: Color(0xFFC05C1D),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 32,
-                      letterSpacing: 2.5,
+              FadeTransition(
+                opacity: _wordmarkOpacityAnimation,
+                child: ScaleTransition(
+                  scale: _wordmarkScaleAnimation,
+                  child: Image.asset(
+                    'assets/text_logo.png',
+                    width: 220,
+                    errorBuilder: (context, error, stackTrace) => const Text(
+                      'ORVIX',
+                      style: TextStyle(
+                        color: Color(0xFFC05C1D),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 32,
+                        letterSpacing: 2.5,
+                      ),
                     ),
                   ),
                 ),
               ),
+
+              const Spacer(flex: 3),
             ],
           ),
         ),

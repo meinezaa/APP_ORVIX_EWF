@@ -1021,12 +1021,10 @@ class _LaporanViewState extends State<LaporanView> {
     );
     await file.writeAsBytes(await document.save());
     if (!mounted) return;
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path)],
-        subject: 'Laporan Analitik ORVIX',
-        text: 'Laporan hasil analisis perhitungan ORVIX',
-      ),
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Laporan Analitik ORVIX',
+      text: 'Laporan hasil analisis perhitungan ORVIX',
     );
   }
 

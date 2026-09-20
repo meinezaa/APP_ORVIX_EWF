@@ -298,12 +298,10 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       await file.writeAsBytes(await document.save());
     }
 
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path)],
-        subject: 'Hasil NEST ${format.toUpperCase()}',
-        text: 'Hasil kalkulasi NEST ORVIX',
-      ),
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Hasil NEST ${format.toUpperCase()}',
+      text: 'Hasil kalkulasi NEST ORVIX',
     );
   }
 
