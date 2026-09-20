@@ -88,9 +88,8 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Spacer(flex: 4),
-
               // LOGO BERLIAN DENGAN ANIMASI JATUH
               RepaintBoundary(
                 child: SlideTransition(
@@ -107,24 +106,25 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              const Spacer(flex: 5),
+              const SizedBox(height: 30),
 
               // LOGO TULISAN ORVIX
-              Image.asset(
-                'assets/text_logo.png',
-                width: 160,
-                errorBuilder: (context, error, stackTrace) => const Text(
-                  'ORVIX',
-                  style: TextStyle(
-                    color: Color(0xFFC05C1D),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 32,
-                    letterSpacing: 2.5,
+              Transform.translate(
+                offset: const Offset(0, 26),
+                child: Image.asset(
+                  'assets/text_logo.png',
+                  width: 160,
+                  errorBuilder: (context, error, stackTrace) => const Text(
+                    'ORVIX',
+                    style: TextStyle(
+                      color: Color(0xFFC05C1D),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 32,
+                      letterSpacing: 2.5,
+                    ),
                   ),
                 ),
               ),
-
-              const Spacer(flex: 3),
             ],
           ),
         ),

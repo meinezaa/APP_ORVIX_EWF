@@ -132,10 +132,9 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Center(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(flex: 4),
-
-              // LOGO BERLIAN DENGAN ANIMASI JATUH
               RepaintBoundary(
                 child: SlideTransition(
                   position: _fallAnimation,
@@ -157,10 +156,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-
-              const Spacer(flex: 5),
-
-              // LOGO TULISAN ORVIX
+              const SizedBox(height: 18),
               FadeTransition(
                 opacity: _wordmarkOpacityAnimation,
                 child: ScaleTransition(
@@ -180,8 +176,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-
-              const Spacer(flex: 3),
             ],
           ),
         ),

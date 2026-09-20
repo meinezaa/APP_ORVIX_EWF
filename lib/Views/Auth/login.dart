@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../main_screen.dart';
 import '../Home/beranda_admin.dart';
 import '../../Models/users_model.dart';
@@ -18,9 +17,6 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView>
     with SingleTickerProviderStateMixin {
-  static const _rememberEmailKey = 'login_remembered_email';
-  static const _rememberPasswordKey = 'login_remembered_password';
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -58,49 +54,6 @@ class _LoginViewState extends State<LoginView>
             curve: Curves.easeInOut,
           ),
         );
-
-    _loadRememberedCredentials();
-  }
-
-  Future<void> _loadRememberedCredentials() async {
-    final preferences = await SharedPreferences.getInstance();
-    final email = preferences.getString(_rememberEmailKey);
-    final password = preferences.getString(_rememberPasswordKey);
-    if (!mounted || email == null || password == null) return;
-    _emailController.text = email;
-    _passwordController.text = password;
-    setState(() => _rememberMe = true);
-  }
-
-  Future<void> _toggleRememberMe(bool value) async {
-    if (!value) {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.remove(_rememberEmailKey);
-      await preferences.remove(_rememberPasswordKey);
-      if (mounted) setState(() => _rememberMe = false);
-      return;
-    }
-
-    final preferences = await SharedPreferences.getInstance();
-    final email = preferences.getString(_rememberEmailKey);
-    final password = preferences.getString(_rememberPasswordKey);
-    if (!mounted) return;
-    if (email != null && password != null) {
-      _emailController.text = email;
-      _passwordController.text = password;
-    }
-    setState(() => _rememberMe = true);
-  }
-
-  Future<void> _saveRememberedCredentials(String email, String password) async {
-    final preferences = await SharedPreferences.getInstance();
-    if (_rememberMe) {
-      await preferences.setString(_rememberEmailKey, email);
-      await preferences.setString(_rememberPasswordKey, password);
-      return;
-    }
-    await preferences.remove(_rememberEmailKey);
-    await preferences.remove(_rememberPasswordKey);
   }
 
   // Arahkan pengguna berdasarkan role yang tersimpan di Firestore.
@@ -165,8 +118,6 @@ class _LoginViewState extends State<LoginView>
       if (!mounted) return;
 
       if (user != null) {
-        await _saveRememberedCredentials(email, password);
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Login Berhasil! Selamat datang, ${user.nama}.'),
@@ -399,7 +350,11 @@ class _LoginViewState extends State<LoginView>
                             side: const BorderSide(color: Color(0xFFD1C7BD)),
                             onChanged: _isLoading
                                 ? null
-                                : (value) => _toggleRememberMe(value ?? false),
+                                : (value) {
+                                    setState(() {
+                                      _rememberMe = value ?? false;
+                                    });
+                                  },
                           ),
                         ),
                         const SizedBox(width: 8),

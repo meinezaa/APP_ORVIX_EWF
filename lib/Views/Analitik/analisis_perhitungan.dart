@@ -9,9 +9,13 @@ import 'package:intl/intl.dart';
 import '../../Models/historikalkulator_model.dart';
 import 'kelola_staff.dart';
 import 'laporan.dart';
+import '../Home/beranda_admin.dart';
+import '../Profil/profil_admin.dart';
 
 class AnalisisPerhitunganView extends StatefulWidget {
-  const AnalisisPerhitunganView({super.key});
+  const AnalisisPerhitunganView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<AnalisisPerhitunganView> createState() =>
@@ -137,6 +141,12 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
 
   @override
   Widget build(BuildContext context) {
+    final content = _showReport
+        ? _buildReportContent()
+        : _showStaff
+        ? _buildStaffContent()
+        : _buildAnalysisStream();
+    if (widget.embedded) return content;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -145,15 +155,110 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
       ),
       child: Scaffold(
         backgroundColor: _pageBackground,
-        body: SafeArea(
-          top: false,
-          child: _showReport
-              ? _buildReportContent()
-              : _showStaff
-              ? _buildStaffContent()
-              : _buildAnalysisStream(),
+        body: SafeArea(top: false, child: content),
+        bottomNavigationBar: _buildBottomNavigationBar(),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: _orange,
+          borderRadius: BorderRadius.circular(35),
+          boxShadow: [
+            BoxShadow(
+              color: _orange.withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.home_rounded, 'Home'),
+            _buildNavItem(1, Icons.bar_chart_rounded, 'Analitik'),
+            _buildNavItem(2, Icons.person_rounded, 'Profil'),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = index == 1;
+    return GestureDetector(
+      onTap: () {
+        if (isSelected) return;
+        final page = index == 0
+            ? const DashboardScreen()
+            : const AdminProfileScreen();
+        Navigator.of(context).pushReplacement(_smoothRoute(page));
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: isSelected ? _orange : Colors.white.withValues(alpha: 0.8),
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          if (isSelected)
+            Container(
+              margin: const EdgeInsets.only(top: 2),
+              width: 12,
+              height: 2,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  PageRoute<void> _smoothRoute(Widget page) {
+    return PageRouteBuilder<void>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, animation, secondaryAnimation) => page,
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
   }
 

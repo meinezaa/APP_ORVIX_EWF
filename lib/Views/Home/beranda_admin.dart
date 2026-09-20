@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Analitik/analisis_perhitungan.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login_histori.dart';
 import 'gold_detail.dart';
 import 'nest_detail.dart';
 import 'pp_detail_lgd.dart';
+import '../Profil/profil_admin.dart';
+import '../Analitik/analisis_perhitungan.dart';
+import '../Profil/notifikasi_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -57,33 +60,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bodyContent = _selectedIndex == 1
-        ? const AnalisisPerhitunganView()
-        : Stack(
-            children: [
-              SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildHeader(),
-                    _buildMainContent(),
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
-            ],
-          );
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F2),
       body: Stack(
         children: [
-          bodyContent,
+          // Background Scrollable Content
+          _buildSelectedContent(),
+          // Floating Bottom Navigation Bar
           Positioned(
             left: 20,
             right: 20,
             bottom: 20,
             child: _buildBottomNavigationBar(),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedContent() {
+    if (_selectedIndex == 1) {
+      return const AnalisisPerhitunganView(embedded: true);
+    }
+    if (_selectedIndex == 2) {
+      return const AdminProfileScreen(embedded: true);
+    }
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildHeader(),
+          _buildMainContent(),
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -129,16 +136,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Bell Icon with Badge
                   Stack(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotifikasiAdminView(),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 20,
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                       Positioned(
@@ -157,19 +172,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 12),
                   // Profile Avatar
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text(
-                      'A',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  InkWell(
+                    onTap: () => setState(() => _selectedIndex = 2),
+                    customBorder: const CircleBorder(),
+                    child: _buildAdminHeaderAvatar(),
                   ),
                 ],
               ),
@@ -194,6 +200,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAdminHeaderAvatar() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return _adminAvatar(null, 'A');
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? const <String, dynamic>{};
+        final name = (data['nama'] ?? data['name'] ?? user.displayName ?? 'A')
+            .toString();
+        final photo =
+            (data['foto_profil_path'] ??
+                    data['photoUrl'] ??
+                    data['photoURL'] ??
+                    '')
+                .toString();
+        return _adminAvatar(photo, name);
+      },
+    );
+  }
+
+  Widget _adminAvatar(String? photo, String name) {
+    final image = photo?.trim() ?? '';
+    return Container(
+      width: 40,
+      height: 40,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.3),
+        shape: BoxShape.circle,
+      ),
+      child: CircleAvatar(
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
+        backgroundImage: image.startsWith('http') ? NetworkImage(image) : null,
+        child: image.startsWith('http')
+            ? null
+            : Text(
+                name.trim().isEmpty ? 'A' : name.trim()[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -941,7 +996,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- 4. JENIS PERHITUNGAN ---
+  // --- 5. JENIS PERHITUNGAN ---
   Widget _buildCalculationTypesCard() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
@@ -1098,7 +1153,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(0, Icons.home_rounded, 'Home'),
-          _buildNavItem(1, Icons.bar_chart_rounded, 'Analistik'),
+          _buildNavItem(1, Icons.bar_chart_rounded, 'Analitik'),
           _buildNavItem(2, Icons.person_rounded, 'Profil'),
         ],
       ),
@@ -1110,6 +1165,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (index == 1) {
+          setState(() => _selectedIndex = index);
+          return;
+        }
+        if (index == 2) {
+          setState(() => _selectedIndex = index);
+          return;
+        }
         setState(() {
           _selectedIndex = index;
         });
