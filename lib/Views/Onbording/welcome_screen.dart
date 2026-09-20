@@ -147,7 +147,7 @@ class WelcomeView extends StatelessWidget {
 
             // Pembatas "Atau"
             Positioned(
-              top: constraints.maxHeight * 0.61,
+              top: constraints.maxHeight * 0.76,
               left: 24,
               right: 24,
               child: Row(
@@ -164,7 +164,7 @@ class WelcomeView extends StatelessWidget {
 
             // Tombol Google
             Positioned(
-              top: constraints.maxHeight * 0.68,
+              top: constraints.maxHeight * 0.66,
               left: 24,
               right: 24,
               child: SizedBox(

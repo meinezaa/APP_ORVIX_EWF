@@ -161,7 +161,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -456,7 +456,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFB83200),
             elevation: 2,
-            shadowColor: const Color(0xFFB83200).withOpacity(0.3),
+            shadowColor: const Color(0xFFB83200).withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),

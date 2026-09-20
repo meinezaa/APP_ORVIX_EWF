@@ -11,6 +11,9 @@ import '../Analitik/analisis_perhitungan.dart';
 import 'edit_profil_admin.dart';
 import 'ganti_password_admin.dart';
 import 'perangkat_terhubung_admin.dart';
+import 'notifikasi_admin.dart';
+import 'manajemen_notifikasi_admin.dart';
+import 'riwayat_aktivitas_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,7 +37,9 @@ class MyApp extends StatelessWidget {
 }
 
 class AdminProfileScreen extends StatefulWidget {
-  const AdminProfileScreen({super.key});
+  const AdminProfileScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<AdminProfileScreen> createState() => _AdminProfileScreenState();
@@ -46,6 +51,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   String _adminEmail = '-';
   String _adminPhoto = '';
   String _activeDeviceName = 'Perangkat utama';
+  int _activeStaffCount = 0;
   DateTime? _joinedDate;
 
   @override
@@ -62,6 +68,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           .collection('users')
           .doc(authUser.uid)
           .get();
+      final staffSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      final staffCount = staffSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final role = (data['role'] ?? '').toString().trim().toLowerCase();
+        final name = (data['nama'] ?? data['name'] ?? '').toString().trim();
+        return role != 'admin' && name.isNotEmpty;
+      }).length;
       final data = userSnapshot.data() ?? <String, dynamic>{};
       final loginSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -121,6 +136,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     'Admin ORVIX')
                 .toString();
         _adminEmail = (data['email'] ?? authUser.email ?? '-').toString();
+        _activeStaffCount = staffCount;
         _adminPhoto = (data['foto_profil_path'] ?? data['photoUrl'] ?? '')
             .toString();
         final savedDevice = preferences.getString(
@@ -148,6 +164,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             authUser.email?.split('@').first ??
             'Admin ORVIX';
         _adminEmail = authUser.email ?? '-';
+        _activeStaffCount = 0;
         _activeDeviceName = 'Perangkat utama';
         _joinedDate = authUser.metadata.creationTime;
       });
@@ -243,90 +260,76 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Scrollable Content
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                // 1. Header Gradient & Profile Info
-                _buildHeader(context),
+    final content = Stack(
+      children: [
+        // Scrollable Content
+        SingleChildScrollView(
+          child: Column(
+            children: [
+              // 1. Header Gradient & Profile Info
+              _buildHeader(context),
 
-                // 2. Body Menu Content
-                Transform.translate(
-                  offset: const Offset(0, -20),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF8F6F2),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 12),
-                        // Stat Cards Row
-                        _buildStatCards(),
-                        const SizedBox(height: 24),
-
-                        // Section 1: INFORMASI AKUN
-                        _buildSectionHeader('INFORMASI AKUN'),
-                        const SizedBox(height: 8),
-                        _buildAccountInfoSection(),
-                        const SizedBox(height: 20),
-
-                        // Section 2: HAK AKSES & KEAMANAN
-                        _buildSectionHeader('HAK AKSES & KEAMANAN'),
-                        const SizedBox(height: 8),
-                        _buildSecuritySection(),
-                        const SizedBox(height: 20),
-
-                        // Section 3: PREFERENSI & DUKUNGAN
-                        _buildSectionHeader('PREFERENSI & DUKUNGAN'),
-                        const SizedBox(height: 8),
-                        _buildPreferenceSection(),
-                        const SizedBox(height: 24),
-
-                        // Logout Button
-                        _buildLogoutButton(),
-                        const SizedBox(height: 16),
-
-                        // Footer Copyright
-                        const Center(
-                          child: Text(
-                            'ORVIX Management System © 2026',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF9CA3AF),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 100,
-                        ), // Space for bottom navigation
-                      ],
+              // 2. Body Menu Content
+              Transform.translate(
+                offset: const Offset(0, -20),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8F6F2),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
                     ),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildStatCards(),
+                      const SizedBox(height: 24),
+                      _buildSectionHeader('INFORMASI AKUN'),
+                      const SizedBox(height: 8),
+                      _buildAccountInfoSection(),
+                      const SizedBox(height: 20),
+                      _buildSectionHeader('HAK AKSES & KEAMANAN'),
+                      const SizedBox(height: 8),
+                      _buildSecuritySection(),
+                      const SizedBox(height: 20),
+                      _buildSectionHeader('PREFERENSI & DUKUNGAN'),
+                      const SizedBox(height: 8),
+                      _buildPreferenceSection(),
+                      const SizedBox(height: 24),
+                      _buildLogoutButton(),
+                      const SizedBox(height: 16),
+                      const Center(
+                        child: Text(
+                          'ORVIX Management System © 2026',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          // Floating Bottom Navigation Bar
+        ),
+        if (!widget.embedded)
           Positioned(
             left: 20,
             right: 20,
             bottom: 20,
             child: _buildBottomNavigationBar(),
           ),
-        ],
-      ),
+      ],
     );
+    if (widget.embedded) return content;
+    return Scaffold(body: Stack(children: [content]));
   }
 
   // --- 1. HEADER SECTION ---
@@ -337,7 +340,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFF47A3C), Color(0xFFF45A0A)],
+          colors: [Color(0xFFF8A76D), Color(0xFFEE7E49)],
         ),
       ),
       child: Column(
@@ -377,7 +380,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
+                      color: Colors.white.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -398,6 +401,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       ),
                     ),
                   ),
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotifikasiAdminView(),
+                          ),
+                        ),
+                        customBorder: const CircleBorder(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -409,7 +425,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 width: 2,
               ),
             ),
@@ -438,7 +454,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFD97706),
+                              color: Color(0xFFC9825B),
                             ),
                           ),
                         ),
@@ -450,7 +466,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFD97706),
+                          color: Color(0xFFC9825B),
                         ),
                       ),
                     ),
@@ -470,7 +486,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             _adminEmail,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -491,7 +507,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -502,7 +518,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEE6C3A),
+                    color: const Color(0xFFE99570),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -526,10 +542,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       ),
                       const SizedBox(height: 2),
                       RichText(
-                        text: const TextSpan(
+                        text: TextSpan(
                           children: [
                             TextSpan(
-                              text: '12 ',
+                              text: '$_activeStaffCount ',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -565,7 +581,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -576,7 +592,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD97706),
+                    color: const Color(0xFFD79A70),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -639,7 +655,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
+            color: Colors.black.withValues(alpha: 0.015),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -650,7 +666,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           _buildMenuItem(
             icon: Icons.person_outline_rounded,
             iconBg: const Color(0xFFFFF0EB),
-            iconColor: const Color(0xFFEE6C3A),
+            iconColor: const Color(0xFFE58F6C),
             title: 'Edit Data Pribadi',
             subtitle: 'Nama, telepon, dan identitas admin',
             onTap: () async {
@@ -666,7 +682,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           _buildMenuItem(
             icon: Icons.lock_outline_rounded,
             iconBg: const Color(0xFFFFF0EB),
-            iconColor: const Color(0xFFEE6C3A),
+            iconColor: const Color(0xFFE58F6C),
             title: 'Ubah Kata Sandi & PIN',
             subtitle: 'Terakhir diperbarui 28 hari lalu',
             onTap: () => Navigator.of(context).push(
@@ -679,9 +695,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           _buildMenuItem(
             icon: Icons.notifications_none_rounded,
             iconBg: const Color(0xFFFFF0EB),
-            iconColor: const Color(0xFFEE6C3A),
+            iconColor: const Color(0xFFE58F6C),
             title: 'Manajemen Notifikasi',
             subtitle: 'Push alert perhitungan & login',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ManajemenNotifikasiAdminView(),
+              ),
+            ),
           ),
         ],
       ),
@@ -696,7 +717,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
+            color: Colors.black.withValues(alpha: 0.015),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -738,6 +759,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             iconColor: const Color(0xFF3B82F6),
             title: 'Riwayat Aktivitas Admin',
             subtitle: 'Log audit dan perubahan sistem',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const RiwayatAktivitasAdminPage(),
+              ),
+            ),
           ),
         ],
       ),
@@ -752,7 +778,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
+            color: Colors.black.withValues(alpha: 0.015),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -760,14 +786,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildMenuItem(
-            icon: Icons.help_outline_rounded,
-            iconBg: const Color(0xFFECFDF5),
-            iconColor: const Color(0xFF10B981),
-            title: 'Pusat Bantuan & Panduan ORVIX',
-            subtitle: 'FAQ, manual staff, dan kontak IT',
-          ),
-          const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
           _buildMenuItem(
             icon: Icons.rotate_right_rounded,
             iconBg: const Color(0xFFECFDF5),
@@ -870,7 +888,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFCA5A5).withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFFFCA5A5).withValues(alpha: 0.3),
+        ),
       ),
       child: InkWell(
         onTap: _logoutAdmin,
@@ -899,11 +919,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: const Color(0xFFEE6C3A),
+        color: const Color(0xFFF09A72),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEE6C3A).withOpacity(0.35),
+            color: const Color(0xFFE99A78).withValues(alpha: 0.28),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -970,7 +990,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 ),
                 child: const Icon(
                   Icons.person,
-                  color: Color(0xFFEE6C3A),
+                  color: Color(0xFFE58F6C),
                   size: 16,
                 ),
               ),

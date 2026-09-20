@@ -228,6 +228,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     }
     final unique = <String, Map<String, dynamic>>{};
     for (final doc in sorted) {
+      if (doc.data()['revoked'] == true) continue;
       final data = {...doc.data(), '_docId': doc.id};
       final key = [
         _text(data, ['device', 'device_name'], 'unknown'),
@@ -300,19 +301,21 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     return Icons.devices_other_rounded;
   }
 
-  Future<void> _revokeSession(Map<String, dynamic>? data) async {
+  Future<bool> _revokeSession(Map<String, dynamic>? data) async {
     final user = FirebaseAuth.instance.currentUser;
     final docId = data?['_docId']?.toString();
-    if (user == null || docId == null || docId.isEmpty) return;
-    await FirebaseFirestore.instance
+    if (user == null || docId == null || docId.isEmpty) return false;
+    final sessionRef = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('login_history')
-        .doc(docId)
-        .set({
-          'revoked': true,
-          'revoked_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        .doc(docId);
+    await sessionRef.set({
+      'revoked': true,
+      'revoked_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    final updated = await sessionRef.get();
+    return updated.data()?['revoked'] == true;
   }
 
   Future<void> _revokeOtherDevices(
@@ -462,7 +465,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -620,7 +623,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -722,7 +725,30 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: InkWell(
-              onTap: () => _revokeSession(data),
+              onTap: () async {
+                try {
+                  final revoked = await _revokeSession(data);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        revoked
+                            ? 'Sesi perangkat berhasil diputuskan.'
+                            : 'Sesi gagal diputuskan.',
+                      ),
+                      backgroundColor: revoked ? Colors.green : Colors.red,
+                    ),
+                  );
+                } catch (error) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal memutuskan sesi: $error'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
               borderRadius: BorderRadius.circular(12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

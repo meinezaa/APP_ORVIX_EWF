@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../main_screen.dart';
-import '../Home/beranda_admin.dart';
-import '../../Services/auth_services.dart';
-import 'onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
+import 'main_screen.dart';
+import 'Home/beranda_admin.dart';
+import '../Services/auth_services.dart';
+import 'Onbording/onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -132,9 +132,10 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const Spacer(flex: 4),
+
+              // LOGO BERLIAN DENGAN ANIMASI JATUH
               RepaintBoundary(
                 child: SlideTransition(
                   position: _fallAnimation,
@@ -156,7 +157,10 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+
+              const Spacer(flex: 5),
+
+              // LOGO TULISAN ORVIX
               FadeTransition(
                 opacity: _wordmarkOpacityAnimation,
                 child: ScaleTransition(
@@ -176,6 +180,8 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
+
+              const Spacer(flex: 3),
             ],
           ),
         ),

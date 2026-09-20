@@ -13,7 +13,9 @@ import '../Home/beranda_admin.dart';
 import '../Profil/profil_admin.dart';
 
 class AnalisisPerhitunganView extends StatefulWidget {
-  const AnalisisPerhitunganView({super.key});
+  const AnalisisPerhitunganView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<AnalisisPerhitunganView> createState() =>
@@ -139,6 +141,12 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
 
   @override
   Widget build(BuildContext context) {
+    final content = _showReport
+        ? _buildReportContent()
+        : _showStaff
+        ? _buildStaffContent()
+        : _buildAnalysisStream();
+    if (widget.embedded) return content;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -147,14 +155,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
       ),
       child: Scaffold(
         backgroundColor: _pageBackground,
-        body: SafeArea(
-          top: false,
-          child: _showReport
-              ? _buildReportContent()
-              : _showStaff
-              ? _buildStaffContent()
-              : _buildAnalysisStream(),
-        ),
+        body: SafeArea(top: false, child: content),
         bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );

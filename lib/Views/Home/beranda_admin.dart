@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login_histori.dart';
 import 'gold_detail.dart';
 import 'nest_detail.dart';
-import 'pp_detailLGD.dart';
+import 'pp_detail_lgd.dart';
 import '../Profil/profil_admin.dart';
 import '../Analitik/analisis_perhitungan.dart';
+import '../Profil/notifikasi_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -63,15 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Stack(
         children: [
           // Background Scrollable Content
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildHeader(),
-                _buildMainContent(),
-                const SizedBox(height: 100), // Spasi untuk Bottom Navigation
-              ],
-            ),
-          ),
+          _buildSelectedContent(),
           // Floating Bottom Navigation Bar
           Positioned(
             left: 20,
@@ -79,6 +73,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             bottom: 20,
             child: _buildBottomNavigationBar(),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedContent() {
+    if (_selectedIndex == 1) {
+      return const AnalisisPerhitunganView(embedded: true);
+    }
+    if (_selectedIndex == 2) {
+      return const AdminProfileScreen(embedded: true);
+    }
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildHeader(),
+          _buildMainContent(),
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -124,16 +136,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Bell Icon with Badge
                   Stack(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotifikasiAdminView(),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 20,
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                       Positioned(
@@ -152,19 +172,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 12),
                   // Profile Avatar
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text(
-                      'A',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  InkWell(
+                    onTap: () => setState(() => _selectedIndex = 2),
+                    customBorder: const CircleBorder(),
+                    child: _buildAdminHeaderAvatar(),
                   ),
                 ],
               ),
@@ -184,11 +195,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             'Pantau aktivitas dan performa ORVIX hari ini',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontSize: 13,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAdminHeaderAvatar() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return _adminAvatar(null, 'A');
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? const <String, dynamic>{};
+        final name = (data['nama'] ?? data['name'] ?? user.displayName ?? 'A')
+            .toString();
+        final photo =
+            (data['foto_profil_path'] ??
+                    data['photoUrl'] ??
+                    data['photoURL'] ??
+                    '')
+                .toString();
+        return _adminAvatar(photo, name);
+      },
+    );
+  }
+
+  Widget _adminAvatar(String? photo, String name) {
+    final image = photo?.trim() ?? '';
+    return Container(
+      width: 40,
+      height: 40,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.3),
+        shape: BoxShape.circle,
+      ),
+      child: CircleAvatar(
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
+        backgroundImage: image.startsWith('http') ? NetworkImage(image) : null,
+        child: image.startsWith('http')
+            ? null
+            : Text(
+                name.trim().isEmpty ? 'A' : name.trim()[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -272,8 +332,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
                 final totalStaff = users.where((doc) {
-                  final role = doc.data()['role']?.toString().toLowerCase();
-                  return role == 'staff';
+                  final data = doc.data();
+                  final role = (data['role'] ?? '')
+                      .toString()
+                      .trim()
+                      .toLowerCase();
+                  final name = (data['nama'] ?? data['name'] ?? '')
+                      .toString()
+                      .trim();
+                  return role != 'admin' && name.isNotEmpty;
                 }).length;
                 final todayCalculations = histories.where((doc) {
                   final date = _timestampFromMap(doc.data(), [
@@ -389,7 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -936,63 +1003,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- 4. AKSES CEPAT ---
-  Widget _buildQuickAccess() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildQuickAccessTile(
-            icon: Icons.groups_rounded,
-            title: 'Kelola Staff',
-            iconColor: const Color(0xFFEE6C3A),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickAccessTile(
-            icon: Icons.bar_chart_rounded,
-            title: 'Analistik',
-            iconColor: const Color(0xFF2563EB),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickAccessTile({
-    required IconData icon,
-    required String title,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: iconColor, size: 28),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-            ],
-          ),
-          const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 18),
-        ],
-      ),
-    );
-  }
-
   // --- 5. JENIS PERHITUNGAN ---
   Widget _buildCalculationTypesCard() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -1140,7 +1150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(35),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEE6C3A).withOpacity(0.3),
+            color: const Color(0xFFEE6C3A).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1163,15 +1173,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return GestureDetector(
       onTap: () {
         if (index == 1) {
-          Navigator.of(
-            context,
-          ).pushReplacement(_smoothRoute(const AnalisisPerhitunganView()));
+          setState(() => _selectedIndex = index);
           return;
         }
         if (index == 2) {
-          Navigator.of(
-            context,
-          ).pushReplacement(_smoothRoute(const AdminProfileScreen()));
+          setState(() => _selectedIndex = index);
           return;
         }
         setState(() {
@@ -1191,7 +1197,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon,
               color: isSelected
                   ? const Color(0xFFEE6C3A)
-                  : Colors.white.withOpacity(0.8),
+                  : Colors.white.withValues(alpha: 0.8),
               size: 20,
             ),
           ),
@@ -1216,30 +1222,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
         ],
       ),
-    );
-  }
-
-  PageRoute<void> _smoothRoute(Widget page) {
-    return PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (_, animation, secondaryAnimation) => page,
-      transitionsBuilder: (_, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.04, 0),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
     );
   }
 }

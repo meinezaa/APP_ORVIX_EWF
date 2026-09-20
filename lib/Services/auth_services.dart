@@ -167,14 +167,99 @@ class AuthService {
         'active_login_platform_${authUser.uid}',
         metadata['platform'] ?? '',
       );
-      _sessionRevocationSubscription?.cancel();
-      _sessionRevocationSubscription = loginRef.snapshots().listen((snapshot) {
-        if (snapshot.data()?['revoked'] == true) {
-          _sessionRevocationSubscription?.cancel();
-          _auth.signOut();
-        }
-      });
+      await monitorCurrentSession();
     } catch (_) {}
+  }
+
+  Future<void> monitorCurrentSession() async {
+    final authUser = currentUser;
+    if (authUser == null) return;
+
+    final preferences = await SharedPreferences.getInstance();
+    final savedSessionId = preferences.getString(
+      'active_login_session_${authUser.uid}',
+    );
+    final localMetadata = await _loginMetadata();
+    final history = await _firestore
+        .collection('users')
+        .doc(authUser.uid)
+        .collection('login_history')
+        .get();
+
+    QueryDocumentSnapshot<Map<String, dynamic>>? selectedSession;
+    if (savedSessionId != null && savedSessionId.isNotEmpty) {
+      for (final doc in history.docs) {
+        if (doc.id == savedSessionId &&
+            _sameSessionDevice(doc.data(), localMetadata)) {
+          selectedSession = doc;
+          break;
+        }
+      }
+    }
+    selectedSession ??= _latestMatchingSession(history.docs, localMetadata);
+
+    if (selectedSession == null) {
+      await _sessionRevocationSubscription?.cancel();
+      _sessionRevocationSubscription = null;
+      return;
+    }
+
+    await preferences.setString(
+      'active_login_session_${authUser.uid}',
+      selectedSession.id,
+    );
+
+    await _sessionRevocationSubscription?.cancel();
+    _sessionRevocationSubscription = selectedSession.reference
+        .snapshots()
+        .listen((snapshot) {
+          if (snapshot.data()?['revoked'] == true) {
+            _sessionRevocationSubscription?.cancel();
+            _sessionRevocationSubscription = null;
+            _auth.signOut();
+          }
+        });
+  }
+
+  QueryDocumentSnapshot<Map<String, dynamic>>? _latestMatchingSession(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> sessions,
+    Map<String, String> localMetadata,
+  ) {
+    final matching = sessions
+        .where((doc) => _sameSessionDevice(doc.data(), localMetadata))
+        .toList();
+    matching.sort((a, b) {
+      final aDate = _sessionDate(a.data());
+      final bDate = _sessionDate(b.data());
+      return bDate.compareTo(aDate);
+    });
+    return matching.isEmpty ? null : matching.first;
+  }
+
+  bool _sameSessionDevice(
+    Map<String, dynamic> session,
+    Map<String, String> localMetadata,
+  ) {
+    final sessionDevice = (session['device'] ?? session['device_name'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final sessionPlatform = (session['platform'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final localDevice = (localMetadata['device'] ?? '').trim().toLowerCase();
+    final localPlatform = (localMetadata['platform'] ?? '')
+        .trim()
+        .toLowerCase();
+    return sessionDevice == localDevice && sessionPlatform == localPlatform;
+  }
+
+  DateTime _sessionDate(Map<String, dynamic> data) {
+    final value = data['logged_in_at'] ?? data['loggedInAt'];
+    if (value is Timestamp) return value.toDate();
+    return DateTime.tryParse('$value') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   Future<Map<String, String>> _loginMetadata() async {

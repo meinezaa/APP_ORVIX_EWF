@@ -1876,7 +1876,7 @@ class _KelolaStaffContentState extends State<KelolaStaffContent> {
   }
 
   bool _isStaff(Map<String, dynamic> data) =>
-      (data['role'] ?? 'staff').toString().toLowerCase() != 'admin';
+      (data['role'] ?? '').toString().trim().toLowerCase() != 'admin';
 
   bool _hasName(Map<String, dynamic> data) =>
       (data['nama'] ?? data['name'] ?? '').toString().trim().isNotEmpty;
