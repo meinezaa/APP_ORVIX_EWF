@@ -228,6 +228,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     }
     final unique = <String, Map<String, dynamic>>{};
     for (final doc in sorted) {
+      if (doc.data()['revoked'] == true) continue;
       final data = {...doc.data(), '_docId': doc.id};
       final key = [
         _text(data, ['device', 'device_name'], 'unknown'),
