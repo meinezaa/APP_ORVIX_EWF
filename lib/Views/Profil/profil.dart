@@ -327,32 +327,59 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (context, snapshot) {
         final values = snapshot.data ?? List<int>.filled(5, 0);
         const maxValue = 60;
-        return _panel(
-          padding: const EdgeInsets.fromLTRB(20, 15, 18, 12),
-          color: Colors.white.withValues(alpha: 0.78),
+        final totalMinutes = values.fold<int>(0, (runningTotal, item) => runningTotal + item);
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9F3EF).withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+                spreadRadius: 0,
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Terakhir Kemarin',
+                children: [
+                  const Text(
+                    'Penggunaan Aplikasi',
                     style: TextStyle(
-                      color: Color(0xFF8D1710),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2D302F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  Text(
-                    'menit',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1E8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$totalMinutes menit',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFE75D1C),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 142,
+                height: 170,
                 child: CustomPaint(
                   painter: _UsageChartPainter(
                     values: values,
@@ -435,14 +462,18 @@ class _ProfileViewState extends State<ProfileView> {
         vertical: horizontal ? 12 : 9,
       ),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFB17F), Color(0xFFFFE4D1)],
-        ),
+        color: Colors.white.withValues(alpha: 0.38),
         borderRadius: BorderRadius.circular(15),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.58),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: horizontal
@@ -647,40 +678,54 @@ class _UsageChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const chartTop = 8.0;
-    const chartBottom = 112.0;
-    const labelWidth = 28.0;
-    const lineColor = Color(0xFFE87520);
-    final chartWidth = size.width - labelWidth;
-    final guidePaint = Paint()
-      ..color = const Color(0xFF6C6866)
-      ..strokeWidth = 1.3;
+    const paddingTop = 18.0;
+    const paddingBottom = 34.0;
+    const labelGap = 18.0;
+    const lineColor = Color(0xFFE75D1C);
+    const fillColor = Color(0x55F28A3C);
+    const guideColor = Color(0xFFE7E1DE);
+    const axisColor = Color(0xFFBFAAA0);
 
-    const guideSpacing = 34.0;
-    for (var guideIndex = 0; guideIndex < 3; guideIndex++) {
-      final minute = [60, 30, 15][guideIndex];
-      final y = chartTop + (guideSpacing * guideIndex);
+    final chartWidth = size.width - labelGap;
+    final chartBottom = size.height - paddingBottom;
+    final chartTop = paddingTop;
+    final slotWidth = chartWidth / (values.length - 1);
+
+    final guidePaint = Paint()
+      ..color = guideColor
+      ..strokeWidth = 1.2;
+
+    final axisPaint = Paint()
+      ..color = axisColor
+      ..strokeWidth = 1.0;
+
+    for (var i = 0; i < 4; i++) {
+      final y = chartTop + ((chartBottom - chartTop) / 3) * i;
       canvas.drawLine(Offset(0, y), Offset(chartWidth, y), guidePaint);
-      _drawText(canvas, '$minute', Offset(chartWidth + 7, y - 8));
     }
 
-    final slotWidth = chartWidth / 5;
-    final points = List<Offset>.generate(5, (index) {
+    canvas.drawLine(
+      Offset(0, chartBottom),
+      Offset(chartWidth, chartBottom),
+      axisPaint,
+    );
+
+    final points = List<Offset>.generate(values.length, (index) {
       final value = values[index].clamp(0, maxValue);
-      final x = (slotWidth * index) + (slotWidth / 2);
+      final x = index * slotWidth;
       final y = chartBottom - ((chartBottom - chartTop) * value / maxValue);
       return Offset(x, y);
     });
 
     final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var index = 1; index < points.length; index++) {
-      final previous = points[index - 1];
-      final current = points[index];
-      final middleX = (previous.dx + current.dx) / 2;
+    for (var i = 1; i < points.length; i++) {
+      final previous = points[i - 1];
+      final current = points[i];
+      final controlX = (previous.dx + current.dx) / 2;
       linePath.cubicTo(
-        middleX,
+        controlX,
         previous.dy,
-        middleX,
+        controlX,
         current.dy,
         current.dx,
         current.dy,
@@ -691,54 +736,74 @@ class _UsageChartPainter extends CustomPainter {
       ..lineTo(points.last.dx, chartBottom)
       ..lineTo(points.first.dx, chartBottom)
       ..close();
+
     canvas.drawPath(
       areaPath,
       Paint()
-        ..shader =
-            const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0x55F28A3C), Color(0x08F28A3C)],
-            ).createShader(
-              Rect.fromLTWH(0, chartTop, chartWidth, chartBottom - chartTop),
-            ),
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [fillColor, Color(0x00F28A3C)],
+        ).createShader(Rect.fromLTRB(0, chartTop, chartWidth, chartBottom)),
     );
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color = lineColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawPath(linePath, linePaint);
+
     for (var index = 0; index < points.length; index++) {
-      canvas.drawCircle(points[index], 4, Paint()..color = lineColor);
-      _drawText(
+      final point = points[index];
+      final glowPaint = Paint()..color = const Color(0x44E75D1C);
+      canvas.drawCircle(point, 10, glowPaint);
+      canvas.drawCircle(point, 5.5, Paint()..color = lineColor);
+
+      final label = _dayLabel(index);
+      final labelPainter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(
+            color: Color(0xFF403A36),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      labelPainter.paint(
         canvas,
-        _dayLabel(index),
-        Offset(points[index].dx - 11, chartBottom + 11),
+        Offset(point.dx - labelPainter.width / 2, chartBottom + 10),
+      );
+    }
+
+    final scaleMarks = ['60', '40', '20'];
+    for (var i = 0; i < scaleMarks.length; i++) {
+      final value = scaleMarks[i];
+      final y = chartTop + ((chartBottom - chartTop) / (scaleMarks.length - 1)) * i;
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: value,
+          style: const TextStyle(
+            color: Color(0xFF8A7263),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        Offset(chartWidth + 8, y - textPainter.height / 2),
       );
     }
   }
 
-  void _drawText(Canvas canvas, String text, Offset offset) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFF16110F),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, offset);
-  }
-
-  String _dayLabel(int index) =>
-      const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'][index];
+  String _dayLabel(int index) => const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'][index];
 
   @override
   bool shouldRepaint(covariant _UsageChartPainter oldDelegate) =>

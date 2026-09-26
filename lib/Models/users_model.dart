@@ -27,10 +27,14 @@ class UserModel {
 
   // Mengubah Map Firestore menjadi Objek UserModel
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    final email = _stringValue(
+          map['email'] ?? map['user_email'] ?? map['email_address']) ??
+        '';
+
     return UserModel(
       userId: map['user_id'] ?? '',
       nama: map['nama'] ?? '',
-      email: map['email'] ?? '',
+      email: email,
       phone: map['phone'] ?? '',
       role: map['role'] ?? 'staff',
       status: map['status'] ?? 'active',

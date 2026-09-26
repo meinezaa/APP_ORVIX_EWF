@@ -431,10 +431,12 @@ class _PivotPointViewState extends State<PivotPointView> {
       await file.writeAsBytes(await document.save());
     }
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Hasil Pivot Point ${format.toUpperCase()}',
-      text: 'Hasil kalkulasi Pivot Point ORVIX',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'Hasil Pivot Point ${format.toUpperCase()}',
+        text: 'Hasil kalkulasi Pivot Point ORVIX',
+      ),
     );
   }
 
@@ -616,122 +618,149 @@ class _PivotPointViewState extends State<PivotPointView> {
               const SizedBox(height: 20),
 
               if (_resultsVisible) ...[
-                // Indikasi / Hasil Akhir Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8833A).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 8,
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.topCenter,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8E5D6).withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          width: 1.5,
                         ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8833A),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          "Indikasi",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Hasil Pivot Point",
-                        style: TextStyle(
-                          color: Colors.brown,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 24,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFE8833A),
-                            width: 1.5,
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Hasil Pivot Point',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6E2E1A),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          _formatNumber(_pp),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF8B2500),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _indication == 'BUY'
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _indication == 'BUY'
-                                ? const Color(0xFF4CAF50)
-                                : const Color(0xFFE53935),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Action',
-                              style: TextStyle(
-                                color: Colors.brown,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                          const SizedBox(height: 6),
+                          Container(
+                            width: 170,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFE8833A),
+                                width: 1.5,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
+                            child: Text(
+                              _formatNumber(_pp),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF801B00),
+                                letterSpacing: 0.2,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Action',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6E2E1A),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: 200,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _indication == 'BUY'
+                                  ? const Color(0xFFE7F8EE).withValues(alpha: 0.9)
+                                  : const Color(0xFFFFEAEA).withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _indication == 'BUY'
+                                    ? const Color(0xFF2EAF5B)
+                                    : const Color(0xFFE53935),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
                               _indication,
                               style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
                                 color: _indication == 'BUY'
                                     ? const Color(0xFF2E7D32)
                                     : const Color(0xFFC62828),
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _indication == 'BUY'
-                                  ? 'Open dibawah Pivot = BUY'
-                                  : 'Open diatas Pivot = SELL',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _indication == 'BUY'
-                                    ? const Color(0xFF4B7F43)
-                                    : const Color(0xFF8B4545),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _indication == 'BUY'
+                                ? 'Open dibawah Pivot = BUY'
+                                : 'Open diatas Pivot = SELL',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _indication == 'BUY'
+                                  ? const Color(0xFF2E683A)
+                                  : const Color(0xFFC62828),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 38,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD8531D),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD8531D).withValues(
+                                alpha: 0.3,
                               ),
-                              textAlign: TextAlign.center,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
+                        child: const Text(
+                          'Indikasi',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -1021,10 +1022,12 @@ class _LaporanViewState extends State<LaporanView> {
     );
     await file.writeAsBytes(await document.save());
     if (!mounted) return;
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Laporan Analitik ORVIX',
-      text: 'Laporan hasil analisis perhitungan ORVIX',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'Laporan Analitik ORVIX',
+        text: 'Laporan hasil analisis perhitungan ORVIX',
+      ),
     );
   }
 
@@ -1085,23 +1088,43 @@ class _LaporanViewState extends State<LaporanView> {
   String _pdfDonutSvg(int physical, int pivot, int nest) {
     final total = physical + pivot + nest;
     if (total == 0) {
-      return '<svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="48" fill="none" stroke="#E8E1DC" stroke-width="22"/></svg>';
+      return '<svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="48" fill="none" stroke="#E8E1DC" stroke-width="22"/><circle cx="75" cy="75" r="35" fill="white"/></svg>';
     }
-    const circumference = 301.59;
-    var offset = 0.0;
-    final segments = <String>[];
-    for (final segment in [
+
+    final segments = [
       (physical, '#E75E14'),
       (pivot, '#5757E8'),
       (nest, '#0A9B70'),
-    ]) {
-      final length = circumference * segment.$1 / total;
-      segments.add(
-        '<circle cx="75" cy="75" r="48" fill="none" stroke="${segment.$2}" stroke-width="22" stroke-dasharray="$length ${circumference - length}" stroke-dashoffset="-$offset" transform="rotate(-90 75 75)"/>',
+    ];
+
+    final cx = 75.0;
+    final cy = 75.0;
+    final r = 48.0;
+    var currentAngle = -90.0;
+    final rendered = <String>[];
+
+    ({double x, double y}) pointForAngle(double angleDegrees) {
+      final angleRad = (angleDegrees - 90) * math.pi / 180;
+      return (
+        x: cx + r * math.cos(angleRad),
+        y: cy + r * math.sin(angleRad),
       );
-      offset += length;
     }
-    return '<svg width="150" height="150" viewBox="0 0 150 150">${segments.join()}<circle cx="75" cy="75" r="35" fill="white"/></svg>';
+
+    for (final (value, color) in segments) {
+      if (value <= 0) continue;
+
+      final sweepDeg = (value / total) * 360;
+      final start = pointForAngle(currentAngle);
+      final end = pointForAngle(currentAngle + sweepDeg);
+      final largeArc = sweepDeg > 180 ? 1 : 0;
+      rendered.add(
+        '<path d="M ${start.x.toStringAsFixed(2)} ${start.y.toStringAsFixed(2)} A $r $r 0 $largeArc 1 ${end.x.toStringAsFixed(2)} ${end.y.toStringAsFixed(2)}" fill="none" stroke="$color" stroke-width="22" stroke-linecap="butt"/>',
+      );
+      currentAngle += sweepDeg;
+    }
+
+    return '<svg width="150" height="150" viewBox="0 0 150 150">${rendered.join()}<circle cx="75" cy="75" r="35" fill="white"/></svg>';
   }
 }
 

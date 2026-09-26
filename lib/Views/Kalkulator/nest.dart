@@ -298,10 +298,12 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       await file.writeAsBytes(await document.save());
     }
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Hasil NEST ${format.toUpperCase()}',
-      text: 'Hasil kalkulasi NEST ORVIX',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'Hasil NEST ${format.toUpperCase()}',
+        text: 'Hasil kalkulasi NEST ORVIX',
+      ),
     );
   }
 
@@ -671,13 +673,12 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
-        // Main Cream Card
         Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 16),
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
           decoration: BoxDecoration(
-            color: const Color(0xFFFBF2EB), // Soft cream/pinkish tint
+            color: const Color(0xFFFBF2EB),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.6),
@@ -693,7 +694,6 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           ),
           child: Column(
             children: [
-              // Hasil Nest Section
               const Text(
                 'Hasil Nest',
                 style: TextStyle(
@@ -703,10 +703,32 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              _buildValueBox(_formatNumber(_nestValue)),
+              Container(
+                width: 170,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFE8833A),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  _formatNumber(_nestValue),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF801B00),
+                    letterSpacing: 0.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               const SizedBox(height: 14),
-
-              // Action Section
               const Text(
                 'Action',
                 style: TextStyle(
@@ -716,9 +738,34 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              _buildValueBox(_action),
-              const SizedBox(height: 16),
-
+              Container(
+                width: 200,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _action == 'BUY'
+                      ? const Color(0xFFE7F8EE).withValues(alpha: 0.9)
+                      : const Color(0xFFFFEAEA).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _action == 'BUY'
+                        ? const Color(0xFF2EAF5B)
+                        : const Color(0xFFE53935),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  _action,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: _action == 'BUY'
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFFC62828),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
               if (_action == 'BUY')
                 const Text(
                   'Jika Close diatas Open BUY',
@@ -740,12 +787,10 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
             ],
           ),
         ),
-
-        // Floating Top Badge "Indikasi"
         Positioned(
           top: 0,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFD8531D),
               borderRadius: BorderRadius.circular(10),
@@ -771,54 +816,25 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     );
   }
 
-  Widget _buildValueBox(String text) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF444444), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF801B00), // Dark Burgundy Red
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
-
   // --- 5. ACTION BUTTONS ---
   Widget _buildActionButtons() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Download Button
         SizedBox(
           width: 150,
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFDE5825), width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFDE5825),
+                width: 1.5,
+              ),
             ),
             child: InkWell(
               onTap: _downloadAndShareResults,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
@@ -842,16 +858,16 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           ),
         ),
         const SizedBox(width: 16),
-
-        // Reset Button
         SizedBox(
           width: 150,
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFDE5825), width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFDE5825),
+                width: 1.5,
+              ),
             ),
             child: InkWell(
               onTap: () {
@@ -864,7 +880,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                   _lastSavedNestInput = null;
                 });
               },
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: const Center(
                 child: Text(
                   'Reset',

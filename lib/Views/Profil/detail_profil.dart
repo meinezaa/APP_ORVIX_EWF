@@ -39,9 +39,14 @@ class _DetailProfilViewState extends State<DetailProfilView> {
 
   Future<UserModel?> _loadUser() async {
     final user = await _authService.getCurrentUserData();
+    final firebaseEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+    final resolvedEmail = (user?.email.trim().isNotEmpty == true
+            ? user!.email
+            : firebaseEmail)
+        .trim();
+
     _nameController.text = user?.nama ?? '';
-    _emailController.text =
-        user?.email ?? FirebaseAuth.instance.currentUser?.email ?? '';
+    _emailController.text = resolvedEmail;
     _phoneController.text = user?.phone ?? '';
     _savedPhotoPath = user?.fotoProfilPath;
     if (user?.tanggalLahir != null && user!.tanggalLahir!.isNotEmpty) {
@@ -127,6 +132,7 @@ class _DetailProfilViewState extends State<DetailProfilView> {
       // 2. Simpan data profil & URL Cloudinary ke Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'nama': _nameController.text.trim(),
+        'email': user.email?.trim() ?? _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
         'tanggal_lahir': _birthDate == 'Pilih tanggal lahir'
             ? null

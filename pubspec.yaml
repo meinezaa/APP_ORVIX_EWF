@@ -86,13 +86,14 @@ flutter:
     - assets/onboarding1.png
     - assets/onboarding2.png
     - assets/onboarding3.png
+    - assets/bg_launcher_orvix.png
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icon_logo.png"
-  adaptive_icon_background: "#F4F1EE"
-  adaptive_icon_foreground: "assets/icon_logo.png"
+  image_path: "assets/bg_launcher_orvix.png"
+  adaptive_icon_background: "#00000000"
+  adaptive_icon_foreground: "assets/bg_launcher_orvix.png"
   min_sdk_android: 21
 
   # To add assets to your application, add an assets section, like this:
