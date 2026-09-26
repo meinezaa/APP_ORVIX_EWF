@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'package:app_pt_ewf/Views/Onbording/splash_screen.dart';
 import 'package:app_pt_ewf/Views/Onbording/onboarding_screen.dart';
@@ -36,6 +37,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   StreamSubscription<User?>? _authSubscription;
   Timer? _inactivityTimer;
   DateTime? _lastActivityAt;
+  DateTime? _lastPersistedActivityAt;
+  String? _trackedAdminUid;
   bool _isAdminSession = false;
   bool _isLoggingOutForInactivity = false;
   bool _hasReceivedInitialAuthState = false;
@@ -64,6 +67,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Future<void> _updateSessionForUser(User? user) async {
     _stopInactivityTracking();
     if (user == null) {
+      final previousUid = _trackedAdminUid;
+      _trackedAdminUid = null;
+      if (previousUid != null) {
+        final preferences = await SharedPreferences.getInstance();
+        await preferences.remove(_adminActivityKey(previousUid));
+      }
       final wasInitialized = _hasReceivedInitialAuthState;
       _hasReceivedInitialAuthState = true;
       if (wasInitialized && mounted) {
@@ -81,18 +90,55 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return;
     }
 
-    await _sessionAuthService.monitorCurrentSession();
-
     _isAdminSession = profile?.role.trim().toLowerCase() == 'admin';
-    if (_isAdminSession) _recordActivity();
+    if (_isAdminSession) {
+      _trackedAdminUid = user.uid;
+      final preferences = await SharedPreferences.getInstance();
+      final savedActivity = preferences.getInt(_adminActivityKey(user.uid));
+      if (savedActivity != null &&
+          DateTime.now().difference(
+                DateTime.fromMillisecondsSinceEpoch(savedActivity),
+              ) >=
+              _adminInactivityTimeout) {
+        await preferences.remove(_adminActivityKey(user.uid));
+        await _sessionAuthService.logout();
+        return;
+      }
+      _recordActivity(persistImmediately: true);
+    } else {
+      _trackedAdminUid = null;
+    }
+
+    await _sessionAuthService.monitorCurrentSession();
   }
 
-  void _recordActivity() {
+  String _adminActivityKey(String uid) => 'admin_last_activity_$uid';
+
+  void _recordActivity({bool persistImmediately = false}) {
     if (!_isAdminSession || _isLoggingOutForInactivity) return;
 
-    _lastActivityAt = DateTime.now();
+    final now = DateTime.now();
+    _lastActivityAt = now;
     _inactivityTimer?.cancel();
     _inactivityTimer = Timer(_adminInactivityTimeout, _logoutForInactivity);
+
+    final uid = _trackedAdminUid;
+    final lastPersisted = _lastPersistedActivityAt;
+    if (uid != null &&
+        (persistImmediately ||
+            lastPersisted == null ||
+            now.difference(lastPersisted) >= const Duration(seconds: 10))) {
+      _lastPersistedActivityAt = now;
+      unawaited(_persistAdminActivity(uid, now));
+    }
+  }
+
+  Future<void> _persistAdminActivity(String uid, DateTime activity) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setInt(
+      _adminActivityKey(uid),
+      activity.millisecondsSinceEpoch,
+    );
   }
 
   void _stopInactivityTracking() {
@@ -122,14 +168,31 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (!_isAdminSession) return;
 
     if (state == AppLifecycleState.resumed) {
+      unawaited(_sessionAuthService.monitorCurrentSession());
       final lastActivity = _lastActivityAt;
       if (lastActivity != null &&
           DateTime.now().difference(lastActivity) >= _adminInactivityTimeout) {
         _logoutForInactivity();
       } else {
-        _recordActivity();
+        _scheduleRemainingInactivityTimeout();
       }
     }
+  }
+
+  void _scheduleRemainingInactivityTimeout() {
+    final lastActivity = _lastActivityAt;
+    if (lastActivity == null) {
+      _recordActivity(persistImmediately: true);
+      return;
+    }
+    final remaining =
+        _adminInactivityTimeout - DateTime.now().difference(lastActivity);
+    if (remaining <= Duration.zero) {
+      unawaited(_logoutForInactivity());
+      return;
+    }
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(remaining, _logoutForInactivity);
   }
 
   Future<void> _listenForPasswordResetLinks() async {

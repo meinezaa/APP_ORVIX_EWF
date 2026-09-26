@@ -60,11 +60,14 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
 
   Future<Map<String, String?>> _activeSessionContext() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return {'id': null, 'device': null, 'platform': null};
+    if (user == null) {
+      return {'id': null, 'uid': null, 'device': null, 'platform': null};
+    }
     final preferences = await SharedPreferences.getInstance();
     final identity = await _currentDeviceIdentity();
     return {
       'id': preferences.getString('active_login_session_${user.uid}'),
+      'uid': user.uid,
       'device': identity['device'],
       'platform': identity['platform'],
     };
@@ -99,6 +102,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
             builder: (context, activeSessionSnapshot) {
               final activeContext = activeSessionSnapshot.data ?? const {};
               final activeSessionId = activeContext['id'];
+              final activeUserId = activeContext['uid'];
               final sessions = _uniqueSessions(
                 snapshot.data?.docs ?? const [],
                 activeSessionId: activeSessionId,
@@ -106,12 +110,14 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
               final current = _currentSession(
                 sessions,
                 activeSessionId,
+                userId: activeUserId,
                 device: activeContext['device'],
                 platform: activeContext['platform'],
               );
               final others = sessions
                   .where((session) => session['_docId'] != current?['_docId'])
                   .toList();
+              final onlineCount = sessions.where(_isOnline).length;
               return SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -132,7 +138,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
                     const SizedBox(height: 20),
 
                     // 1. Alert Banner (Keamanan Sesi Aktif)
-                    _buildSecurityAlertBanner(sessions.length),
+                    _buildSecurityAlertBanner(onlineCount),
                     const SizedBox(height: 24),
 
                     // 2. Section: Perangkat Saat Ini
@@ -228,45 +234,58 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     }
     final unique = <String, Map<String, dynamic>>{};
     for (final doc in sorted) {
-      if (doc.data()['revoked'] == true) continue;
       final data = {...doc.data(), '_docId': doc.id};
+      final ownerId = doc.reference.parent.parent?.id;
+      if (ownerId == null) continue;
+      data['_ownerUid'] = ownerId;
+      final deviceName = (data['device'] ?? data['device_name'])
+          ?.toString()
+          .trim();
+      if (deviceName == null ||
+          deviceName.isEmpty ||
+          deviceName.toLowerCase() == 'perangkat lain' ||
+          deviceName.toLowerCase() == 'tidak tersedia') {
+        continue;
+      }
       final key = [
+        ownerId,
         _text(data, ['device', 'device_name'], 'unknown'),
         _text(data, ['platform'], 'unknown'),
       ].join('|').toLowerCase();
 
       if (unique.containsKey(key)) continue;
-      if (data['revoked'] == true) {
-        unique[key] = data;
-        continue;
-      }
-      unique.putIfAbsent(key, () => data);
+      unique[key] = data;
     }
-    return unique.values.where((data) => data['revoked'] != true).toList();
+    return unique.values.toList();
   }
 
   Map<String, dynamic>? _currentSession(
     List<Map<String, dynamic>> sessions,
     String? activeSessionId, {
+    String? userId,
     String? device,
     String? platform,
   }) {
+    if (activeSessionId != null && userId != null) {
+      for (final session in sessions) {
+        if (session['_ownerUid'] == userId &&
+            session['_docId'] == activeSessionId) {
+          return session;
+        }
+      }
+    }
     if (device != null && device.isNotEmpty) {
       final matching = sessions
           .where(
             (session) =>
+                session['_ownerUid'] == userId &&
                 _deviceKey(session) ==
-                _deviceKey({'device': device, 'platform': platform}),
+                    _deviceKey({'device': device, 'platform': platform}),
           )
           .toList();
       if (matching.isNotEmpty) return matching.first;
     }
-    if (activeSessionId != null) {
-      for (final session in sessions) {
-        if (session['_docId'] == activeSessionId) return session;
-      }
-    }
-    return sessions.isEmpty ? null : sessions.first;
+    return null;
   }
 
   String _deviceKey(Map<String, dynamic> data) {
@@ -281,6 +300,15 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     if (value is Timestamp) return value.toDate().toLocal();
     return DateTime.tryParse('$value') ??
         DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  bool _isOnline(Map<String, dynamic> data) {
+    if (data['revoked'] == true || data['is_online'] == false) return false;
+    final lastActivity =
+        data['last_seen'] ?? data['logged_in_at'] ?? data['loggedInAt'];
+    if (lastActivity is! Timestamp) return false;
+    return DateTime.now().difference(lastActivity.toDate()) <=
+        const Duration(minutes: 2);
   }
 
   String _text(Map<String, dynamic> data, List<String> keys, String fallback) {
@@ -308,20 +336,102 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
   }
 
   Future<bool> _revokeSession(Map<String, dynamic>? data) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final ownerId = data?['_ownerUid']?.toString();
     final docId = data?['_docId']?.toString();
-    if (user == null || docId == null || docId.isEmpty) return false;
+    if (ownerId == null || data == null || docId == null || docId.isEmpty) {
+      return false;
+    }
     final sessionRef = FirebaseFirestore.instance
         .collection('users')
-        .doc(user.uid)
+        .doc(ownerId)
         .collection('login_history')
         .doc(docId);
     await sessionRef.set({
       'revoked': true,
       'revoked_at': FieldValue.serverTimestamp(),
+      'is_online': false,
+      'last_seen': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     final updated = await sessionRef.get();
     return updated.data()?['revoked'] == true;
+  }
+
+  Future<bool> _reconnectSession(Map<String, dynamic>? data) async {
+    final ownerId = data?['_ownerUid']?.toString();
+    final docId = data?['_docId']?.toString();
+    if (ownerId == null || docId == null || docId.isEmpty) return false;
+    final historyRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(ownerId)
+        .collection('login_history');
+    final history = await historyRef.get();
+    final deviceKey = _deviceKey(data!);
+    final batch = FirebaseFirestore.instance.batch();
+    var changed = false;
+    for (final doc in history.docs) {
+      if (_deviceKey({...doc.data(), '_ownerUid': ownerId}) != deviceKey) {
+        continue;
+      }
+      batch.set(doc.reference, {
+        'revoked': false,
+        'revoked_at': FieldValue.delete(),
+      }, SetOptions(merge: true));
+      changed = true;
+    }
+    if (!changed) return false;
+    await batch.commit();
+    final updated = await historyRef.doc(docId).get();
+    return updated.data()?['revoked'] != true;
+  }
+
+  Future<void> _handleRevoke(Map<String, dynamic> data) async {
+    try {
+      final success = await _revokeSession(data);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Sesi perangkat berhasil diputuskan.'
+                : 'Sesi gagal diputuskan.',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memutuskan sesi: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleReconnect(Map<String, dynamic> data) async {
+    try {
+      final success = await _reconnectSession(data);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Perangkat berhasil disambungkan kembali.'
+                : 'Perangkat gagal disambungkan.',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyambungkan perangkat: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _revokeOtherDevices(
@@ -345,6 +455,8 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
       batch.set(doc.reference, {
         'revoked': true,
         'revoked_at': FieldValue.serverTimestamp(),
+        'is_online': false,
+        'last_seen': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       changed = true;
     }
@@ -616,11 +728,20 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
   // --- 3. OTHER REGISTERED DEVICE CARD ---
   Widget _buildOtherDeviceCard(Map<String, dynamic> data) {
     final device = _text(data, ['device', 'device_name'], 'Perangkat lain');
+    final account = _text(data, ['email', 'name', 'nama'], 'Admin');
     final subtitle = _text(data, ['browser', 'platform'], 'Sesi login');
     final locationIp = _text(data, ['ip_address', 'ip'], 'IP tidak tersedia');
     final loggedAt = _date(data);
-    final activeStatus =
-        'Login ${loggedAt.day}/${loggedAt.month}/${loggedAt.year}';
+    final isRevoked = data['revoked'] == true;
+    final isOnline = _isOnline(data);
+    final activeStatus = isOnline
+        ? 'Online'
+        : isRevoked
+        ? 'Terputus'
+        : 'Offline · Login ${loggedAt.day}/${loggedAt.month}/${loggedAt.year}';
+    final statusColor = isOnline
+        ? const Color(0xFF0F766E)
+        : const Color(0xFF4B5563);
     final icon = _deviceIcon(device);
     return Container(
       padding: const EdgeInsets.all(16),
@@ -663,6 +784,14 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
+                      account,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
                       subtitle,
                       style: const TextStyle(
                         fontSize: 11,
@@ -676,7 +805,9 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: isOnline
+                      ? const Color(0xFFCCFBF1)
+                      : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -684,8 +815,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF4B5563),
-                  ),
+                  ).copyWith(color: statusColor),
                 ),
               ),
             ],
@@ -722,62 +852,72 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Terminate Button
-          Container(
-            width: double.infinity,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: InkWell(
-              onTap: () async {
-                try {
-                  final revoked = await _revokeSession(data);
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        revoked
-                            ? 'Sesi perangkat berhasil diputuskan.'
-                            : 'Sesi gagal diputuskan.',
-                      ),
-                      backgroundColor: revoked ? Colors.green : Colors.red,
-                    ),
-                  );
-                } catch (error) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Gagal memutuskan sesi: $error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.logout_rounded,
-                    color: Color(0xFFB91C1C),
-                    size: 16,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Putuskan Sesi Ini',
-                    style: TextStyle(
-                      color: Color(0xFFB91C1C),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+          Row(
+            children: [
+              Expanded(
+                child: _buildSessionActionButton(
+                  icon: Icons.logout_rounded,
+                  label: 'Putuskan Sesi',
+                  backgroundColor: const Color(0xFFFEF2F2),
+                  foregroundColor: const Color(0xFFB91C1C),
+                  onPressed: isRevoked ? null : () => _handleRevoke(data),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSessionActionButton(
+                  icon: Icons.link_rounded,
+                  label: 'Sambungkan',
+                  backgroundColor: const Color(0xFFECFDF5),
+                  foregroundColor: const Color(0xFF047857),
+                  onPressed: () => _handleReconnect(data),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSessionActionButton({
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required VoidCallback? onPressed,
+  }) {
+    final enabled = onPressed != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: foregroundColor, size: 16),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foregroundColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

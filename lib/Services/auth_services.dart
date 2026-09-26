@@ -15,6 +15,8 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
   _sessionRevocationSubscription;
+  Timer? _presenceTimer;
+  DocumentReference<Map<String, dynamic>>? _activeSessionReference;
 
   User? get currentUser => _auth.currentUser;
 
@@ -69,6 +71,7 @@ class AuthService {
       );
 
       String uid = userCred.user!.uid;
+      await _removeLegacyPasswordFields(uid);
 
       DocumentSnapshot userDoc = await _firestore
           .collection('users')
@@ -107,6 +110,16 @@ class AuthService {
     }
   }
 
+  Future<void> _removeLegacyPasswordFields(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'password': FieldValue.delete(),
+        'passwordHash': FieldValue.delete(),
+        'password_hash': FieldValue.delete(),
+      });
+    } catch (_) {}
+  }
+
   // 3. AMBIL DATA USER AKTIF (MENGEMBALIKAN USERMODEL)
   Future<UserModel?> getCurrentUserData() async {
     if (currentUser == null) return null;
@@ -138,6 +151,14 @@ class AuthService {
                 authUser.email?.split('@').first ??
                 'Pengguna');
       final metadata = await _loginMetadata();
+      final previousLogins = await _firestore
+          .collection('users')
+          .doc(authUser.uid)
+          .collection('login_history')
+          .get();
+      final isNewDevice = previousLogins.docs.every(
+        (doc) => !_sameSessionDevice(doc.data(), metadata),
+      );
 
       final loginRef = await _firestore
           .collection('users')
@@ -150,6 +171,9 @@ class AuthService {
             'role': profile?.role ?? 'staff',
             'email': authUser.email ?? profile?.email ?? '',
             'foto_profil_path': profile?.fotoProfilPath,
+            'is_new_device': isNewDevice,
+            'is_online': true,
+            'last_seen': FieldValue.serverTimestamp(),
             'logged_in_at': FieldValue.serverTimestamp(),
             'loggedInAt': FieldValue.serverTimestamp(),
             ...metadata,
@@ -190,6 +214,7 @@ class AuthService {
     if (savedSessionId != null && savedSessionId.isNotEmpty) {
       for (final doc in history.docs) {
         if (doc.id == savedSessionId &&
+            doc.data()['revoked'] != true &&
             _sameSessionDevice(doc.data(), localMetadata)) {
           selectedSession = doc;
           break;
@@ -201,6 +226,9 @@ class AuthService {
     if (selectedSession == null) {
       await _sessionRevocationSubscription?.cancel();
       _sessionRevocationSubscription = null;
+      _presenceTimer?.cancel();
+      _presenceTimer = null;
+      _activeSessionReference = null;
       return;
     }
 
@@ -208,6 +236,9 @@ class AuthService {
       'active_login_session_${authUser.uid}',
       selectedSession.id,
     );
+    _activeSessionReference = selectedSession.reference;
+    await _updateSessionPresence(selectedSession.reference, isOnline: true);
+    _startSessionHeartbeat(authUser.uid, selectedSession.reference);
 
     await _sessionRevocationSubscription?.cancel();
     _sessionRevocationSubscription = selectedSession.reference
@@ -216,9 +247,38 @@ class AuthService {
           if (snapshot.data()?['revoked'] == true) {
             _sessionRevocationSubscription?.cancel();
             _sessionRevocationSubscription = null;
+            _presenceTimer?.cancel();
+            _presenceTimer = null;
+            _activeSessionReference = null;
             _auth.signOut();
           }
         });
+  }
+
+  void _startSessionHeartbeat(
+    String uid,
+    DocumentReference<Map<String, dynamic>> sessionReference,
+  ) {
+    _presenceTimer?.cancel();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 45), (timer) {
+      if (_auth.currentUser?.uid != uid) {
+        timer.cancel();
+        return;
+      }
+      unawaited(_updateSessionPresence(sessionReference, isOnline: true));
+    });
+  }
+
+  Future<void> _updateSessionPresence(
+    DocumentReference<Map<String, dynamic>> sessionReference, {
+    required bool isOnline,
+  }) async {
+    try {
+      await sessionReference.set({
+        'is_online': isOnline,
+        'last_seen': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
   }
 
   QueryDocumentSnapshot<Map<String, dynamic>>? _latestMatchingSession(
@@ -226,7 +286,11 @@ class AuthService {
     Map<String, String> localMetadata,
   ) {
     final matching = sessions
-        .where((doc) => _sameSessionDevice(doc.data(), localMetadata))
+        .where(
+          (doc) =>
+              doc.data()['revoked'] != true &&
+              _sameSessionDevice(doc.data(), localMetadata),
+        )
         .toList();
     matching.sort((a, b) {
       final aDate = _sessionDate(a.data());
@@ -314,6 +378,26 @@ class AuthService {
   Future<void> logout() async {
     await _sessionRevocationSubscription?.cancel();
     _sessionRevocationSubscription = null;
+    _presenceTimer?.cancel();
+    _presenceTimer = null;
+    final user = currentUser;
+    final preferences = await SharedPreferences.getInstance();
+    final sessionId = user == null
+        ? null
+        : preferences.getString('active_login_session_${user.uid}');
+    final sessionReference =
+        _activeSessionReference ??
+        (user == null || sessionId == null
+            ? null
+            : _firestore
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('login_history')
+                  .doc(sessionId));
+    if (sessionReference != null) {
+      await _updateSessionPresence(sessionReference, isOnline: false);
+    }
+    _activeSessionReference = null;
     await _auth.signOut();
   }
 

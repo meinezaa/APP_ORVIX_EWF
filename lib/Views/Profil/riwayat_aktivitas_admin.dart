@@ -1,12 +1,6 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart' as pdf;
-import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
 
 class RiwayatAktivitasAdminPage extends StatefulWidget {
   const RiwayatAktivitasAdminPage({super.key});
@@ -18,12 +12,12 @@ class RiwayatAktivitasAdminPage extends StatefulWidget {
 
 class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
   String _searchText = '';
-  String _selectedFilter = 'Semua';
+  DateTime? _selectedDate;
+  final String _selectedFilter = 'Autentikasi';
 
   final Color _bgSoft = const Color(0xFFF4F1EE);
   final Color _orange = const Color(0xFFE68A4D);
   final Color _orangeDeep = const Color(0xFFCF6F2E);
-  final Color _olive = const Color(0xFF5D6B51);
   final Color _textDark = const Color(0xFF1D1D1D);
   final Color _textSoft = const Color(0xFF5E5E5E);
   final Color _line = const Color(0xFFE9E1D9);
@@ -38,83 +32,61 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
               .collectionGroup('login_history')
               .snapshots(),
           builder: (context, loginSnapshot) {
-            final loginItems =
-                (loginSnapshot.data?.docs ??
-                        const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                    .map(_parseLoginLog)
-                    .toList();
+            final loginItems = _dedupeLoginByBrand(
+              (loginSnapshot.data?.docs ??
+                      const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                  .map(_parseLoginLog)
+                  .toList(),
+            );
 
-            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collectionGroup('calculation_history')
-                  .snapshots(),
-              builder: (context, calcSnapshot) {
-                final calcItems =
-                    (calcSnapshot.data?.docs ??
-                            const <
-                              QueryDocumentSnapshot<Map<String, dynamic>>
-                            >[])
-                        .map(_parseCalculationLog)
-                        .toList();
+            final allItems = loginItems
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-                final allItems = <_ActivityLogItem>[...loginItems, ...calcItems]
-                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            final visibleItems = _filterItems(allItems);
+            final summarySafe = allItems
+                .where((item) => _isHealthyStatus(item.status))
+                .length;
 
-                final visibleItems = _filterItems(allItems);
-                final summarySafe = allItems
-                    .where((item) => _isHealthyStatus(item.status))
-                    .length;
-
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.only(bottom: 30),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 14),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: _buildSummaryCard(
+                            total: allItems.length,
+                            safe: summarySafe,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(),
-                            const SizedBox(height: 14),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              child: _buildSummaryCard(
-                                total: allItems.length,
-                                safe: summarySafe,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              child: _buildSearchBar(),
-                            ),
-                            const SizedBox(height: 12),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              child: _buildDownloadSection(),
-                            ),
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              child: _buildFilterTabs(),
-                            ),
-                            const SizedBox(height: 14),
-                            _buildActivityList(visibleItems),
-                          ],
+                        const SizedBox(height: 18),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: _buildSearchBar(),
                         ),
-                      ),
-                    );
-                  },
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: _buildDateSearchDropdown(allItems),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: _buildFilterTabs(),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildActivityList(visibleItems),
+                      ],
+                    ),
+                  ),
                 );
               },
             );
@@ -127,11 +99,16 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
   List<_ActivityLogItem> _filterItems(List<_ActivityLogItem> items) {
     final query = _searchText.trim().toLowerCase();
     return items.where((item) {
-      final typeMatch =
-          _selectedFilter == 'Semua' ||
-          item.category.toLowerCase() == _selectedFilter.toLowerCase() ||
-          (_selectedFilter == 'Autentikasi' && item.type == 'autentikasi') ||
-          (_selectedFilter == 'Manajemen Staff' && item.type == 'manajemen');
+      final categoryName = (item.category).toLowerCase();
+      final typeName = (item.type).toLowerCase();
+      final dateMatch =
+          _selectedDate == null || _isSameDate(item.createdAt, _selectedDate!);
+
+      final typeMatch = _selectedFilter.toLowerCase() == 'autentikasi'
+          ? categoryName == 'autentikasi' ||
+                typeName == 'autentikasi' ||
+                item.title.toLowerCase().contains('login sesi')
+          : true;
 
       final queryMatch =
           query.isEmpty ||
@@ -139,8 +116,12 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
           item.subtitle.toLowerCase().contains(query) ||
           item.meta.toLowerCase().contains(query);
 
-      return typeMatch && queryMatch;
+      return dateMatch && typeMatch && queryMatch;
     }).toList();
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   bool _isHealthyStatus(String status) {
@@ -149,6 +130,23 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
         normalized.contains('selesai') ||
         normalized.contains('tersimpan') ||
         normalized.contains('valid');
+  }
+
+  List<_ActivityLogItem> _dedupeLoginByBrand(List<_ActivityLogItem> items) {
+    final latestByBrand = <String, _ActivityLogItem>{};
+
+    for (final item in items) {
+      final key = item.meta.trim().toLowerCase();
+      final current = latestByBrand[key];
+      if (current == null || item.createdAt.isAfter(current.createdAt)) {
+        latestByBrand[key] = item;
+      }
+    }
+
+    final deduped = latestByBrand.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return deduped;
   }
 
   Widget _buildHeader() {
@@ -361,38 +359,198 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
     );
   }
 
-  Widget _buildFilterTabs() {
-    final tabs = ['Semua', 'Autentikasi', 'Manajemen Staff'];
-    return Row(
-      children: List.generate(tabs.length, (index) {
-        final label = tabs[index];
-        final active = _selectedFilter == label;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedFilter = label),
-            child: Container(
-              margin: EdgeInsets.only(right: index < tabs.length - 1 ? 10 : 0),
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: active ? _orange : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: active ? _orange : const Color(0xFFE6DED7),
+  Future<void> _showDateSearchDialog(List<DateTime> dates) async {
+    final controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = controller.text.trim().toLowerCase();
+            final filteredDates = dates.where((date) {
+              final label = DateFormat(
+                'dd MMM yyyy',
+                'id_ID',
+              ).format(date).toLowerCase();
+              return query.isEmpty || label.contains(query);
+            }).toList();
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 460),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cari Tanggal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: controller,
+                        onChanged: (_) => setDialogState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Masukkan tanggal...',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Flexible(
+                        child: filteredDates.isEmpty
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 20),
+                                  child: Text('Tanggal tidak ditemukan'),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: filteredDates.length,
+                                separatorBuilder: (_, _) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final date = filteredDates[index];
+                                  final label = DateFormat(
+                                    'dd MMM yyyy',
+                                    'id_ID',
+                                  ).format(date);
+                                  final isSelected =
+                                      _selectedDate != null &&
+                                      _isSameDate(date, _selectedDate!);
+
+                                  return ListTile(
+                                    title: Text(
+                                      label,
+                                      style: TextStyle(
+                                        color: isSelected ? _orange : _textDark,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                      ),
+                                    ),
+                                    trailing: isSelected
+                                        ? const Icon(
+                                            Icons.check,
+                                            color: Color(0xFFE68A4D),
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedDate = date;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDateSearchDropdown(List<_ActivityLogItem> items) {
+    final dates =
+        items
+            .map(
+              (item) => DateTime(
+                item.createdAt.year,
+                item.createdAt.month,
+                item.createdAt.day,
+              ),
+            )
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+
+    final label = _selectedDate == null
+        ? 'Pilih Tanggal'
+        : DateFormat('dd MMM yyyy', 'id_ID').format(_selectedDate!);
+
+    return GestureDetector(
+      onTap: () => _showDateSearchDialog(dates),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _line),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: Color(0xFF7B7B7B),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12.5,
+                  color: _selectedDate == null ? _textSoft : _textDark,
                   fontWeight: FontWeight.w700,
-                  color: active ? Colors.white : _textSoft,
                 ),
               ),
             ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF7B7B7B),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTabs() {
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _orange,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _orange),
+        ),
+        child: Text(
+          'Autentikasi',
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
-        );
-      }),
+        ),
+      ),
     );
   }
 
@@ -499,6 +657,8 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
   }
 
   Widget _buildActivityCard(_ActivityLogItem item) {
+    final timeText = DateFormat('HH:mm', 'id_ID').format(item.createdAt);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -562,7 +722,7 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      item.subtitle,
+                      '${item.subtitle} Jam login: $timeText.',
                       style: TextStyle(
                         fontSize: 11,
                         color: _textSoft,
@@ -581,7 +741,7 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  item.meta,
+                  '${item.meta} • $timeText',
                   style: TextStyle(
                     fontSize: 11,
                     color: _textSoft,
@@ -596,73 +756,6 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
     );
   }
 
-  Widget _buildDownloadSection() {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              final filtered = _filterItems(
-                (await FirebaseFirestore.instance
-                        .collectionGroup('login_history')
-                        .get()
-                        .then(
-                          (value) => value.docs.map(_parseLoginLog).toList(),
-                        )) +
-                    (await FirebaseFirestore.instance
-                        .collectionGroup('calculation_history')
-                        .get()
-                        .then(
-                          (value) =>
-                              value.docs.map(_parseCalculationLog).toList(),
-                        )),
-              );
-              await _downloadAuditPdf(filtered);
-            },
-            icon: const Icon(Icons.download_rounded),
-            label: const Text('Unduh Log Audit Lengkap (PDF)'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _orange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              elevation: 0,
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF6F5F4),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _line),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.lock_outline_rounded, color: _olive, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Seluruh log aktivitas tersimpan dengan enkripsi dan dapat diunduh sesuai kebutuhan audit internal. ORVIX Audit Engine v2.4.0',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: const Color(0xFF5B6159),
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   _ActivityLogItem _parseLoginLog(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
@@ -674,11 +767,14 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
     final createdAt = _parseDate(timestamp);
     final safeName = fullName.trim().isEmpty ? 'Admin ORVIX' : fullName;
     final isAdmin = role.toLowerCase().contains('admin');
+    final brand = _detectDeviceBrand(data);
+
+    final timeLabel = DateFormat('HH:mm', 'id_ID').format(createdAt);
 
     return _ActivityLogItem(
       title: isAdmin ? 'Login Sesi Administrator' : 'Login Sesi Staff',
       subtitle:
-          'Verifikasi akses masuk $safeName melalui sistem keamanan internal ORVIX.',
+          'Verifikasi akses masuk ${brand.isNotEmpty ? brand : safeName} melalui sistem keamanan internal ORVIX.',
       category: 'Autentikasi',
       type: 'autentikasi',
       status: '',
@@ -687,58 +783,43 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
       icon: Icons.security_rounded,
       iconBg: const Color(0xFFEAF4FF),
       iconColor: const Color(0xFF1F7BE8),
-      meta: '${_formatLocation(data)} • ${_formatIp(data)}',
+      meta: brand.isNotEmpty ? '$brand • $timeLabel' : 'Perangkat • $timeLabel',
       createdAt: createdAt,
     );
   }
 
-  _ActivityLogItem _parseCalculationLog(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    final userName = (data['user_name'] ?? data['nama'] ?? 'Staff').toString();
-    final type =
-        (data['jenis_kalkulator'] ?? data['jenisKalkulator'] ?? 'Kalkulator')
-            .toString();
-    final createdAt = _parseDate(data['created_at'] ?? data['createdAt']);
-    final amount = (data['hasil'] is num)
-        ? (data['hasil'] as num).toDouble()
-        : 0;
-    final title = type.toLowerCase().contains('pivot')
-        ? 'Pembaruan Pivot Point'
-        : type.toLowerCase().contains('nest')
-        ? 'Perhitungan NEST Terekam'
-        : 'Perhitungan ${type.isNotEmpty ? type : 'Emas'} Tersimpan';
+  String _detectDeviceBrand(Map<String, dynamic> data) {
+    final candidates = [
+      data['device_name'],
+      data['deviceName'],
+      data['manufacturer'],
+      data['manufacturer_name'],
+      data['device_brand'],
+      data['deviceBrand'],
+      data['model'],
+      data['phone_model'],
+      data['device_model'],
+      data['deviceModel'],
+    ];
 
-    return _ActivityLogItem(
-      title: title,
-      subtitle:
-          '$userName melakukan perhitungan ${type.isNotEmpty ? type : 'emaster'}. Hasil: ${amount.toStringAsFixed(2)}.',
-      category: 'Manajemen Staff',
-      type: 'manajemen',
-      status: '',
-      badgeColor: Colors.transparent,
-      badgeTextColor: Colors.transparent,
-      icon: Icons.calculate_rounded,
-      iconBg: const Color(0xFFF8E6DA),
-      iconColor: _orange,
-      meta: '${_formatLocation(data)} • ${_formatIp(data)}',
-      createdAt: createdAt,
-    );
-  }
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final value = candidate.toString().trim();
+      if (value.isEmpty) continue;
 
-  String _formatLocation(Map<String, dynamic> data) {
-    final location =
-        data['lokasi'] ??
-        data['location'] ??
-        data['device_name'] ??
-        'Indonesia';
-    return location.toString();
-  }
+      final cleaned = value.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+      if (cleaned.isEmpty) continue;
 
-  String _formatIp(Map<String, dynamic> data) {
-    final value = data['ip_address'] ?? data['ipAddress'] ?? '192.168.1.10';
-    return value.toString();
+      final brand = cleaned.split(RegExp(r'\s+')).first;
+      if (brand.isNotEmpty) return brand;
+    }
+
+    final fallBack = data['os'] ?? data['platform'] ?? '';
+    if (fallBack is String && fallBack.trim().isNotEmpty) {
+      return fallBack.trim();
+    }
+
+    return '';
   }
 
   DateTime _parseDate(dynamic value) {
@@ -746,105 +827,6 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
     return DateTime.now();
-  }
-
-  Future<void> _downloadAuditPdf(List<_ActivityLogItem> items) async {
-    final doc = pw.Document();
-    final rows = <List<String>>[
-      ['WAKTU', 'JENIS', 'AKTIVITAS', 'STATUS'],
-      ...items
-          .take(30)
-          .map(
-            (item) => [
-              DateFormat('dd/MM/yyyy • HH:mm').format(item.createdAt),
-              item.category,
-              item.title,
-              item.status,
-            ],
-          ),
-    ];
-
-    doc.addPage(
-      pw.Page(
-        pageFormat: pdf.PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Riwayat Aktivitas Admin ORVIX',
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdf.PdfColors.deepOrange,
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Text(
-                'Waktu unduh: ${DateFormat('dd MMM yyyy • HH:mm', 'id_ID').format(DateTime.now())}',
-                style: const pw.TextStyle(
-                  fontSize: 10,
-                  color: pdf.PdfColors.grey,
-                ),
-              ),
-              pw.SizedBox(height: 18),
-              pw.Table(
-                border: pw.TableBorder.all(
-                  color: pdf.PdfColors.orange,
-                  width: 0.8,
-                ),
-                columnWidths: {
-                  0: const pw.FixedColumnWidth(90),
-                  1: const pw.FixedColumnWidth(80),
-                  2: const pw.FixedColumnWidth(220),
-                  3: const pw.FixedColumnWidth(70),
-                },
-                children: rows.map((row) {
-                  return pw.TableRow(
-                    children: row.map((cell) {
-                      return pw.Container(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text(
-                          cell,
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            fontWeight: row.first == 'WAKTU'
-                                ? pw.FontWeight.bold
-                                : pw.FontWeight.normal,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                }).toList(),
-              ),
-              pw.Spacer(),
-              pw.Text(
-                'Dokumen laporan dibuat otomatis oleh Sistem Audit ORVIX',
-                style: const pw.TextStyle(
-                  fontSize: 8,
-                  color: pdf.PdfColors.grey,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    final directory = await getTemporaryDirectory();
-    final file = File(
-      '${directory.path}/riwayat_aktivitas_admin_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf',
-    );
-    await file.writeAsBytes(await doc.save());
-
-    if (!mounted) return;
-
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Riwayat Aktivitas Admin ORVIX',
-      text: 'Log aktivitas admin ORVIX',
-    );
   }
 }
 

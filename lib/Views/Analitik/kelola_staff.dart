@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class KelolaStaffContent extends StatefulWidget {
@@ -1555,20 +1556,36 @@ class _EditStaffPageState extends State<EditStaffPage> {
 
   Future<void> _save() async {
     final isActive = _status == 'Aktif';
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.document.id)
-        .update({
-          'nama': _name.text.trim(),
-          'email': _email.text.trim(),
-          'phone': _phone.text.trim(),
-          'tanggal_lahir': _birthDate.text.trim(),
-          'jenis_kelamin': _gender.text.trim(),
-          'role': 'staff',
-          'status': isActive ? 'active' : 'inactive',
-          'isActive': isActive,
-          'aktif': isActive,
-        });
+    final previousStatus = _active(widget.document.data());
+    final firestore = FirebaseFirestore.instance;
+    await firestore.collection('users').doc(widget.document.id).update({
+      'nama': _name.text.trim(),
+      'email': _email.text.trim(),
+      'phone': _phone.text.trim(),
+      'tanggal_lahir': _birthDate.text.trim(),
+      'jenis_kelamin': _gender.text.trim(),
+      'role': 'staff',
+      'status': isActive ? 'active' : 'inactive',
+      'isActive': isActive,
+      'aktif': isActive,
+    });
+    final admin = FirebaseAuth.instance.currentUser;
+    if (admin != null && previousStatus != isActive) {
+      try {
+        await firestore
+            .collection('users')
+            .doc(admin.uid)
+            .collection('security_events')
+            .add({
+              'event_type': 'staff_status_changed',
+              'staff_uid': widget.document.id,
+              'staff_name': _name.text.trim(),
+              'old_status': previousStatus ? 'Aktif' : 'Nonaktif',
+              'new_status': isActive ? 'Aktif' : 'Nonaktif',
+              'created_at': FieldValue.serverTimestamp(),
+            });
+      } catch (_) {}
+    }
     if (mounted) Navigator.pop(context, true);
   }
 

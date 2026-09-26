@@ -12,7 +12,6 @@ import 'edit_profil_admin.dart';
 import 'ganti_password_admin.dart';
 import 'perangkat_terhubung_admin.dart';
 import 'notifikasi_admin.dart';
-import 'manajemen_notifikasi_admin.dart';
 import 'riwayat_aktivitas_admin.dart';
 
 void main() {
@@ -209,12 +208,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Future<void> _logoutAdmin() async {
     final preferences = await SharedPreferences.getInstance();
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    await AuthService().logout();
     if (uid != null) {
       await preferences.remove('active_login_session_$uid');
       await preferences.remove('active_login_device_$uid');
       await preferences.remove('active_login_platform_$uid');
     }
-    await AuthService().logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const LoginView()),
@@ -688,19 +687,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const ChangePasswordScreen(),
-              ),
-            ),
-          ),
-          const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
-          _buildMenuItem(
-            icon: Icons.notifications_none_rounded,
-            iconBg: const Color(0xFFFFF0EB),
-            iconColor: const Color(0xFFE58F6C),
-            title: 'Manajemen Notifikasi',
-            subtitle: 'Push alert perhitungan & login',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ManajemenNotifikasiAdminView(),
               ),
             ),
           ),
