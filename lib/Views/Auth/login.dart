@@ -24,7 +24,6 @@ class _LoginViewState extends State<LoginView>
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _rememberMe = false;
 
   // Controller & Animasi Mengambang (Naik-Turun)
   late AnimationController _animationController;
@@ -332,58 +331,26 @@ class _LoginViewState extends State<LoginView>
 
                 const SizedBox(height: 12),
 
-                // 5. CHECKBOX INGAT SAYA & LUPA PASSWORD
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            activeColor: const Color(0xFFD36A28),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            side: const BorderSide(color: Color(0xFFD1C7BD)),
-                            onChanged: _isLoading
-                                ? null
-                                : (value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Ingat saya',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF6E5544),
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: _onLupaPasswordPressed,
-                      child: const Text(
-                        'Lupa Password?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD36A28),
-                        ),
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _onLupaPasswordPressed,
+                    child: const Text(
+                      'Lupa Password?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD36A28),
                       ),
                     ),
-                  ],
+                  ),
                 ),
 
                 const SizedBox(height: 28),
 
-                // 6. TOMBOL UTAMA MASUK (DENGAN INDIKATOR LOADING)
+                // 5. TOMBOL UTAMA MASUK (DENGAN INDIKATOR LOADING)
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleManualLogin,
                   style: ElevatedButton.styleFrom(
