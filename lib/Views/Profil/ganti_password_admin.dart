@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() {
   runApp(const MyApp());
@@ -525,6 +526,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       );
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(_newPasswordController.text.trim());
+      await _recordCredentialChange(user);
       if (!mounted) return;
       _showMessage('Password berhasil diubah');
       _oldPasswordController.clear();
@@ -546,6 +548,20 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _recordCredentialChange(User user) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('security_events')
+          .add({
+            'event_type': 'credential_changed',
+            'user_name': user.displayName ?? user.email?.split('@').first,
+            'created_at': FieldValue.serverTimestamp(),
+          });
+    } catch (_) {}
   }
 
   void _showMessage(String message) {

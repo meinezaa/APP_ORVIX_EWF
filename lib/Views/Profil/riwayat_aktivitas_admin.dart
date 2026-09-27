@@ -33,7 +33,8 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
               .snapshots(),
           builder: (context, loginSnapshot) {
             final loginItems = _dedupeLoginByBrand(
-              (loginSnapshot.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+              (loginSnapshot.data?.docs ??
+                      const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
                   .map(_parseLoginLog)
                   .toList(),
             );
@@ -42,14 +43,18 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
               ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
             final visibleItems = _filterItems(allItems);
-            final summarySafe = allItems.where((item) => _isHealthyStatus(item.status)).length;
+            final summarySafe = allItems
+                .where((item) => _isHealthyStatus(item.status))
+                .length;
 
             return LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.only(bottom: 30),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -96,8 +101,8 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
     return items.where((item) {
       final categoryName = (item.category).toLowerCase();
       final typeName = (item.type).toLowerCase();
-      final dateMatch = _selectedDate == null ||
-          _isSameDate(item.createdAt, _selectedDate!);
+      final dateMatch =
+          _selectedDate == null || _isSameDate(item.createdAt, _selectedDate!);
 
       final typeMatch = _selectedFilter.toLowerCase() == 'autentikasi'
           ? categoryName == 'autentikasi' ||
@@ -359,7 +364,10 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
           builder: (context, setDialogState) {
             final query = controller.text.trim().toLowerCase();
             final filteredDates = dates.where((date) {
-              final label = DateFormat('dd MMM yyyy', 'id_ID').format(date).toLowerCase();
+              final label = DateFormat(
+                'dd MMM yyyy',
+                'id_ID',
+              ).format(date).toLowerCase();
               return query.isEmpty || label.contains(query);
             }).toList();
 
@@ -395,7 +403,10 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -413,8 +424,12 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                                 separatorBuilder: (_, _) => const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final date = filteredDates[index];
-                                  final label = DateFormat('dd MMM yyyy', 'id_ID').format(date);
-                                  final isSelected = _selectedDate != null &&
+                                  final label = DateFormat(
+                                    'dd MMM yyyy',
+                                    'id_ID',
+                                  ).format(date);
+                                  final isSelected =
+                                      _selectedDate != null &&
                                       _isSameDate(date, _selectedDate!);
 
                                   return ListTile(
@@ -422,10 +437,17 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                                       label,
                                       style: TextStyle(
                                         color: isSelected ? _orange : _textDark,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
                                       ),
                                     ),
-                                    trailing: isSelected ? const Icon(Icons.check, color: Color(0xFFE68A4D)) : null,
+                                    trailing: isSelected
+                                        ? const Icon(
+                                            Icons.check,
+                                            color: Color(0xFFE68A4D),
+                                          )
+                                        : null,
                                     onTap: () {
                                       setState(() {
                                         _selectedDate = date;
@@ -448,11 +470,18 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
   }
 
   Widget _buildDateSearchDropdown(List<_ActivityLogItem> items) {
-    final dates = items
-        .map((item) => DateTime(item.createdAt.year, item.createdAt.month, item.createdAt.day))
-        .toSet()
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
+    final dates =
+        items
+            .map(
+              (item) => DateTime(
+                item.createdAt.year,
+                item.createdAt.month,
+                item.createdAt.day,
+              ),
+            )
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
 
     final label = _selectedDate == null
         ? 'Pilih Tanggal'
@@ -470,7 +499,11 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF7B7B7B)),
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: Color(0xFF7B7B7B),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -482,7 +515,10 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                 ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF7B7B7B)),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF7B7B7B),
+            ),
           ],
         ),
       ),
@@ -719,7 +755,8 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
 
     return _ActivityLogItem(
       title: isAdmin ? 'Login Sesi Administrator' : 'Login Sesi Staff',
-      subtitle: 'Verifikasi akses masuk ${brand.isNotEmpty ? brand : safeName} melalui sistem keamanan internal ORVIX.',
+      subtitle:
+          'Verifikasi akses masuk ${brand.isNotEmpty ? brand : safeName} melalui sistem keamanan internal ORVIX.',
       category: 'Autentikasi',
       type: 'autentikasi',
       status: '',

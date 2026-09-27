@@ -48,6 +48,30 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
         .map((snapshot) => snapshot.docs.map((doc) => doc.id).toSet());
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _preferencesStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('settings')
+        .doc('notification_preferences')
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _securityEventsStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('security_events')
+        .snapshots();
+  }
+
+  bool _preferenceEnabled(Map<String, dynamic> preferences, String key) =>
+      preferences[key] is bool ? preferences[key] as bool : true;
+
   DateTime _dateValue(Map<String, dynamic> data, List<String> keys) {
     for (final key in keys) {
       final value = data[key];
@@ -65,7 +89,9 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
   List<_AdminNotification> _buildNotifications(
     QuerySnapshot<Map<String, dynamic>> calculations,
     QuerySnapshot<Map<String, dynamic>> logins,
+    QuerySnapshot<Map<String, dynamic>> securityEvents,
     Set<String> readIds,
+    Map<String, dynamic> preferences,
   ) {
     final notifications = <_AdminNotification>[];
     for (final doc in calculations.docs) {
@@ -93,6 +119,7 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
       );
     }
     for (final doc in logins.docs) {
+      if (!_preferenceEnabled(preferences, 'login_alerts')) continue;
       final data = doc.data();
       final date = _dateValue(data, ['logged_in_at', 'loggedInAt']);
       if (date.millisecondsSinceEpoch == 0) continue;
@@ -100,16 +127,55 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
       final device = (data['device'] ?? data['device_name'] ?? '')
           .toString()
           .trim();
+      final isNewDevice = data['is_new_device'] != false;
       final id = _statusId('login', doc);
       notifications.add(
         _AdminNotification(
           id: id,
-          title: 'Login perangkat baru',
+          title: isNewDevice ? 'Login perangkat baru' : 'Login sesi baru',
           message: device.isEmpty
               ? '$name masuk ke sistem.'
               : '$name masuk melalui $device.',
           date: date,
           icon: Icons.login_outlined,
+          color: const Color(0xFFFFD5D5),
+          category: 'Keamanan',
+          isRead: readIds.contains(id),
+        ),
+      );
+    }
+    for (final doc in securityEvents.docs) {
+      final data = doc.data();
+      final eventType = data['event_type']?.toString();
+      final preferenceKey = switch (eventType) {
+        'credential_changed' => 'credential_alerts',
+        'staff_status_changed' => 'staff_status_alerts',
+        _ => null,
+      };
+      if (preferenceKey == null ||
+          !_preferenceEnabled(preferences, preferenceKey)) {
+        continue;
+      }
+      final date = _dateValue(data, ['created_at', 'createdAt']);
+      if (date.millisecondsSinceEpoch == 0) continue;
+      final id = _statusId('security', doc);
+      final isCredentialChange = eventType == 'credential_changed';
+      final subject = (data['user_name'] ?? 'Administrator').toString().trim();
+      final staffName = (data['staff_name'] ?? 'Staff').toString().trim();
+      final newStatus = (data['new_status'] ?? '').toString().trim();
+      notifications.add(
+        _AdminNotification(
+          id: id,
+          title: isCredentialChange
+              ? 'Perubahan kredensial admin'
+              : 'Status akun staff berubah',
+          message: isCredentialChange
+              ? 'Kredensial $subject berhasil diubah.'
+              : '$staffName berubah menjadi ${newStatus.isEmpty ? 'status baru' : newStatus}.',
+          date: date,
+          icon: isCredentialChange
+              ? Icons.password_outlined
+              : Icons.manage_accounts_outlined,
           color: const Color(0xFFFFD5D5),
           category: 'Keamanan',
           isRead: readIds.contains(id),
@@ -160,27 +226,40 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
               .collectionGroup('login_history')
               .snapshots(),
           builder: (context, loginSnapshot) {
-            return StreamBuilder<Set<String>>(
-              stream: _readIdsStream(),
-              builder: (context, readSnapshot) {
-                final notifications = _buildNotifications(
-                  calculationSnapshot.data ??
-                      const _EmptyQuerySnapshot<Map<String, dynamic>>(),
-                  loginSnapshot.data ??
-                      const _EmptyQuerySnapshot<Map<String, dynamic>>(),
-                  readSnapshot.data ?? <String>{},
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _securityEventsStream(),
+              builder: (context, securitySnapshot) {
+                return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: _preferencesStream(),
+                  builder: (context, preferencesSnapshot) {
+                    return StreamBuilder<Set<String>>(
+                      stream: _readIdsStream(),
+                      builder: (context, readSnapshot) {
+                        final notifications = _buildNotifications(
+                          calculationSnapshot.data ??
+                              const _EmptyQuerySnapshot<Map<String, dynamic>>(),
+                          loginSnapshot.data ??
+                              const _EmptyQuerySnapshot<Map<String, dynamic>>(),
+                          securitySnapshot.data ??
+                              const _EmptyQuerySnapshot<Map<String, dynamic>>(),
+                          readSnapshot.data ?? <String>{},
+                          preferencesSnapshot.data?.data() ?? const {},
+                        );
+                        final visible = notifications.where((notification) {
+                          if (_selectedFilter == 1) {
+                            return notification.category == 'Perhitungan';
+                          }
+                          if (_selectedFilter == 2) {
+                            return notification.category == 'Keamanan';
+                          }
+                          if (_selectedFilter == 3) return !notification.isRead;
+                          return true;
+                        }).toList();
+                        return _buildPage(notifications, visible);
+                      },
+                    );
+                  },
                 );
-                final visible = notifications.where((notification) {
-                  if (_selectedFilter == 1) {
-                    return notification.category == 'Perhitungan';
-                  }
-                  if (_selectedFilter == 2) {
-                    return notification.category == 'Keamanan';
-                  }
-                  if (_selectedFilter == 3) return !notification.isRead;
-                  return true;
-                }).toList();
-                return _buildPage(notifications, visible);
               },
             );
           },
