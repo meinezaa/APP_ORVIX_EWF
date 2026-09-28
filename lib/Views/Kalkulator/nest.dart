@@ -827,10 +827,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
             height: 40,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFDE5825),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFFDE5825), width: 1.5),
             ),
             child: InkWell(
               onTap: _downloadAndShareResults,
@@ -864,10 +861,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
             height: 40,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFDE5825),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFFDE5825), width: 1.5),
             ),
             child: InkWell(
               onTap: () {

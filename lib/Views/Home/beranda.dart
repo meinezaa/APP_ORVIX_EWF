@@ -376,6 +376,22 @@ class _HomeViewState extends State<HomeView> {
                                   width: 45,
                                   height: 45,
                                   child: Material(
+                                    color: Colors.white,
+                                    shape: const CircleBorder(),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.asset(
+                                      'assets/kepompong-logo.png',
+                                      width: 45,
+                                      height: 45,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: Material(
                                     color: const Color(0xFFE8E0D8),
                                     shape: const CircleBorder(),
                                     child: InkWell(

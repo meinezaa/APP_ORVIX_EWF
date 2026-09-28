@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'main_screen.dart';
 import 'Home/beranda_admin.dart';
 import '../Services/auth_services.dart';
-import 'Onbording/onboarding_screen.dart'; // Hanya perlu meng-import OnboardingScreen
+import 'Onbording/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

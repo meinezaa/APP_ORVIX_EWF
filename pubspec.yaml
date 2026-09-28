@@ -87,6 +87,7 @@ flutter:
     - assets/onboarding2.png
     - assets/onboarding3.png
     - assets/bg_launcher_orvix.png
+    - assets/kepompong-logo.png
 
 flutter_launcher_icons:
   android: true

@@ -109,33 +109,65 @@ class _ProfileViewState extends State<ProfileView> {
 
   Widget _buildHeader() {
     return SizedBox(
-      height: 42,
+      height: 60,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/text_logo.png', width: 88),
-              const SizedBox(width: 10),
-              const Text(
-                'Profil',
-                style: TextStyle(
+          Positioned(
+            left: 2,
+            top: 0,
+            bottom: 0,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: Material(
                   color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/kepompong-logo.png',
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            ],
+            ),
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset('assets/text_logo.png', width: 88),
+                const SizedBox(width: 10),
+                const Text(
+                  'Profil',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
           Positioned(
             right: 0,
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PengaturanView()),
+            top: 0,
+            bottom: 0,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PengaturanView()),
+                ),
+                child: _roundIcon(Icons.settings_outlined),
               ),
-              child: _roundIcon(Icons.settings_outlined),
             ),
           ),
         ],
@@ -145,13 +177,13 @@ class _ProfileViewState extends State<ProfileView> {
 
   Widget _roundIcon(IconData icon) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 50,
+      height: 50,
       decoration: const BoxDecoration(
         color: Color(0xFFFFF0E7),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: Color(0xFF241A17), size: 25),
+      child: Icon(icon, color: Color(0xFF241A17), size: 26),
     );
   }
 
@@ -327,7 +359,10 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (context, snapshot) {
         final values = snapshot.data ?? List<int>.filled(5, 0);
         const maxValue = 60;
-        final totalMinutes = values.fold<int>(0, (runningTotal, item) => runningTotal + item);
+        final totalMinutes = values.fold<int>(
+          0,
+          (runningTotal, item) => runningTotal + item,
+        );
 
         return Container(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
@@ -784,7 +819,8 @@ class _UsageChartPainter extends CustomPainter {
     final scaleMarks = ['60', '40', '20'];
     for (var i = 0; i < scaleMarks.length; i++) {
       final value = scaleMarks[i];
-      final y = chartTop + ((chartBottom - chartTop) / (scaleMarks.length - 1)) * i;
+      final y =
+          chartTop + ((chartBottom - chartTop) / (scaleMarks.length - 1)) * i;
       final textPainter = TextPainter(
         text: TextSpan(
           text: value,
@@ -803,7 +839,8 @@ class _UsageChartPainter extends CustomPainter {
     }
   }
 
-  String _dayLabel(int index) => const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'][index];
+  String _dayLabel(int index) =>
+      const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'][index];
 
   @override
   bool shouldRepaint(covariant _UsageChartPainter oldDelegate) =>

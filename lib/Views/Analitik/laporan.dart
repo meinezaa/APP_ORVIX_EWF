@@ -1105,10 +1105,7 @@ class _LaporanViewState extends State<LaporanView> {
 
     ({double x, double y}) pointForAngle(double angleDegrees) {
       final angleRad = (angleDegrees - 90) * math.pi / 180;
-      return (
-        x: cx + r * math.cos(angleRad),
-        y: cy + r * math.sin(angleRad),
-      );
+      return (x: cx + r * math.cos(angleRad), y: cy + r * math.sin(angleRad));
     }
 
     for (final (value, color) in segments) {
