@@ -143,6 +143,7 @@ class _LoginViewState extends State<LoginView>
   // Fungsi penanganan login Google
   Future<void> _handleGoogleSignIn() async {
     try {
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser != null && mounted) {
@@ -151,9 +152,10 @@ class _LoginViewState extends State<LoginView>
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        await FirebaseAuth.instance.signInWithCredential(credential);
-        final user = await _authService.getCurrentUserData();
-        await _authService.recordLogin(user: user);
+        final user = await _authService.signInWithRegisteredGoogle(
+          credential: credential,
+          googleEmail: googleUser.email,
+        );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,10 +169,13 @@ class _LoginViewState extends State<LoginView>
         _navigateAfterLogin(user);
       }
     } catch (error) {
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal masuk dengan Google: $error'),
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
             backgroundColor: Colors.red,
           ),
         );

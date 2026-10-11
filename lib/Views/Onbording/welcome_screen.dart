@@ -18,6 +18,7 @@ class WelcomeView extends StatelessWidget {
   // Fungsi untuk menangani proses login Google
   Future<void> _handleGoogleSignIn(BuildContext context) async {
     try {
+      await _googleSignIn.signOut();
       // Menampilkan pemilih akun Google (Account Picker)
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
@@ -27,10 +28,11 @@ class WelcomeView extends StatelessWidget {
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        await FirebaseAuth.instance.signInWithCredential(credential);
         final authService = AuthService();
-        final user = await authService.getCurrentUserData();
-        await authService.recordLogin(user: user);
+        final user = await authService.signInWithRegisteredGoogle(
+          credential: credential,
+          googleEmail: googleUser.email,
+        );
         if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -42,17 +44,20 @@ class WelcomeView extends StatelessWidget {
 
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
-            builder: (context) => user?.role.trim().toLowerCase() == 'admin'
+            builder: (context) => user.role.trim().toLowerCase() == 'admin'
                 ? const DashboardScreen()
                 : const MainScreen(),
           ),
         );
       }
     } catch (error) {
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal masuk dengan Google: $error'),
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
             backgroundColor: Colors.red,
           ),
         );

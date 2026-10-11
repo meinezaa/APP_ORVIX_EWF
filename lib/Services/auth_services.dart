@@ -59,6 +59,112 @@ class AuthService {
     }
   }
 
+  Future<UserModel> signInWithRegisteredGoogle({
+    required AuthCredential credential,
+    required String googleEmail,
+  }) async {
+    final normalizedEmail = googleEmail.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) {
+      throw StateError('Email akun Google tidak tersedia.');
+    }
+
+    final users = _firestore.collection('users');
+    final authResult = await _auth.signInWithCredential(credential);
+    try {
+      final authUser = authResult.user;
+      if (authUser == null ||
+          authUser.email?.trim().toLowerCase() != normalizedEmail) {
+        throw StateError('Email akun Google tidak cocok.');
+      }
+
+      final userReference = users.doc(authUser.uid);
+      final existingProfile = await userReference.get();
+      if (existingProfile.exists) {
+        final profileData = existingProfile.data() ?? <String, dynamic>{};
+        final profileEmail =
+            (profileData['email'] ??
+                    profileData['user_email'] ??
+                    profileData['email_address'] ??
+                    '')
+                .toString()
+                .trim()
+                .toLowerCase();
+        if (profileEmail != normalizedEmail) {
+          throw StateError('Email akun tidak cocok dengan profil.');
+        }
+        if (!_isUserActive(profileData)) {
+          throw StateError('Akun Anda nonaktif. Hubungi admin.');
+        }
+
+        final profile = UserModel.fromMap(profileData);
+        await recordLogin(user: profile);
+        return profile;
+      }
+
+      final registeredSnapshot = await users
+          .where('email', isEqualTo: normalizedEmail)
+          .limit(1)
+          .get();
+      if (registeredSnapshot.docs.isEmpty) {
+        throw StateError('Email Google belum terdaftar. Hubungi admin.');
+      }
+
+      final registeredDocument = registeredSnapshot.docs.first;
+      final registeredData = registeredDocument.data();
+      if (!_isUserActive(registeredData)) {
+        throw StateError('Akun Anda nonaktif. Hubungi admin.');
+      }
+
+      late Map<String, dynamic> profileData;
+      await _firestore.runTransaction((transaction) async {
+        final currentProfile = await transaction.get(userReference);
+        if (currentProfile.exists) {
+          profileData = currentProfile.data() ?? <String, dynamic>{};
+          final currentEmail =
+              (profileData['email'] ??
+                      profileData['user_email'] ??
+                      profileData['email_address'] ??
+                      '')
+                  .toString()
+                  .trim()
+                  .toLowerCase();
+          if (currentEmail != normalizedEmail) {
+            throw StateError('Email akun tidak cocok dengan profil.');
+          }
+          if (!_isUserActive(profileData)) {
+            throw StateError('Akun Anda nonaktif. Hubungi admin.');
+          }
+        } else {
+          profileData = {
+            ...registeredData,
+            'user_id': authUser.uid,
+            'email': normalizedEmail,
+          };
+          transaction.set(userReference, profileData);
+        }
+
+        if (registeredDocument.id != authUser.uid) {
+          transaction.delete(registeredDocument.reference);
+        }
+      });
+
+      final profile = UserModel.fromMap(profileData);
+      await recordLogin(user: profile);
+      return profile;
+    } catch (_) {
+      if (_auth.currentUser != null) await _auth.signOut();
+      rethrow;
+    }
+  }
+
+  bool _isUserActive(Map<String, dynamic> data) {
+    final status = (data['status'] ?? 'active').toString().trim().toLowerCase();
+    return data['isActive'] != false &&
+        data['aktif'] != false &&
+        status != 'inactive' &&
+        status != 'nonaktif';
+  }
+
   // 2. LOGIN (MENGEMBALIKAN USERMODEL)
   Future<UserModel?> loginUser({
     required String email,

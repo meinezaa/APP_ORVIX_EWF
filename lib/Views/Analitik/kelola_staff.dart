@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'tambah_staff.dart';
 
 class KelolaStaffContent extends StatefulWidget {
   const KelolaStaffContent({super.key});
@@ -1878,6 +1879,35 @@ class _KelolaStaffContentState extends State<KelolaStaffContent> {
         return Column(
           children: [
             _buildSearch(),
+            const SizedBox(height: 24),
+            FractionallySizedBox(
+              widthFactor: 0.88,
+              child: SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => const AddStaffScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add_rounded, size: 24),
+                  label: const Text(
+                    'Tambah Staff',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE75E14),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             if (staff.isEmpty)
               const Padding(
