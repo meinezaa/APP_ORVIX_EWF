@@ -67,9 +67,15 @@ class HistoryModel {
 
     return HistoryModel(
       id: id,
-      jenisKalkulator: data['jenis_kalkulator']?.toString() ?? '',
+      jenisKalkulator:
+          (data['jenis_kalkulator'] ??
+                  data['jenisKalkulator'] ??
+                  data['jenis_perhitungan'] ??
+                  data['type'])
+              ?.toString() ??
+          '',
       hasil: (data['hasil'] as num?)?.toDouble() ?? 0,
-      createdAt: parseDate(data['created_at']),
+      createdAt: parseDate(data['created_at'] ?? data['createdAt']),
       userId: data['user_id']?.toString() ?? '',
       userName: data['user_name']?.toString() ?? '',
       role: data['role']?.toString() ?? 'staff',
@@ -91,6 +97,46 @@ class HistoryModel {
       kategori: data['kategori']?.toString() ?? data['category']?.toString(),
     );
   }
+
+  bool isSameNestCalculationAs(HistoryModel other) {
+    if (!jenisKalkulator.toLowerCase().contains('nest') ||
+        !other.jenisKalkulator.toLowerCase().contains('nest') ||
+        !_isSameCalendarDay(other)) {
+      return false;
+    }
+    return hasil == other.hasil;
+  }
+
+  bool isSamePivotCalculationAs(HistoryModel other) {
+    if (!jenisKalkulator.toLowerCase().contains('pivot') ||
+        !other.jenisKalkulator.toLowerCase().contains('pivot') ||
+        !_isSameCalendarDay(other)) {
+      return false;
+    }
+    return kategori?.toUpperCase() == other.kategori?.toUpperCase() &&
+        hasil == other.hasil;
+  }
+
+  bool isSamePhysicalCalculationAs(HistoryModel other) {
+    if (!jenisKalkulator.toLowerCase().contains('emas') ||
+        !jenisKalkulator.toLowerCase().contains('fisik') ||
+        !other.jenisKalkulator.toLowerCase().contains('emas') ||
+        !other.jenisKalkulator.toLowerCase().contains('fisik') ||
+        !_isSameCalendarDay(other)) {
+      return false;
+    }
+    return hasil == other.hasil;
+  }
+
+  bool _isSameCalendarDay(HistoryModel other) =>
+      createdAt.year == other.createdAt.year &&
+      createdAt.month == other.createdAt.month &&
+      createdAt.day == other.createdAt.day;
+
+  bool isSameCalculationAs(HistoryModel other) =>
+      isSameNestCalculationAs(other) ||
+      isSamePivotCalculationAs(other) ||
+      isSamePhysicalCalculationAs(other);
 
   Map<String, dynamic> toMap() {
     return {

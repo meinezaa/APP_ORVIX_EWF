@@ -15,17 +15,9 @@ class NotifikasiView extends StatefulWidget {
 
 class _NotifikasiViewState extends State<NotifikasiView> {
   int _selectedFilter = 0;
+  bool _isMarkingAllRead = false;
 
   final List<NotifikasiModel> _notifications = [
-    NotifikasiModel(
-      id: 'calculation-saved',
-      title: 'Perhitungan tersimpan',
-      message: 'Hasil perhitungan Emas Fisik berhasil disimpan.',
-      time: '08.30',
-      icon: Icons.check_circle_outline,
-      isRead: false,
-      group: 'Hari ini',
-    ),
     NotifikasiModel(
       id: 'gold-price-updated',
       title: 'Harga emas diperbarui',
@@ -41,16 +33,7 @@ class _NotifikasiViewState extends State<NotifikasiView> {
       message: 'Mulai gunakan kalkulator untuk membantu perhitungan Anda.',
       time: 'Kemarin',
       icon: Icons.waving_hand_outlined,
-      isRead: true,
-      group: 'Kemarin',
-    ),
-    NotifikasiModel(
-      id: 'saved-pivot-example',
-      title: 'Perhitungan tersimpan',
-      message: 'Hasil perhitungan Pivot Point berhasil disimpan.',
-      time: 'Kemarin',
-      icon: Icons.check_circle_outline,
-      isRead: true,
+      isRead: false,
       group: 'Kemarin',
     ),
     NotifikasiModel(
@@ -59,7 +42,7 @@ class _NotifikasiViewState extends State<NotifikasiView> {
       message: 'Lihat kembali seluruh aktivitas perhitungan Anda.',
       time: 'Kemarin',
       icon: Icons.history,
-      isRead: true,
+      isRead: false,
       group: 'Kemarin',
     ),
   ];
@@ -73,7 +56,15 @@ class _NotifikasiViewState extends State<NotifikasiView> {
         .collection('notification_status')
         .where('is_read', isEqualTo: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toSet());
+        .map(
+          (snapshot) => snapshot.docs
+              .where((doc) {
+                final action = doc.data()['read_action'];
+                return action == 'tap' || action == 'mark_all';
+              })
+              .map((doc) => doc.id)
+              .toSet(),
+        );
   }
 
   Future<void> _markAsRead(NotifikasiModel notification) async {
@@ -84,7 +75,11 @@ class _NotifikasiViewState extends State<NotifikasiView> {
         .doc(user.uid)
         .collection('notification_status')
         .doc(notification.id)
-        .set({'is_read': true, 'read_at': FieldValue.serverTimestamp()});
+        .set({
+          'is_read': true,
+          'read_action': 'tap',
+          'read_at': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
@@ -96,8 +91,18 @@ class _NotifikasiViewState extends State<NotifikasiView> {
         builder: (context, statusSnapshot) {
           final readIds = statusSnapshot.data ?? <String>{};
           final notifications = [
-            ..._notifications,
-            ..._buildPivotNotifications(
+            ..._notifications.map(
+              (notification) => NotifikasiModel(
+                id: notification.id,
+                title: notification.title,
+                message: notification.message,
+                time: notification.time,
+                icon: notification.icon,
+                isRead: readIds.contains(notification.id),
+                group: notification.group,
+              ),
+            ),
+            ..._buildCalculationNotifications(
               historySnapshot.data ?? const <HistoryModel>[],
               readIds,
             ),
@@ -149,7 +154,10 @@ class _NotifikasiViewState extends State<NotifikasiView> {
                                   34,
                                   30,
                                 ),
-                                children: _buildGroupedNotifications(visible),
+                                children: _buildGroupedNotifications(
+                                  visible,
+                                  notifications,
+                                ),
                               ),
                       ),
                     ),
@@ -163,26 +171,59 @@ class _NotifikasiViewState extends State<NotifikasiView> {
     );
   }
 
-  List<NotifikasiModel> _buildPivotNotifications(
+  List<NotifikasiModel> _buildCalculationNotifications(
     List<HistoryModel> history,
     Set<String> readIds,
-  ) => history
-      .where((item) => item.jenisKalkulator.toLowerCase().contains('pivot'))
-      .map((item) {
-        final indication = (item.indikasi ?? '').toUpperCase();
-        final id = 'pivot-${item.id}';
-        return NotifikasiModel(
-          id: id,
-          title: 'Hasil Pivot Point: $indication',
-          message:
-              'Nilai Pivot Point Anda adalah ${item.hasil.toStringAsFixed(2)}. Indikasi: $indication.',
-          time: _formatTime(item.createdAt),
-          icon: indication == 'BUY' ? Icons.trending_up : Icons.trending_down,
-          isRead: readIds.contains(id),
-          group: _isToday(item.createdAt) ? 'Hari ini' : 'Kemarin',
-        );
-      })
-      .toList();
+  ) {
+    final uniqueHistory = <HistoryModel>[];
+    for (final item in history) {
+      final type = item.jenisKalkulator.toLowerCase();
+      final isSupportedType =
+          type.contains('pivot') ||
+          type.contains('nest') ||
+          (type.contains('emas') && type.contains('fisik'));
+      if (!isSupportedType || uniqueHistory.any(item.isSameCalculationAs)) {
+        continue;
+      }
+      uniqueHistory.add(item);
+    }
+
+    return uniqueHistory.map((item) {
+      final type = item.jenisKalkulator.toLowerCase();
+      final indication = (item.indikasi ?? '').toUpperCase();
+      final isPivot = type.contains('pivot');
+      final isNest = type.contains('nest');
+      final idPrefix = isPivot
+          ? 'pivot'
+          : isNest
+          ? 'nest'
+          : 'physical';
+      final id = '$idPrefix-${item.id}';
+      final title = isPivot
+          ? 'Hasil Pivot Point: $indication'
+          : isNest
+          ? 'Hasil NEST: $indication'
+          : 'Perhitungan Emas Fisik';
+      final message = isPivot
+          ? 'Nilai Pivot Point Anda adalah ${item.hasil.toStringAsFixed(2)}. Indikasi: $indication.'
+          : isNest
+          ? 'Hasil NEST ${item.hasil.toStringAsFixed(2)}. Open: ${item.open?.toStringAsFixed(2) ?? '-'}, Close: ${item.close?.toStringAsFixed(2) ?? '-'}. Indikasi: $indication.'
+          : 'Hasil perhitungan Emas Fisik adalah ${item.hasil.toStringAsFixed(2)}.';
+      return NotifikasiModel(
+        id: id,
+        title: title,
+        message: message,
+        time: _formatTime(item.createdAt),
+        icon: isPivot || isNest
+            ? indication == 'BUY'
+                  ? Icons.trending_up
+                  : Icons.trending_down
+            : Icons.check_circle_outline,
+        isRead: readIds.contains(id),
+        group: _isToday(item.createdAt) ? 'Hari ini' : 'Kemarin',
+      );
+    }).toList();
+  }
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
@@ -242,6 +283,57 @@ class _NotifikasiViewState extends State<NotifikasiView> {
     ),
   );
 
+  Widget _buildMarkAllReadButton(List<NotifikasiModel> notifications) =>
+      TextButton.icon(
+        onPressed: _isMarkingAllRead
+            ? null
+            : () => _markAllAsRead(notifications),
+        icon: const Icon(Icons.mark_email_read_outlined, size: 18),
+        label: const Text('Baca semua'),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFFD95D16),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          minimumSize: const Size(0, 40),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      );
+
+  Future<void> _markAllAsRead(List<NotifikasiModel> notifications) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _isMarkingAllRead) return;
+    final unread = notifications.where((notification) => !notification.isRead);
+    if (unread.isEmpty) return;
+
+    setState(() => _isMarkingAllRead = true);
+    try {
+      final collection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('notification_status');
+      final items = unread.toList();
+      for (var start = 0; start < items.length; start += 450) {
+        final batch = FirebaseFirestore.instance.batch();
+        final end = (start + 450).clamp(0, items.length);
+        for (final notification in items.sublist(start, end)) {
+          batch.set(collection.doc(notification.id), {
+            'is_read': true,
+            'read_action': 'mark_all',
+            'read_at': FieldValue.serverTimestamp(),
+          });
+        }
+        await batch.commit();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifikasi gagal ditandai dibaca.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMarkingAllRead = false);
+    }
+  }
+
   Widget _filterButton(String label, int index) => Expanded(
     child: GestureDetector(
       onTap: () => setState(() => _selectedFilter = index),
@@ -270,21 +362,38 @@ class _NotifikasiViewState extends State<NotifikasiView> {
     ),
   );
 
-  List<Widget> _buildGroupedNotifications(List<NotifikasiModel> items) {
+  List<Widget> _buildGroupedNotifications(
+    List<NotifikasiModel> items,
+    List<NotifikasiModel> allNotifications,
+  ) {
     final widgets = <Widget>[];
+    final canMarkAll =
+        (_selectedFilter == 0 || _selectedFilter == 2) &&
+        allNotifications.any((item) => !item.isRead);
+    var markAllButtonAdded = false;
     for (final group in ['Hari ini', 'Kemarin']) {
       final groupItems = items.where((item) => item.group == group).toList();
       if (groupItems.isEmpty) continue;
       widgets.add(
-        Text(
-          group,
-          style: const TextStyle(
-            color: Color(0xFFD95D16),
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+        Row(
+          children: [
+            Text(
+              group,
+              style: const TextStyle(
+                color: Color(0xFFD95D16),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            if (canMarkAll && !markAllButtonAdded)
+              _buildMarkAllReadButton(allNotifications),
+          ],
         ),
       );
+      if (canMarkAll && !markAllButtonAdded) {
+        markAllButtonAdded = true;
+      }
       widgets.add(const SizedBox(height: 10));
       for (final item in groupItems) {
         widgets.add(_notificationCard(item));

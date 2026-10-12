@@ -162,6 +162,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         hargaJualPerGram: h2,
         selisihPerGram: h3,
         jumlahEmas: h4,
+        idempotencyKey: 'physical|$hasilAkhir',
       );
     } catch (_) {
       if (mounted) {

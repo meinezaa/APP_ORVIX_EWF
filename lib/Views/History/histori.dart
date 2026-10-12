@@ -14,8 +14,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   static const Color primaryOrange = Color(0xFFDC6B38);
   static const Color cardBgColor = Color(0xFFEFEFEF);
   static const Color cardBorderColor = Color(0xFFCCCCCC);
-  String? _selectedPeriod;
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   String _selectedCalculator = 'Semua Kalkulator';
+  final Set<String> _selectedHistoryIds = {};
+  bool _isDeleting = false;
+  bool _isSelectionMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +45,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   children: [
                     Image.asset('assets/text_logo.png', width: 92),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'History',
                       style: TextStyle(
                         color: Colors.white,
@@ -68,50 +71,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     child: StreamBuilder<List<HistoryModel>>(
                       stream: HistoryService.watchHistory(),
+                      initialData: const <HistoryModel>[],
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: primaryOrange,
-                            ),
-                          );
-                        }
                         if (snapshot.hasError) {
                           return const Center(
                             child: Text('Histori belum dapat dimuat.'),
                           );
                         }
 
-                        final history = snapshot.data ?? [];
-                        if (history.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'Belum ada aktivitas perhitungan.',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          );
-                        }
-
-                        final periods = _buildPeriods(history);
+                        final allHistory = snapshot.data ?? [];
+                        final history = _deduplicateCalculationHistory(
+                          allHistory,
+                        );
                         final filteredHistory = _filterHistory(history);
                         return ListView(
                           padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                           children: [
-                            _buildFilters(periods),
-                            const SizedBox(height: 18),
+                            _buildFilters(),
+                            const SizedBox(height: 12),
+                            _buildSelectionToolbar(filteredHistory, allHistory),
+                            const SizedBox(height: 8),
                             if (filteredHistory.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 32),
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 48),
                                 child: Center(
                                   child: Text(
-                                    'Belum ada histori pada periode ini.',
-                                    style: TextStyle(color: Colors.grey),
+                                    DateUtils.isSameDay(
+                                          _selectedDate,
+                                          DateTime.now(),
+                                        )
+                                        ? 'Hari ini tidak ada perhitungan.'
+                                        : 'Tidak ada perhitungan pada ${_formatDate(_selectedDate)}.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               )
                             else
-                              ...filteredHistory.map(_buildHistoryCard),
+                              ...filteredHistory.map(
+                                (item) => _buildHistoryCard(item, allHistory),
+                              ),
                           ],
                         );
                       },
@@ -126,12 +128,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildFilters(Map<String, String> periods) {
-    final selectedValue = periods.containsKey(_selectedPeriod)
-        ? _selectedPeriod
-        : null;
+  List<HistoryModel> _deduplicateCalculationHistory(
+    List<HistoryModel> history,
+  ) {
+    final uniqueHistory = <HistoryModel>[];
+    for (final item in history) {
+      if (uniqueHistory.any(item.isSameCalculationAs)) continue;
+      uniqueHistory.add(item);
+    }
+    return uniqueHistory;
+  }
+
+  Widget _buildFilters() {
+    final isToday = DateUtils.isSameDay(_selectedDate, DateTime.now());
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF4EC),
         borderRadius: BorderRadius.circular(12),
@@ -139,24 +150,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       child: Column(
         children: [
-          _buildDropdownRow(
-            icon: Icons.calendar_month_outlined,
-            label: 'Periode',
-            value: selectedValue,
-            hint: 'Semua Bulan',
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('Semua Bulan'),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: _pickDate,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_month_outlined,
+                    color: primaryOrange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isToday ? 'Perhitungan Hari Ini' : 'Pilih Tanggal',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _formatDate(_selectedDate),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Pilih tanggal',
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.edit_calendar_outlined),
+                  ),
+                ],
               ),
-              ...periods.entries.map(
-                (period) => DropdownMenuItem<String?>(
-                  value: period.key,
-                  child: Text(period.value),
-                ),
-              ),
-            ],
-            onChanged: (value) => setState(() => _selectedPeriod = value),
+            ),
           ),
           const Divider(height: 1),
           _buildDropdownRow(
@@ -185,6 +217,139 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateUtils.dateOnly(DateTime.now()),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selectedDate = DateUtils.dateOnly(picked);
+      _selectedHistoryIds.clear();
+    });
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year}';
+
+  Widget _buildSelectionToolbar(
+    List<HistoryModel> visibleHistory,
+    List<HistoryModel> allHistory,
+  ) {
+    final visibleIds = <String>{
+      for (final item in visibleHistory)
+        ..._matchingHistoryIds(item, allHistory),
+    };
+    final allVisibleSelected =
+        visibleIds.isNotEmpty && visibleIds.every(_selectedHistoryIds.contains);
+    return Row(
+      children: [
+        TextButton.icon(
+          onPressed: visibleIds.isEmpty
+              ? null
+              : () => setState(() {
+                  if (allVisibleSelected) {
+                    _selectedHistoryIds.removeAll(visibleIds);
+                    _isSelectionMode = false;
+                  } else {
+                    _selectedHistoryIds.addAll(visibleIds);
+                    _isSelectionMode = true;
+                  }
+                }),
+          icon: Icon(
+            allVisibleSelected ? Icons.deselect : Icons.select_all,
+            size: 19,
+          ),
+          label: Text(allVisibleSelected ? 'Batalkan' : 'Pilih semua'),
+          style: TextButton.styleFrom(foregroundColor: primaryOrange),
+        ),
+        const Spacer(),
+        if (_selectedHistoryIds.isNotEmpty) ...[
+          Text('${_selectedHistoryIds.length} dipilih'),
+          IconButton(
+            tooltip: 'Hapus riwayat terpilih',
+            onPressed: _deleteSelectedHistory,
+            icon: const Icon(Icons.delete_outline),
+            color: Colors.red.shade700,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Set<String> _matchingHistoryIds(
+    HistoryModel history,
+    List<HistoryModel> allHistory,
+  ) {
+    return allHistory
+        .where((item) => item.isSameCalculationAs(history))
+        .map((item) => item.id)
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  void _toggleHistorySelection(
+    HistoryModel history,
+    List<HistoryModel> allHistory,
+  ) {
+    final ids = _matchingHistoryIds(history, allHistory);
+    setState(() {
+      if (ids.any(_selectedHistoryIds.contains)) {
+        _selectedHistoryIds.removeAll(ids);
+        if (_selectedHistoryIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedHistoryIds.addAll(ids);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedHistory() async {
+    if (_selectedHistoryIds.isEmpty || _isDeleting) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus riwayat?'),
+        content: Text(
+          'Hapus ${_selectedHistoryIds.length} riwayat perhitungan terpilih?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    _isDeleting = true;
+    try {
+      await HistoryService.deleteCalculations(_selectedHistoryIds);
+      if (!mounted) return;
+      setState(() {
+        _selectedHistoryIds.clear();
+        _isSelectionMode = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Riwayat berhasil dihapus.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Riwayat gagal dihapus.')));
+    } finally {
+      _isDeleting = false;
+    }
   }
 
   Widget _buildDropdownRow({
@@ -216,51 +381,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Map<String, String> _buildPeriods(List<HistoryModel> history) {
-    final periods = <String, String>{};
-    for (final item in history) {
-      final key = _periodKey(item.createdAt);
-      periods[key] =
-          '${_monthName(item.createdAt.month)} ${item.createdAt.year}';
-    }
-    return Map.fromEntries(
-      periods.entries.toList()..sort((a, b) => b.key.compareTo(a.key)),
-    );
-  }
-
   List<HistoryModel> _filterHistory(List<HistoryModel> history) {
     return history.where((item) {
-      final matchesPeriod =
-          _selectedPeriod == null ||
-          _periodKey(item.createdAt) == _selectedPeriod;
+      final matchesDate = DateUtils.isSameDay(item.createdAt, _selectedDate);
       final matchesCalculator =
           _selectedCalculator == 'Semua Kalkulator' ||
           item.jenisKalkulator == _selectedCalculator;
-      return matchesPeriod && matchesCalculator;
+      return matchesDate && matchesCalculator;
     }).toList();
   }
 
-  String _periodKey(DateTime date) =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}';
-
-  Widget _buildHistoryCard(HistoryModel history) {
+  Widget _buildHistoryCard(
+    HistoryModel history,
+    List<HistoryModel> allHistory,
+  ) {
     final date = history.createdAt;
+    final matchingIds = _matchingHistoryIds(history, allHistory);
+    final isSelected = matchingIds.any(_selectedHistoryIds.contains);
     final dateText =
-        '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year}';
+        '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DetailHistoryScreen(history: history),
-          ),
-        ),
+        onLongPress: () => _toggleHistorySelection(history, allHistory),
+        onTap: _selectedHistoryIds.isNotEmpty
+            ? () => _toggleHistorySelection(history, allHistory)
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailHistoryScreen(history: history),
+                ),
+              ),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: cardBgColor,
+            color: isSelected ? const Color(0xFFFFE2D1) : cardBgColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: cardBorderColor, width: 1.2),
             boxShadow: [
@@ -275,8 +431,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  if (_isSelectionMode) ...[
+                    SizedBox(
+                      width: 34,
+                      height: 30,
+                      child: IgnorePointer(
+                        child: Checkbox(
+                          value: isSelected,
+                          visualDensity: VisualDensity.compact,
+                          activeColor: primaryOrange,
+                          onChanged: (_) {},
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
                     history.jenisKalkulator,
                     style: const TextStyle(
@@ -285,6 +455,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       color: primaryOrange,
                     ),
                   ),
+                  const Spacer(),
                   Text(
                     dateText,
                     style: const TextStyle(fontSize: 11, color: Colors.grey),

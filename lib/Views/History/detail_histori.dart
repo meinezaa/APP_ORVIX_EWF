@@ -11,6 +11,7 @@ class DetailHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPivot = history.jenisKalkulator.toLowerCase().contains('pivot');
+    final isNest = history.jenisKalkulator.toLowerCase().contains('nest');
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -84,17 +85,25 @@ class DetailHistoryScreen extends StatelessWidget {
                         _buildResultCard(),
                         const SizedBox(height: 20),
                         Text(
-                          isPivot ? 'Data Harga' : 'Data Emas Fisik',
+                          isPivot || isNest ? 'Data Harga' : 'Data Emas Fisik',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        isPivot ? _buildPriceCard() : _buildGoldPriceCard(),
+                        isPivot
+                            ? _buildPriceCard()
+                            : isNest
+                            ? _buildNestPriceCard()
+                            : _buildGoldPriceCard(),
                         const SizedBox(height: 20),
                         Text(
-                          isPivot ? 'Detail Pivot Point' : 'Detail Emas Fisik',
+                          isPivot
+                              ? 'Detail Pivot Point'
+                              : isNest
+                              ? 'Detail NEST'
+                              : 'Detail Emas Fisik',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -103,6 +112,8 @@ class DetailHistoryScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         isPivot
                             ? _buildTypeCard(isPivot)
+                            : isNest
+                            ? _buildTypeCard(isPivot, isNest: true)
                             : _buildGoldFormulaCard(),
                       ],
                     ),
@@ -160,14 +171,18 @@ class DetailHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeCard(bool isPivot) {
+  Widget _buildTypeCard(bool isPivot, {bool isNest = false}) {
     return _card(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoRow(
             'Jenis proses',
-            isPivot ? 'Perhitungan Pivot Point' : 'Perhitungan Emas Fisik',
+            isPivot
+                ? 'Perhitungan Pivot Point'
+                : isNest
+                ? 'Perhitungan NEST'
+                : 'Perhitungan Emas Fisik',
           ),
           if (isPivot && history.kategori != null) ...[
             const Divider(height: 20),
@@ -198,6 +213,20 @@ class DetailHistoryScreen extends StatelessWidget {
           _buildInfoRow('Close', _formatPrice(history.close)),
           const Divider(height: 20),
           _buildInfoRow('Indikasi', history.indikasi ?? '-'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNestPriceCard() {
+    return _card(
+      Column(
+        children: [
+          _buildInfoRow('Open', _formatPrice(history.open)),
+          const Divider(height: 20),
+          _buildInfoRow('Close', _formatPrice(history.close)),
+          const Divider(height: 20),
+          _buildInfoRow('Action', history.indikasi ?? '-'),
         ],
       ),
     );

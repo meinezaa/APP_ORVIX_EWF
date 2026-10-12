@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'tambah_staff.dart';
+import '../../Models/historikalkulator_model.dart';
 
 class KelolaStaffContent extends StatefulWidget {
   const KelolaStaffContent({super.key});
@@ -168,9 +169,19 @@ class _RiwayatPerhitunganStaffPageState
               (a, b) =>
                   _dateTimeValue(b.data()).compareTo(_dateTimeValue(a.data())),
             );
+          final uniqueDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+          final seenCalculations = <HistoryModel>[];
+          for (final doc in docs) {
+            final history = HistoryModel.fromMap(doc.data(), id: doc.id);
+            if (seenCalculations.any(history.isSameCalculationAs)) {
+              continue;
+            }
+            seenCalculations.add(history);
+            uniqueDocs.add(doc);
+          }
           final filteredDocs = _selectedType == 'Semua'
-              ? docs
-              : docs
+              ? uniqueDocs
+              : uniqueDocs
                     .where(
                       (doc) => _calculationType(doc.data()) == _selectedType,
                     )
@@ -802,13 +813,33 @@ class DetailPerhitunganPage extends StatelessWidget {
 
   String _historyText(List<String> keys, {String fallback = '-'}) {
     for (final key in keys) {
-      final value = historyData[key];
+      final value = _historyValue(key);
       if (value != null && value.toString().trim().isNotEmpty) {
         if (value is num) return _formatStoredNumber(key, value);
         return value.toString();
       }
     }
     return fallback;
+  }
+
+  Object? _historyValue(String key) {
+    final directValue = historyData[key];
+    if (directValue != null) return directValue;
+    const containers = [
+      'input',
+      'inputs',
+      'input_data',
+      'detail',
+      'details',
+      'perhitungan',
+      'calculation',
+      'calculation_data',
+    ];
+    for (final container in containers) {
+      final values = historyData[container];
+      if (values is Map && values[key] != null) return values[key];
+    }
+    return null;
   }
 
   String _pivotCategoryForDetail() {

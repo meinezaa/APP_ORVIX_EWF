@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../Models/historikalkulator_model.dart';
@@ -47,6 +49,7 @@ class HistoryService {
     double? hargaJualPerGram,
     double? selisihPerGram,
     double? jumlahEmas,
+    String? idempotencyKey,
   }) async {
     final collection = _userHistory;
     if (collection == null) {
@@ -101,13 +104,44 @@ class HistoryService {
     payload['category'] = category;
     payload['kategori'] = category;
 
-    final savedDocument = await collection.add(payload);
-    await _recordSessionActivity(
-      title:
-          'Perhitungan $jenisKalkulator${category == null ? '' : ' ($category)'}',
-      subtitle: 'Hasil: ${hasil.toStringAsFixed(2)}',
-      calculationId: savedDocument.id,
-    );
+    final dateKey =
+        '${history.createdAt.year}-${history.createdAt.month.toString().padLeft(2, '0')}-${history.createdAt.day.toString().padLeft(2, '0')}';
+    final documentId = idempotencyKey == null
+        ? null
+        : 'calc_${base64Url.encode(utf8.encode('$dateKey|$idempotencyKey'))}';
+    final savedDocument = documentId == null
+        ? await collection.add(payload)
+        : collection.doc(documentId);
+    final alreadyExisted = documentId == null
+        ? false
+        : (await savedDocument.get()).exists;
+    if (documentId != null) await savedDocument.set(payload);
+
+    if (!alreadyExisted) {
+      await _recordSessionActivity(
+        title:
+            'Perhitungan $jenisKalkulator${category == null ? '' : ' ($category)'}',
+        subtitle: 'Hasil: ${hasil.toStringAsFixed(2)}',
+        calculationId: savedDocument.id,
+      );
+    }
+  }
+
+  static Future<void> deleteCalculations(Iterable<String> documentIds) async {
+    final collection = _userHistory;
+    if (collection == null) {
+      throw StateError('Pengguna belum login.');
+    }
+
+    final ids = documentIds.toSet().toList();
+    for (var start = 0; start < ids.length; start += 500) {
+      final batch = _firestore.batch();
+      final end = (start + 500).clamp(0, ids.length);
+      for (final id in ids.sublist(start, end)) {
+        batch.delete(collection.doc(id));
+      }
+      await batch.commit();
+    }
   }
 
   static Future<void> _recordSessionActivity({

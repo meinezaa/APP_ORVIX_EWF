@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -51,6 +52,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
   String _action = '-';
   String? _saveError;
   String? _lastSavedNestInput;
+  Timer? _nestHistoryTimer;
   final GlobalKey _resultsKey = GlobalKey();
 
   @override
@@ -61,6 +63,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
 
   @override
   void dispose() {
+    _nestHistoryTimer?.cancel();
     _openController.dispose();
     _closeController.dispose();
     super.dispose();
@@ -138,7 +141,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       if (!mounted || !_isAuto) return;
       _openController.text = _formatNumber(liveOpen);
       _closeController.text = _formatNumber(latest.close);
-      _calculateNest();
+      _calculateNest(saveHistory: true);
     } catch (_) {
       if (mounted) {
         setState(() => _saveError = 'Data otomatis Open/Close belum tersedia.');
@@ -149,6 +152,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
   }
 
   void _toggleAutomatic(bool enabled) {
+    _nestHistoryTimer?.cancel();
     setState(() {
       _isAuto = enabled;
       _saveError = null;
@@ -157,7 +161,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     if (enabled) _loadAutomaticData();
   }
 
-  void _calculateNest() {
+  void _calculateNest({bool saveHistory = false}) {
     final open = _parseNumber(_openController.text);
     final close = _parseNumber(_closeController.text);
     final action = open == 0 || close == 0
@@ -170,7 +174,20 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       _action = action;
       _saveError = null;
     });
-    if (action != '-') _saveNestHistory(open, close, action);
+    if (action != '-') {
+      if (saveHistory) {
+        _nestHistoryTimer?.cancel();
+        _saveNestHistory(open, close, action);
+      } else {
+        _nestHistoryTimer?.cancel();
+        _nestHistoryTimer = Timer(
+          const Duration(milliseconds: 700),
+          () => _saveNestHistory(open, close, action),
+        );
+      }
+    } else {
+      _nestHistoryTimer?.cancel();
+    }
   }
 
   Future<void> _saveNestHistory(
@@ -178,7 +195,8 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     double close,
     String action,
   ) async {
-    final inputKey = '$open|$close|$action';
+    final dayKey = DateTime.now().toIso8601String().substring(0, 10);
+    final inputKey = '$dayKey|$open|$close|$action';
     if (_lastSavedNestInput == inputKey) return;
     _lastSavedNestInput = inputKey;
     try {
@@ -188,6 +206,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
         open: open,
         close: close,
         indikasi: action,
+        idempotencyKey: 'nest|$close',
       );
     } catch (_) {
       _lastSavedNestInput = null;
@@ -607,7 +626,12 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                   ),
                 ),
               ),
-              Expanded(child: _buildInputField(_openController)),
+              Expanded(
+                child: _buildInputField(
+                  _openController,
+                  saveOnSubmitted: false,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -625,7 +649,12 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                   ),
                 ),
               ),
-              Expanded(child: _buildInputField(_closeController)),
+              Expanded(
+                child: _buildInputField(
+                  _closeController,
+                  saveOnSubmitted: true,
+                ),
+              ),
             ],
           ),
         ],
@@ -633,7 +662,10 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     );
   }
 
-  Widget _buildInputField(TextEditingController controller) {
+  Widget _buildInputField(
+    TextEditingController controller, {
+    required bool saveOnSubmitted,
+  }) {
     return Container(
       height: 38,
       decoration: BoxDecoration(
@@ -643,6 +675,12 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       child: TextField(
         controller: controller,
         onChanged: (_) => _calculateNest(),
+        textInputAction: saveOnSubmitted
+            ? TextInputAction.done
+            : TextInputAction.next,
+        onSubmitted: (_) {
+          if (saveOnSubmitted) _calculateNest(saveHistory: true);
+        },
         enabled: !_isAuto,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textAlign: TextAlign.left,
@@ -866,6 +904,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
             child: InkWell(
               onTap: () {
                 setState(() {
+                  _nestHistoryTimer?.cancel();
                   _openController.clear();
                   _closeController.clear();
                   _nestValue = 0;

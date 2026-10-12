@@ -30,6 +30,7 @@ class _PivotPointViewState extends State<PivotPointView> {
   String? _historicalError;
   String _selectedCategory = 'LGD';
   Timer? _liveOpenTimer;
+  Timer? _historySaveTimer;
   double _pp = 0, _r1 = 0, _r2 = 0, _r3 = 0, _r4 = 0;
   double _s1 = 0, _s2 = 0, _s3 = 0, _s4 = 0;
   bool _resultsVisible = true;
@@ -58,6 +59,7 @@ class _PivotPointViewState extends State<PivotPointView> {
   @override
   void dispose() {
     _liveOpenTimer?.cancel();
+    _historySaveTimer?.cancel();
     _openController.dispose();
     _highController.dispose();
     _lowController.dispose();
@@ -194,6 +196,7 @@ class _PivotPointViewState extends State<PivotPointView> {
     final close = _parseNumber(_closeController.text);
     if (!_isAutoFromYesterday &&
         (open == 0 || high == 0 || low == 0 || close == 0)) {
+      _historySaveTimer?.cancel();
       _clearPivotResults();
       return;
     }
@@ -212,7 +215,22 @@ class _PivotPointViewState extends State<PivotPointView> {
       _s3 = _pp - range * 2;
       _s4 = _pp - range * 3;
     });
-    if (!_isAutoFromYesterday) _savePivotHistory();
+    if (!_isAutoFromYesterday &&
+        !_isLoadingHistorical &&
+        open != 0 &&
+        high != 0 &&
+        low != 0 &&
+        close != 0) {
+      _schedulePivotHistorySave();
+    }
+  }
+
+  void _schedulePivotHistorySave() {
+    _historySaveTimer?.cancel();
+    _historySaveTimer = Timer(
+      const Duration(milliseconds: 700),
+      _savePivotHistory,
+    );
   }
 
   void _clearPivotResults() {
@@ -236,9 +254,10 @@ class _PivotPointViewState extends State<PivotPointView> {
     final high = _parseNumber(_highController.text);
     final low = _parseNumber(_lowController.text);
     final close = _parseNumber(_closeController.text);
-    if (high == 0 || low == 0 || close == 0) return;
+    if (open == 0 || high == 0 || low == 0 || close == 0) return;
 
-    final inputKey = '$_selectedCategory|$open|$high|$low|$close';
+    final dayKey = DateTime.now().toIso8601String().substring(0, 10);
+    final inputKey = '$dayKey|$_selectedCategory|$open|$high|$low|$close';
     if (_lastSavedPivotInputs == inputKey) return;
     _lastSavedPivotInputs = inputKey;
 
@@ -252,6 +271,7 @@ class _PivotPointViewState extends State<PivotPointView> {
         low: low,
         close: close,
         indikasi: _indication,
+        idempotencyKey: 'pivot|$_selectedCategory|$_pp',
       );
     } catch (_) {
       _lastSavedPivotInputs = null;
@@ -266,6 +286,7 @@ class _PivotPointViewState extends State<PivotPointView> {
     if (enabled) {
       _loadYesterdayData();
     } else {
+      _historySaveTimer?.cancel();
       _openController.clear();
       _lastSavedPivotInputs = null;
       _clearPivotResults();
