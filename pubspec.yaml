@@ -49,6 +49,7 @@ dependencies:
   device_info_plus: ^11.3.3
   package_info_plus: ^8.3.1
   shared_preferences: ^2.5.3
+  cloud_functions: ^6.5.0
 
 dev_dependencies:
   flutter_test:

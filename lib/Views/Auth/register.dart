@@ -1,8 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'otp_verification.dart';
+import '../../Services/auth_services.dart';
+import 'login.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -12,6 +11,8 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
+  final AuthService _authService = AuthService();
+
   // Controller untuk mengambil data dari inputan
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -72,7 +73,9 @@ class _RegisterViewState extends State<RegisterView> {
 
               // Sub-judul / Deskripsi
               Text(
-                'Mulai kelola emas fisik Anda dengan mudah dan akurat sekarang juga',
+                'Gunakan email yang sudah didaftarkan admin. Setelah membuat '
+                'akun, buka tautan verifikasi yang dikirim ke email Anda, '
+                'lalu tekan Daftar lagi untuk menyelesaikan pendaftaran.',
                 style: TextStyle(
                   fontSize: 15,
                   color: subtitleTextColor,
@@ -215,7 +218,7 @@ class _RegisterViewState extends State<RegisterView> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _continueToOtp,
+                  onPressed: _isLoading ? null : _registerAccount,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryOrange,
                     elevation: 0,
@@ -324,9 +327,9 @@ class _RegisterViewState extends State<RegisterView> {
   }
 
   // Fungsi Proses Registrasi ke Firebase Auth & Firestore
-  Future<void> _continueToOtp() async {
+  Future<void> _registerAccount() async {
     final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
     final confirmation = _confirmPasswordController.text;
@@ -338,7 +341,7 @@ class _RegisterViewState extends State<RegisterView> {
         password.isEmpty ||
         confirmation.isEmpty) {
       message = 'Lengkapi seluruh data pendaftaran.';
-    } else if (!email.contains('@')) {
+    } else if (!RegExp(r'^[^@\s/]+@[^@\s/]+\.[^@\s/]+$').hasMatch(email)) {
       message = 'Masukkan alamat email yang valid.';
     } else if (password.length < 8) {
       message = 'Password minimal harus terdiri dari 8 karakter.';
@@ -360,52 +363,52 @@ class _RegisterViewState extends State<RegisterView> {
     });
 
     try {
-      // 1. Buat akun di Firebase Authentication
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-
-      String uid = userCredential.user!.uid;
-
-      // 2. Simpan data staff ke Firestore secara otomatis
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'user_id': uid,
-        'nama': name,
-        'email': email,
-        'phone': phone,
-        'role': 'staff', // Peran otomatis dikunci sebagai staff
-        'status': 'active',
-        'created_at': FieldValue.serverTimestamp(),
-      });
+      final result = await _authService.registerStaff(
+        email: email,
+        password: password,
+        nama: name,
+        phone: phone,
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi akun staff berhasil!')),
-      );
-
-      // 3. Pindah ke halaman verifikasi OTP
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => OtpVerificationView(phoneNumber: phone),
-        ),
-      );
-    } on FirebaseAuthException catch (e) {
-      String errorMsg = 'Terjadi kesalahan registrasi.';
-      if (e.code == 'weak-password') {
-        errorMsg = 'Password yang digunakan terlalu lemah.';
-      } else if (e.code == 'email-already-in-use') {
-        errorMsg = 'Email ini sudah terdaftar.';
-      } else if (e.code == 'invalid-email') {
-        errorMsg = 'Format email tidak valid.';
+      if (result == StaffRegistrationStatus.verificationSent) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Tautan verifikasi sudah dikirim ke email Anda. Buka tautannya, '
+              'lalu kembali dan tekan Daftar lagi untuk menyelesaikan pendaftaran.',
+            ),
+            duration: Duration(seconds: 7),
+          ),
+        );
+        return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMsg)));
-    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal registrasi: ${e.toString()}')),
+        const SnackBar(
+          content: Text(
+            'Pendaftaran berhasil. Silakan masuk dengan email dan password Anda.',
+          ),
+        ),
       );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (context) => LoginView(initialEmail: email),
+        ),
+        (route) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        final message = e is StateError
+            ? e.message
+            : 'Gagal registrasi: ${e.toString()}';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

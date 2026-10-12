@@ -53,7 +53,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
       _showMessage('Nama dan email wajib diisi.');
       return;
     }
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    if (!RegExp(r'^[^@\s/]+@[^@\s/]+\.[^@\s/]+$').hasMatch(email)) {
       _showMessage('Masukkan alamat email yang valid.');
       return;
     }
@@ -63,27 +63,54 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
       final users = FirebaseFirestore.instance.collection('users');
       final duplicate = await users
           .where('email', isEqualTo: email)
-          .limit(1)
+          .limit(2)
           .get();
-      if (duplicate.docs.isNotEmpty) {
-        _showMessage('Email tersebut sudah terdaftar.');
+      if (duplicate.docs.any(
+        (document) => document.data()['account_created'] == true,
+      )) {
+        _showMessage('Email tersebut sudah memiliki akun.');
+        return;
+      }
+      if (duplicate.docs.length > 1) {
+        _showMessage(
+          'Undangan email ini tercatat lebih dari satu kali. Periksa data staff terlebih dahulu.',
+        );
         return;
       }
 
-      final userDocument = users.doc();
-      final isActive = _selectedStatus == 'Aktif';
-      await userDocument.set({
-        'user_id': userDocument.id,
+      final invitationReference = users.doc(email);
+      final invitationSnapshot = await invitationReference.get();
+      if (invitationSnapshot.exists &&
+          !duplicate.docs.any(
+            (document) => document.reference.path == invitationReference.path,
+          )) {
+        _showMessage(
+          'Dokumen dengan email ini sudah ada. Periksa data staff terlebih dahulu.',
+        );
+        return;
+      }
+
+      final invitationData = <String, dynamic>{
+        'user_id': email,
         'nama': name,
         'email': email,
         'phone': '',
         'jenis_kelamin': _selectedGender ?? '',
         'role': _selectedRole.toLowerCase(),
-        'status': isActive ? 'active' : 'inactive',
-        'isActive': isActive,
-        'aktif': isActive,
+        'status': _selectedStatus == 'Aktif' ? 'active' : 'inactive',
+        'isActive': _selectedStatus == 'Aktif',
+        'aktif': _selectedStatus == 'Aktif',
+        'account_created': false,
+        'pending_registration': true,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+      final writeBatch = FirebaseFirestore.instance.batch();
+      if (duplicate.docs.isNotEmpty &&
+          duplicate.docs.single.reference.path != invitationReference.path) {
+        writeBatch.delete(duplicate.docs.single.reference);
+      }
+      writeBatch.set(invitationReference, invitationData);
+      await writeBatch.commit();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

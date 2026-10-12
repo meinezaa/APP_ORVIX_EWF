@@ -1880,30 +1880,28 @@ class _KelolaStaffContentState extends State<KelolaStaffContent> {
           children: [
             _buildSearch(),
             const SizedBox(height: 24),
-            FractionallySizedBox(
-              widthFactor: 0.88,
-              child: SizedBox(
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const AddStaffScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 24),
-                  label: const Text(
-                    'Tambah Staff',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE75E14),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AddStaffScreen(),
                     ),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded, size: 24),
+                label: const Text(
+                  'Tambah Staff',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFE75E14),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),

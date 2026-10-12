@@ -9,7 +9,9 @@ import 'register.dart';
 import 'forgot_password.dart';
 
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+  const LoginView({super.key, this.initialEmail = ''});
+
+  final String initialEmail;
 
   @override
   State<LoginView> createState() => _LoginViewState();
@@ -38,6 +40,7 @@ class _LoginViewState extends State<LoginView>
   @override
   void initState() {
     super.initState();
+    _emailController.text = widget.initialEmail;
 
     // Setup durasi & perulangan animasi
     _animationController = AnimationController(
@@ -89,8 +92,8 @@ class _LoginViewState extends State<LoginView>
 
   // Fungsi penanganan login Manual (Email & Password)
   Future<void> _handleManualLogin() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
 
     // Validasi input sederhana
     if (email.isEmpty || password.isEmpty) {
@@ -128,8 +131,9 @@ class _LoginViewState extends State<LoginView>
       }
     } catch (e) {
       if (!mounted) return;
+      final message = e is StateError ? e.message : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -152,9 +156,19 @@ class _LoginViewState extends State<LoginView>
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
+        final emailForLink = _emailController.text.trim().toLowerCase();
+        final passwordForLink = _passwordController.text;
+        if (passwordForLink.isNotEmpty &&
+            emailForLink.isNotEmpty &&
+            emailForLink != googleUser.email.trim().toLowerCase()) {
+          throw StateError(
+            'Email pada kolom login harus sama dengan email akun Google.',
+          );
+        }
         final user = await _authService.signInWithRegisteredGoogle(
           credential: credential,
           googleEmail: googleUser.email,
+          passwordForLink: passwordForLink,
         );
 
         if (!mounted) return;
