@@ -39,6 +39,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  late final Stream<List<LoginHistoryDocument>> _loginHistoryStream =
+      watchLoginHistory();
 
   DateTime? _timestampFromMap(Map<String, dynamic> data, List<String> keys) {
     for (final key in keys) {
@@ -642,15 +644,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
         activityTiles.add(const Divider(height: 1, color: Color(0xFFF3F4F6)));
 
         activityTiles.add(
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collectionGroup('login_history')
-                .snapshots(),
+          StreamBuilder<List<LoginHistoryDocument>>(
+            stream: _loginHistoryStream,
             builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return _buildActivityTile(
+                  icon: Icons.login_rounded,
+                  iconBg: const Color(0xFFEFF6FF),
+                  iconColor: const Color(0xFF2563EB),
+                  title: 'Login ke sistem',
+                  subtitle: 'Gagal membaca riwayat login',
+                  time: 'Periksa koneksi atau izin Firestore',
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const LoginHistoryScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return _buildActivityTile(
+                  icon: Icons.login_rounded,
+                  iconBg: const Color(0xFFEFF6FF),
+                  iconColor: const Color(0xFF2563EB),
+                  title: 'Login ke sistem',
+                  subtitle: 'Memuat riwayat login...',
+                  time: 'Mohon tunggu',
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const LoginHistoryScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+
               final loginDocs =
-                  (snapshot.data?.docs ??
-                          const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                      .toList()
+                  (snapshot.data ?? const <LoginHistoryDocument>[]).toList()
                     ..sort((a, b) {
                       final aDate = _timestampFromMap(a.data(), [
                         'logged_in_at',

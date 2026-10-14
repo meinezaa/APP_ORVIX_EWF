@@ -1,6 +1,68 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_historidetail.dart';
+
+typedef LoginHistoryDocument = QueryDocumentSnapshot<Map<String, dynamic>>;
+
+Stream<List<LoginHistoryDocument>> watchLoginHistory() {
+  return Stream<List<LoginHistoryDocument>>.multi((controller) {
+    final firestore = FirebaseFirestore.instance;
+    final userSubscriptions =
+        <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
+    final documentsByUser = <String, List<LoginHistoryDocument>>{};
+    final usersWithInitialSnapshot = <String>{};
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? usersSubscription;
+    Set<String> currentUserIds = {};
+    var usersLoaded = false;
+
+    void emitIfReady() {
+      if (!usersLoaded ||
+          !usersWithInitialSnapshot.containsAll(currentUserIds)) {
+        return;
+      }
+      controller.add(documentsByUser.values.expand((docs) => docs).toList());
+    }
+
+    usersSubscription = firestore.collection('users').snapshots().listen((
+      usersSnapshot,
+    ) {
+      final userIds = usersSnapshot.docs.map((user) => user.id).toSet();
+      for (final removedUserId in currentUserIds.difference(userIds)) {
+        userSubscriptions.remove(removedUserId)?.cancel();
+        documentsByUser.remove(removedUserId);
+        usersWithInitialSnapshot.remove(removedUserId);
+      }
+      currentUserIds = userIds;
+      usersLoaded = true;
+
+      for (final user in usersSnapshot.docs) {
+        if (userSubscriptions.containsKey(user.id)) continue;
+
+        userSubscriptions[user.id] = user.reference
+            .collection('login_history')
+            .snapshots()
+            .listen((loginSnapshot) {
+              documentsByUser[user.id] = loginSnapshot.docs;
+              usersWithInitialSnapshot.add(user.id);
+              emitIfReady();
+            }, onError: controller.addError);
+      }
+      emitIfReady();
+    }, onError: controller.addError);
+
+    controller.onCancel = () async {
+      await usersSubscription?.cancel();
+      await Future.wait(
+        userSubscriptions.values.map((subscription) {
+          return subscription.cancel();
+        }),
+      );
+      userSubscriptions.clear();
+    };
+  });
+}
 
 void main() {
   runApp(const MyApp());
@@ -28,14 +90,47 @@ class LoginHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collectionGroup('login_history')
-          .snapshots(),
+    return StreamBuilder<List<LoginHistoryDocument>>(
+      stream: watchLoginHistory(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'Riwayat login gagal dimuat:\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Color(0xFF6B7280)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFFEE6C3A)),
+            ),
+          );
+        }
+
         final loginLogs =
-            (snapshot.data?.docs ??
-                    const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+            (snapshot.data ?? const <LoginHistoryDocument>[])
                 .map(_loginLogFromFirestore)
                 .toList()
               ..sort((a, b) {
@@ -66,17 +161,28 @@ class LoginHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // 4. Staff Login History List
-                  ListView.separated(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    itemCount: loginLogs.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final log = loginLogs[index];
-                      return _buildLogTile(context, log);
-                    },
-                  ),
+                  if (loginLogs.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          'Belum ada riwayat login tercatat.',
+                          style: TextStyle(color: Color(0xFF6B7280)),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: loginLogs.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final log = loginLogs[index];
+                        return _buildLogTile(context, log);
+                      },
+                    ),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -342,6 +448,22 @@ class LoginHistoryScreen extends StatelessWidget {
 
   // --- SECTION HEADER ---
   Widget _buildSectionHeader() {
+    const monthNames = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final now = DateTime.now();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -359,9 +481,9 @@ class LoginHistoryScreen extends StatelessWidget {
             color: const Color(0xFFE5E7EB).withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Text(
-            'September 2026',
-            style: TextStyle(
+          child: Text(
+            '${monthNames[now.month - 1]} ${now.year}',
+            style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: Color(0xFF6B7280),

@@ -445,7 +445,10 @@ class AuthService {
         metadata['platform'] ?? '',
       );
       await monitorCurrentSession();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('Failed to record login history: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> monitorCurrentSession() async {
