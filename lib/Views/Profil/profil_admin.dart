@@ -12,7 +12,6 @@ import 'edit_profil_admin.dart';
 import 'ganti_password_admin.dart';
 import 'perangkat_terhubung_admin.dart';
 import 'notifikasi_admin.dart';
-import 'riwayat_aktivitas_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -293,10 +292,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       _buildSectionHeader('HAK AKSES & KEAMANAN'),
                       const SizedBox(height: 8),
                       _buildSecuritySection(),
-                      const SizedBox(height: 20),
-                      _buildSectionHeader('PREFERENSI & DUKUNGAN'),
-                      const SizedBox(height: 8),
-                      _buildPreferenceSection(),
                       const SizedBox(height: 24),
                       _buildLogoutButton(),
                       const SizedBox(height: 16),
@@ -730,63 +725,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               ),
               child: const Text(
                 '1 Online',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF4B5563),
-                ),
-              ),
-            ),
-          ),
-          const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
-          _buildMenuItem(
-            icon: Icons.history_rounded,
-            iconBg: const Color(0xFFEFF6FF),
-            iconColor: const Color(0xFF3B82F6),
-            title: 'Riwayat Aktivitas Admin',
-            subtitle: 'Log audit dan perubahan sistem',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RiwayatAktivitasAdminPage(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- 6. SECTION 3: PREFERENSI & DUKUNGAN ---
-  Widget _buildPreferenceSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildMenuItem(
-            icon: Icons.rotate_right_rounded,
-            iconBg: const Color(0xFFECFDF5),
-            iconColor: const Color(0xFF10B981),
-            title: 'Versi Aplikasi',
-            subtitle: 'Build produksi terbaru',
-            showChevron: false,
-            trailingBadge: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'v2.4.0 (Latest)',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,

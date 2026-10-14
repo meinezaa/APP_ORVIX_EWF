@@ -494,7 +494,7 @@ class _HomeViewState extends State<HomeView> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'ORVIX membantu perhitungan emas fisik dan pivot poin lebih mudah',
+                                'ORVIX membantu perhitungan Emas Fisik, Pivot Point, dan NEST lebih mudah',
                                 style: TextStyle(
                                   fontFamily: 'sans-serif-medium',
                                   fontSize: 10,

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'keamanan_aplikasi.dart';
-
 class TentangAplikasiView extends StatelessWidget {
   const TentangAplikasiView({super.key});
 
@@ -86,12 +84,6 @@ class TentangAplikasiView extends StatelessWidget {
                           'ORVIX',
                           Icons.info_rounded,
                         ),
-                        _buildInfoRow('Versi', '1.0.0', Icons.layers_outlined),
-                        _buildInfoRow(
-                          'Tanggal Rilis',
-                          '15 September 2026',
-                          Icons.calendar_month_rounded,
-                        ),
                         _buildInfoRow(
                           'Platform',
                           'Android',
@@ -106,10 +98,6 @@ class TentangAplikasiView extends StatelessWidget {
                         _buildSectionTitle('Dikembangkan Oleh'),
                         const SizedBox(height: 8),
                         _buildDeveloperCard(),
-                        const SizedBox(height: 20),
-                        _buildSectionTitle('Lainnya'),
-                        const SizedBox(height: 8),
-                        _buildSecurityRow(context),
                         const SizedBox(height: 20),
                         const Center(
                           child: Text(
@@ -291,57 +279,4 @@ class TentangAplikasiView extends StatelessWidget {
     );
   }
 
-  Widget _buildSecurityRow(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const KeamananAplikasiView()),
-        ),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE88A52),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.security_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Keamanan Aplikasi',
-                  style: TextStyle(
-                    color: Color(0xFF2B2B2B),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF2B2B2B),
-                size: 28,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

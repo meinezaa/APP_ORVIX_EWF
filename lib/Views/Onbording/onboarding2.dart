@@ -59,7 +59,7 @@ class OnboardingTwo extends StatelessWidget {
 
                 // 3. SUBTITLE / DESKRIPSI
                 const Text(
-                  'Perhitungan Emas Fisik dan Pivot Point dalam proses yang lebih cepat dan praktis',
+                  'Perhitungan Emas Fisik, Pivot Point, dan NEST dalam proses yang lebih cepat dan praktis',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
