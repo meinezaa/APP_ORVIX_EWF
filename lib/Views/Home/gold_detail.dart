@@ -193,6 +193,7 @@ class _GoldListScreenState extends State<GoldListScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, snapshot) {
         final allDocs =

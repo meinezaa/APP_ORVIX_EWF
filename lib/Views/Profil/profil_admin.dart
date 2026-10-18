@@ -75,7 +75,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         final data = doc.data();
         final role = (data['role'] ?? '').toString().trim().toLowerCase();
         final name = (data['nama'] ?? data['name'] ?? '').toString().trim();
-        return role != 'admin' && name.isNotEmpty;
+        return role == 'staff' &&
+            data['account_created'] != false &&
+            name.isNotEmpty;
       }).length;
       final data = userSnapshot.data() ?? <String, dynamic>{};
       final loginSnapshot = await FirebaseFirestore.instance

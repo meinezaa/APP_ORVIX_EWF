@@ -219,11 +219,13 @@ class _NotifikasiAdminViewState extends State<NotifikasiAdminView> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, calculationSnapshot) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collectionGroup('login_history')
+              .where('role', isEqualTo: 'staff')
               .snapshots(),
           builder: (context, loginSnapshot) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(

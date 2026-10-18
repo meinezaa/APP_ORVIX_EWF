@@ -356,6 +356,8 @@ class _PivotPointViewState extends State<PivotPointView> {
         if (mounted) setState(() => _isExportingPng = false);
       }
     } else {
+      final logoBytes = await rootBundle.load('assets/ewf_logo.png');
+      final kepompongBytes = await rootBundle.load('assets/kepompong-logo.png');
       final document = pw.Document();
       document.addPage(
         pw.Page(
@@ -363,13 +365,40 @@ class _PivotPointViewState extends State<PivotPointView> {
           build: (context) => pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                'Hasil Pivot Point ORVIX',
-                style: pw.TextStyle(
-                  fontSize: 22,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdf.PdfColors.deepOrange,
-                ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      'Hasil Pivot Point ORVIX',
+                      style: pw.TextStyle(
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                        color: pdf.PdfColors.deepOrange,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Image(
+                        pw.MemoryImage(logoBytes.buffer.asUint8List()),
+                        width: 64,
+                        height: 52,
+                        fit: pw.BoxFit.contain,
+                      ),
+                      pw.SizedBox(width: 10),
+                      pw.Image(
+                        pw.MemoryImage(kepompongBytes.buffer.asUint8List()),
+                        width: 52,
+                        height: 52,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ],
+                  ),
+                ],
               ),
               pw.SizedBox(height: 6),
               pw.Text(
@@ -543,266 +572,265 @@ class _PivotPointViewState extends State<PivotPointView> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
-      child: RepaintBoundary(
-        key: _resultsKey,
-        child: Container(
-          color: Colors.transparent,
-          padding: const EdgeInsets.only(top: 8, bottom: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10, top: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      AppStrings.text(context, 'Hasil Pivot Point'),
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
+      child: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10, top: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppStrings.text(context, 'Hasil Pivot Point'),
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                      fontWeight: FontWeight.bold,
                     ),
-                    Text(
-                      _formatResultDate(),
-                      style: TextStyle(
-                        color: AppTheme.mutedText(context),
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  Text(
+                    _formatResultDate(),
+                    style: TextStyle(
+                      color: AppTheme.mutedText(context),
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Input Form Box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface(context),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.border(context)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.1),
-                      spreadRadius: 2,
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Transform.translate(
-                          offset: const Offset(18, 0),
-                          child: Opacity(
-                            opacity: 0.5,
-                            child: Transform.scale(
-                              scale: 0.85,
-                              child: Image.asset(
-                                'assets/ewf_logo.png',
-                                fit: BoxFit.contain,
-                              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.border(context)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    spreadRadius: 2,
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Transform.translate(
+                        offset: const Offset(18, 0),
+                        child: Opacity(
+                          opacity: 0.5,
+                          child: Transform.scale(
+                            scale: 0.85,
+                            child: Image.asset(
+                              'assets/ewf_logo.png',
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Switch(
-                              value: _isAutoFromYesterday,
-                              onChanged: _toggleAuto,
-                              activeThumbColor: const Color(0xFFD95B14),
-                            ),
-                          ],
-                        ),
-                        if (_historicalError != null)
-                          Text(
-                            _historicalError!,
-                            style: TextStyle(fontSize: 10, color: Colors.red),
+                  ),
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Switch(
+                            value: _isAutoFromYesterday,
+                            onChanged: _toggleAuto,
+                            activeThumbColor: const Color(0xFFD95B14),
                           ),
-                        _buildCategorySelector(),
-                        const SizedBox(height: 12),
-                        _buildInputField("Open", _openController),
-                        const SizedBox(height: 12),
-                        _buildInputField("High", _highController),
-                        const SizedBox(height: 12),
-                        _buildInputField("Low", _lowController),
-                        const SizedBox(height: 12),
-                        _buildInputField("Close", _closeController),
+                        ],
+                      ),
+                      if (_historicalError != null)
+                        Text(
+                          _historicalError!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.red,
+                          ),
+                        ),
+                      _buildCategorySelector(),
+                      const SizedBox(height: 12),
+                      _buildInputField('Open', _openController),
+                      const SizedBox(height: 12),
+                      _buildInputField('High', _highController),
+                      const SizedBox(height: 12),
+                      _buildInputField('Low', _lowController),
+                      const SizedBox(height: 12),
+                      _buildInputField('Close', _closeController),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (_resultsVisible) ...[
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceRaised(context),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: AppTheme.border(context),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                    child: Column(
+                      children: [
+                        Text(
+                          AppStrings.text(context, 'Hasil Pivot Point'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppTheme.text(context)
+                                : Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: 170,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface(context),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFFE8833A),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            _formatNumber(_pp),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFD95B14),
+                              letterSpacing: 0.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          AppStrings.text(context, 'Action'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: 200,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _indication == 'BUY'
+                                ? const Color(0xFFE7F8EE).withValues(alpha: 0.9)
+                                : const Color(
+                                    0xFFFFEAEA,
+                                  ).withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _indication == 'BUY'
+                                  ? const Color(0xFF2EAF5B)
+                                  : const Color(0xFFE53935),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            _indication,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: _indication == 'BUY'
+                                  ? const Color(0xFF2E7D32)
+                                  : const Color(0xFFC62828),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          AppStrings.text(
+                            context,
+                            _indication == 'BUY'
+                                ? 'Open dibawah Pivot = BUY'
+                                : 'Open diatas Pivot = SELL',
+                          ),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _indication == 'BUY'
+                                ? const Color(0xFF2E683A)
+                                : const Color(0xFFC62828),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 38,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD8531D),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFD8531D,
+                            ).withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'Indikasi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
 
-              if (_resultsVisible) ...[
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(top: 16),
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceRaised(context),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: AppTheme.border(context),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            AppStrings.text(context, 'Hasil Pivot Point'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? AppTheme.text(context)
-                                  : Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: 170,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surface(context),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFFE8833A),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Text(
-                              _formatNumber(_pp),
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFD95B14),
-                                letterSpacing: 0.2,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            AppStrings.text(context, 'Action'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.text(context),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: 200,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _indication == 'BUY'
-                                  ? const Color(
-                                      0xFFE7F8EE,
-                                    ).withValues(alpha: 0.9)
-                                  : const Color(
-                                      0xFFFFEAEA,
-                                    ).withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _indication == 'BUY'
-                                    ? const Color(0xFF2EAF5B)
-                                    : const Color(0xFFE53935),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Text(
-                              _indication,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: _indication == 'BUY'
-                                    ? const Color(0xFF2E7D32)
-                                    : const Color(0xFFC62828),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            AppStrings.text(
-                              context,
-                              _indication == 'BUY'
-                                  ? 'Open dibawah Pivot = BUY'
-                                  : 'Open diatas Pivot = SELL',
-                            ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _indication == 'BUY'
-                                  ? const Color(0xFF2E683A)
-                                  : const Color(0xFFC62828),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 38,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD8531D),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFFD8531D,
-                              ).withValues(alpha: 0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          'Indikasi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Tombol untuk memanggil Detail / Formula R4-S4
-                DetailPivotPoint(
+              // Tombol untuk memanggil Detail / Formula R4-S4
+              RepaintBoundary(
+                key: _resultsKey,
+                child: DetailPivotPoint(
                   pp: _pp,
                   r1: _r1,
                   r2: _r2,
@@ -815,10 +843,11 @@ class _PivotPointViewState extends State<PivotPointView> {
                   onReset: _resetToYesterday,
                   onDownload: _downloadAndShareResults,
                   showActions: !_isExportingPng,
+                  showBranding: _isExportingPng,
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

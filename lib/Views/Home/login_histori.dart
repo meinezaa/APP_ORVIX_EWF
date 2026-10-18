@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_historidetail.dart';
@@ -7,61 +5,11 @@ import 'login_historidetail.dart';
 typedef LoginHistoryDocument = QueryDocumentSnapshot<Map<String, dynamic>>;
 
 Stream<List<LoginHistoryDocument>> watchLoginHistory() {
-  return Stream<List<LoginHistoryDocument>>.multi((controller) {
-    final firestore = FirebaseFirestore.instance;
-    final userSubscriptions =
-        <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
-    final documentsByUser = <String, List<LoginHistoryDocument>>{};
-    final usersWithInitialSnapshot = <String>{};
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? usersSubscription;
-    Set<String> currentUserIds = {};
-    var usersLoaded = false;
-
-    void emitIfReady() {
-      if (!usersLoaded ||
-          !usersWithInitialSnapshot.containsAll(currentUserIds)) {
-        return;
-      }
-      controller.add(documentsByUser.values.expand((docs) => docs).toList());
-    }
-
-    usersSubscription = firestore.collection('users').snapshots().listen((
-      usersSnapshot,
-    ) {
-      final userIds = usersSnapshot.docs.map((user) => user.id).toSet();
-      for (final removedUserId in currentUserIds.difference(userIds)) {
-        userSubscriptions.remove(removedUserId)?.cancel();
-        documentsByUser.remove(removedUserId);
-        usersWithInitialSnapshot.remove(removedUserId);
-      }
-      currentUserIds = userIds;
-      usersLoaded = true;
-
-      for (final user in usersSnapshot.docs) {
-        if (userSubscriptions.containsKey(user.id)) continue;
-
-        userSubscriptions[user.id] = user.reference
-            .collection('login_history')
-            .snapshots()
-            .listen((loginSnapshot) {
-              documentsByUser[user.id] = loginSnapshot.docs;
-              usersWithInitialSnapshot.add(user.id);
-              emitIfReady();
-            }, onError: controller.addError);
-      }
-      emitIfReady();
-    }, onError: controller.addError);
-
-    controller.onCancel = () async {
-      await usersSubscription?.cancel();
-      await Future.wait(
-        userSubscriptions.values.map((subscription) {
-          return subscription.cancel();
-        }),
-      );
-      userSubscriptions.clear();
-    };
-  });
+  return FirebaseFirestore.instance
+      .collectionGroup('login_history')
+      .where('role', isEqualTo: 'staff')
+      .snapshots()
+      .map((snapshot) => snapshot.docs);
 }
 
 void main() {

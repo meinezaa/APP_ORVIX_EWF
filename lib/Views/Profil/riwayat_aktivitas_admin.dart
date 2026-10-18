@@ -30,6 +30,7 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collectionGroup('login_history')
+              .where('role', isEqualTo: 'staff')
               .snapshots(),
           builder: (context, loginSnapshot) {
             final loginItems = _dedupeLoginByBrand(
@@ -106,11 +107,12 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
 
       final typeMatch = _selectedFilter.toLowerCase() == 'autentikasi'
           ? categoryName == 'autentikasi' ||
-              typeName == 'autentikasi' ||
-              item.title.toLowerCase().contains('login sesi')
+                typeName == 'autentikasi' ||
+                item.title.toLowerCase().contains('login sesi')
           : true;
 
-      final queryMatch = query.isEmpty ||
+      final queryMatch =
+          query.isEmpty ||
           item.title.toLowerCase().contains(query) ||
           item.subtitle.toLowerCase().contains(query) ||
           item.meta.toLowerCase().contains(query);
@@ -155,7 +157,11 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
         children: [
           IconButton(
             onPressed: () => Navigator.maybePop(context),
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF2B2B2B), size: 26),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Color(0xFF2B2B2B),
+              size: 26,
+            ),
             splashRadius: 20,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -421,7 +427,8 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
                             : ListView.separated(
                                 shrinkWrap: true,
                                 itemCount: filteredDates.length,
-                                separatorBuilder: (_, _) => const Divider(height: 1),
+                                separatorBuilder: (_, _) =>
+                                    const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final date = filteredDates[index];
                                   final label = DateFormat(
@@ -561,7 +568,11 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
           ),
           child: Column(
             children: [
-              Icon(Icons.history_toggle_off_rounded, size: 42, color: _orange.withValues(alpha: 0.7)),
+              Icon(
+                Icons.history_toggle_off_rounded,
+                size: 42,
+                color: _orange.withValues(alpha: 0.7),
+              ),
               const SizedBox(height: 10),
               const Text(
                 'Tidak ada aktivitas yang cocok',
@@ -614,10 +625,12 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
               ),
             ),
             const SizedBox(height: 10),
-            ...sectionItems.map((item) => Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                  child: _buildActivityCard(item),
-                )),
+            ...sectionItems.map(
+              (item) => Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                child: _buildActivityCard(item),
+              ),
+            ),
           ],
         );
       }).toList(),
@@ -626,8 +639,14 @@ class _RiwayatAktivitasAdminPageState extends State<RiwayatAktivitasAdminPage> {
 
   String _groupKey(DateTime value) {
     final now = DateTime.now();
-    final sameDay = value.year == now.year && value.month == now.month && value.day == now.day;
-    final yesterday = value.year == now.year && value.month == now.month && value.day == now.day - 1;
+    final sameDay =
+        value.year == now.year &&
+        value.month == now.month &&
+        value.day == now.day;
+    final yesterday =
+        value.year == now.year &&
+        value.month == now.month &&
+        value.day == now.day - 1;
 
     if (sameDay) {
       return 'HARI INI • ${DateFormat('dd MMMM yyyy', 'id_ID').format(value)}';

@@ -9,8 +9,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Models/users_model.dart'; // Import UserModel
 
-enum StaffRegistrationStatus { verificationSent, completed }
-
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,159 +19,71 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  // 1. REGISTRASI KHUSUS STAFF
-  Future<StaffRegistrationStatus> registerStaff({
+  // 1. REGISTRASI PENGGUNA
+  Future<void> registerUser({
     required String email,
     required String password,
     required String nama,
+    required String role,
     String? phone,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     final normalizedName = nama.trim();
     final normalizedPhone = phone?.trim() ?? '';
-    var createdDuringAttempt = false;
-    var registrationWriteStarted = false;
-    var registrationCommitted = false;
+    final normalizedRole = role.trim().toLowerCase();
 
     if (!RegExp(r'^[^@\s/]+@[^@\s/]+\.[^@\s/]+$')
             .hasMatch(normalizedEmail) ||
         normalizedName.isEmpty ||
         normalizedName.length > 120 ||
         normalizedPhone.length > 40 ||
-        password.length < 8) {
+        password.length < 8 ||
+        !{'staff', 'nasabah'}.contains(normalizedRole)) {
       throw StateError('Periksa kembali data pendaftaran Anda.');
     }
 
-    final currentAuthUser = _auth.currentUser;
-    if (currentAuthUser != null &&
-        currentAuthUser.email?.trim().toLowerCase() != normalizedEmail) {
+    if (_auth.currentUser != null) {
       throw StateError(
-        'Keluar dari akun yang sedang aktif sebelum mendaftar dengan email lain.',
+        'Keluar dari akun yang sedang aktif sebelum membuat akun baru.',
       );
     }
 
+    User? createdUser;
+    var profileWritten = false;
     try {
-      User? authUser = _auth.currentUser;
-      if (authUser == null) {
-        try {
-          final credential = await _auth.createUserWithEmailAndPassword(
-            email: normalizedEmail,
-            password: password,
-          );
-          authUser = credential.user;
-          createdDuringAttempt = authUser != null;
-        } on FirebaseAuthException catch (error) {
-          if (error.code != 'email-already-in-use') {
-            throw StateError(_handleAuthException(error));
-          }
-          try {
-            final credential = await _auth.signInWithEmailAndPassword(
-              email: normalizedEmail,
-              password: password,
-            );
-            authUser = credential.user;
-          } on FirebaseAuthException catch (signInError) {
-            throw StateError(_handleAuthException(signInError));
-          }
-        }
-      }
-
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+      final authUser = credential.user;
       if (authUser == null) {
         throw StateError('Akun Firebase tidak berhasil dibuat.');
       }
-
-      await authUser.reload();
-      authUser = _auth.currentUser;
-      if (authUser == null ||
-          authUser.email?.trim().toLowerCase() != normalizedEmail) {
-        throw StateError('Email akun tidak cocok dengan email pendaftaran.');
-      }
-
-      final existingProfile = await _firestore
-          .collection('users')
-          .doc(authUser.uid)
-          .get();
-      if (existingProfile.exists) {
-        final existingData = existingProfile.data() ?? <String, dynamic>{};
-        if (_isAdmin(existingData)) {
-          throw StateError('Akun admin tidak perlu didaftarkan sebagai staff.');
-        }
-        if (existingData['account_created'] == true) {
-          throw StateError(
-            'Email ini sudah memiliki akun. Silakan masuk atau gunakan Lupa Password.',
-          );
-        }
-      }
-
-      final invitation = await _getStaffInvitation(normalizedEmail);
-      if (!invitation.exists) {
-        throw StateError('Email ini belum didaftarkan oleh admin.');
-      }
-      final invitationData = invitation.data()!;
-      if (!_isStaffInvitation(invitationData)) {
-        throw StateError('Email ini belum memiliki undangan pendaftaran staff.');
-      }
-      if ((invitationData['email'] ?? '').toString().trim().toLowerCase() !=
-          normalizedEmail) {
-        throw StateError('Email undangan tidak cocok dengan email pendaftaran.');
-      }
-      if (!_isUserActive(invitationData)) {
-        throw StateError('Undangan staff ini nonaktif. Hubungi admin.');
-      }
-
-      if (!authUser.emailVerified) {
-        await authUser.updateDisplayName(normalizedName);
-        await authUser.sendEmailVerification();
-        return StaffRegistrationStatus.verificationSent;
-      }
-      await authUser.getIdToken(true);
-
-      final profileReference = _firestore
-          .collection('users')
-          .doc(authUser.uid);
-      final registrationBatch = _firestore.batch();
-      registrationBatch.set(profileReference, {
+      createdUser = authUser;
+      await authUser.updateDisplayName(normalizedName);
+      await _firestore.collection('users').doc(authUser.uid).set({
         'user_id': authUser.uid,
         'nama': normalizedName,
         'email': normalizedEmail,
         'phone': normalizedPhone,
-        'jenis_kelamin': invitationData['jenis_kelamin'] ?? '',
-        'role': 'staff',
+        'jenis_kelamin': '',
+        'role': normalizedRole,
         'status': 'active',
         'isActive': true,
         'aktif': true,
         'account_created': true,
         'pending_registration': false,
-        if (invitationData['createdAt'] != null)
-          'createdAt': invitationData['createdAt'],
-        'registeredAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
       });
-      registrationBatch.delete(invitation.reference);
-      registrationWriteStarted = true;
-      await registrationBatch.commit();
-      registrationCommitted = true;
-
+      profileWritten = true;
       await _auth.signOut();
-      return StaffRegistrationStatus.completed;
     } catch (error) {
-      if (createdDuringAttempt &&
-          !registrationWriteStarted &&
-          !registrationCommitted &&
-          _auth.currentUser != null) {
+      if (!profileWritten && createdUser != null) {
         try {
-          await _auth.currentUser!.delete();
+          await createdUser.delete();
         } catch (cleanupError) {
           debugPrint(
-            'Failed to remove an unregistered Firebase Auth account: '
-            '$cleanupError',
-          );
-        }
-      } else if (!registrationCommitted && _auth.currentUser != null) {
-        try {
-          await _auth.signOut();
-        } catch (cleanupError) {
-          debugPrint(
-            'Failed to sign out after staff registration failed: '
+            'Failed to clean up Firebase Auth after registration failed: '
             '$cleanupError',
           );
         }
@@ -183,7 +93,7 @@ class AuthService {
       }
       if (error is FirebaseException && error.code == 'permission-denied') {
         throw StateError(
-          'Akses Firestore ditolak. Deploy firestore.rules yang disiapkan untuk alur pendaftaran staff.',
+          'Akses Firestore ditolak. Pastikan aturan Firestore sudah diperbarui untuk pendaftaran pengguna.',
         );
       }
       rethrow;
@@ -269,6 +179,9 @@ class AuthService {
       if (!_isUserActive(profileData)) {
         throw StateError('Akun Anda nonaktif. Hubungi admin.');
       }
+      if (!_isSupportedRole(profileData)) {
+        throw StateError('Role akun tidak valid. Hubungi admin.');
+      }
 
       final profile = UserModel.fromMap(profileData);
       await recordLogin(user: profile);
@@ -300,14 +213,10 @@ class AuthService {
   bool _isAdmin(Map<String, dynamic> data) =>
       (data['role'] ?? '').toString().trim().toLowerCase() == 'admin';
 
-  bool _isStaffInvitation(Map<String, dynamic> data) =>
-      (data['role'] ?? '').toString().trim().toLowerCase() == 'staff' &&
-      data['account_created'] != true &&
-      data['pending_registration'] == true;
-
-  Future<DocumentSnapshot<Map<String, dynamic>>> _getStaffInvitation(
-    String email,
-  ) => _firestore.collection('users').doc(email).get();
+  bool _isSupportedRole(Map<String, dynamic> data) {
+    final role = (data['role'] ?? '').toString().trim().toLowerCase();
+    return role == 'admin' || role == 'staff' || role == 'nasabah';
+  }
 
   // 2. LOGIN (MENGEMBALIKAN USERMODEL)
   Future<UserModel?> loginUser({
@@ -335,12 +244,6 @@ class AuthService {
 
       final userData = userDoc.data() as Map<String, dynamic>;
       final isAdmin = _isAdmin(userData);
-      if (!isAdmin && !authUser.emailVerified) {
-        await _auth.signOut();
-        throw StateError(
-          'Verifikasi email dari tautan yang dikirim sebelum masuk.',
-        );
-      }
       if (!isAdmin && (userData['account_created'] ?? false) != true) {
         await _auth.signOut();
         throw StateError(
@@ -350,6 +253,10 @@ class AuthService {
       if (!_isUserActive(userData)) {
         await _auth.signOut();
         throw StateError('Akun Anda nonaktif. Hubungi admin.');
+      }
+      if (!_isSupportedRole(userData)) {
+        await _auth.signOut();
+        throw StateError('Role akun tidak valid. Hubungi admin.');
       }
 
       await _removeLegacyPasswordFields(authUser.uid);
@@ -421,7 +328,7 @@ class AuthService {
             'user_id': authUser.uid,
             'nama': loginName,
             'name': loginName,
-            'role': profile?.role ?? 'staff',
+            'role': profile?.role.trim().toLowerCase() ?? 'staff',
             'email': authUser.email ?? profile?.email ?? '',
             'foto_profil_path': profile?.fotoProfilPath,
             'is_new_device': isNewDevice,

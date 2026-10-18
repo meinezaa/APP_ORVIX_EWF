@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import '../../Services/app_strings.dart';
 import '../../Services/app_theme.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import '../main_screen.dart';
+import 'kalkulator_info.dart';
+import 'grafik_harga.dart';
 import '../../Models/historidata_model.dart';
 import '../../Services/api_services.dart';
 import '../../Services/history_service.dart';
@@ -52,6 +55,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       1; // 0: Home, 1: Calculate, 2: History, 3: Profil
   bool _isAuto = true;
   bool _isLoadingAuto = false;
+  bool _isExportingPng = false;
 
   final TextEditingController _openController = TextEditingController();
   final TextEditingController _closeController = TextEditingController();
@@ -266,17 +270,24 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     final directory = await getTemporaryDirectory();
     late File file;
     if (format == 'png') {
-      final boundary =
-          _resultsKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final image = await boundary.toImage(pixelRatio: 3);
-      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      if (bytes == null) return;
-      file = File('${directory.path}/hasil_nest.png');
-      await file.writeAsBytes(bytes.buffer.asUint8List());
+      setState(() => _isExportingPng = true);
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+        final boundary =
+            _resultsKey.currentContext?.findRenderObject()
+                as RenderRepaintBoundary?;
+        if (boundary == null) return;
+        final image = await boundary.toImage(pixelRatio: 3);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+        if (bytes == null) return;
+        file = File('${directory.path}/hasil_nest.png');
+        await file.writeAsBytes(bytes.buffer.asUint8List());
+      } finally {
+        if (mounted) setState(() => _isExportingPng = false);
+      }
     } else {
+      final logoBytes = await rootBundle.load('assets/ewf_logo.png');
       final document = pw.Document();
       document.addPage(
         pw.Page(
@@ -284,13 +295,28 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           build: (context) => pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                'Hasil NEST ORVIX',
-                style: pw.TextStyle(
-                  fontSize: 22,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdf.PdfColors.deepOrange,
-                ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      'Hasil NEST ORVIX',
+                      style: pw.TextStyle(
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                        color: pdf.PdfColors.deepOrange,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Image(
+                    pw.MemoryImage(logoBytes.buffer.asUint8List()),
+                    width: 90,
+                    height: 52,
+                    fit: pw.BoxFit.contain,
+                  ),
+                ],
               ),
               pw.SizedBox(height: 18),
               pw.Table(
@@ -402,9 +428,22 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                               _buildHeaderTitle(),
                               const SizedBox(height: 24),
 
+                              if (!_isExportingPng) ...[
+                                const TradingViewChartCarousel(),
+                                const SizedBox(height: 24),
+                              ],
+
                               // 2. Top Tab Selector
                               _buildTopTabBar(),
                               const SizedBox(height: 20),
+
+                              const KalkulatorInfoCard(
+                                title: 'NEST',
+                                summary:
+                                    'NEST menggunakan konsep Follow the Trend dengan membandingkan harga Close dan Open.',
+                                details:
+                                    'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
+                              ),
 
                               Padding(
                                 padding: const EdgeInsets.only(

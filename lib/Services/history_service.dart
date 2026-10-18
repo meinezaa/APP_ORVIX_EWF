@@ -68,7 +68,7 @@ class HistoryService {
           .get();
       final data = profile.data();
       userName = (data?['nama'] ?? currentUser.displayName ?? '').toString();
-      role = (data?['role'] ?? 'staff').toString();
+      role = (data?['role'] ?? 'staff').toString().trim().toLowerCase();
       email = (data?['email'] ?? currentUser.email)?.toString();
     }
 

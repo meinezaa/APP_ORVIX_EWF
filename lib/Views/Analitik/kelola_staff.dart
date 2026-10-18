@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'tambah_staff.dart';
 import '../../Models/historikalkulator_model.dart';
 
 class KelolaStaffContent extends StatefulWidget {
@@ -153,6 +152,7 @@ class _RiwayatPerhitunganStaffPageState
             .collection('users')
             .doc(widget.document.id)
             .collection('calculation_history')
+            .where('role', isEqualTo: 'staff')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -1138,6 +1138,7 @@ class DetailStaffPage extends StatelessWidget {
               .collection('users')
               .doc(document.id)
               .collection('calculation_history')
+              .where('role', isEqualTo: 'staff')
               .snapshots(),
           builder: (context, historySnapshot) {
             final histories = historySnapshot.data?.docs ?? const [];
@@ -1911,33 +1912,6 @@ class _KelolaStaffContentState extends State<KelolaStaffContent> {
           children: [
             _buildSearch(),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AddStaffScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add_rounded, size: 24),
-                label: const Text(
-                  'Tambah Staff',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFE75E14),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             if (staff.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 42),
@@ -1952,7 +1926,8 @@ class _KelolaStaffContentState extends State<KelolaStaffContent> {
   }
 
   bool _isStaff(Map<String, dynamic> data) =>
-      (data['role'] ?? '').toString().trim().toLowerCase() != 'admin';
+      (data['role'] ?? '').toString().trim().toLowerCase() == 'staff' &&
+      data['account_created'] != false;
 
   bool _hasName(Map<String, dynamic> data) =>
       (data['nama'] ?? data['name'] ?? '').toString().trim().isNotEmpty;

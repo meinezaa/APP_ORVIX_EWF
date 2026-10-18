@@ -7,8 +7,10 @@ import '../../Services/app_strings.dart';
 import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
 import '../main_screen.dart';
+import 'kalkulator_info.dart';
 import 'pivotpoin.dart';
 import 'nest.dart';
+import 'grafik_harga.dart';
 
 class KalkulatorEmasFisikView extends StatefulWidget {
   final int initialTab;
@@ -251,6 +253,8 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                 ),
 
                 const SizedBox(height: 24),
+                const TradingViewChartCarousel(),
+                const SizedBox(height: 24),
 
                 // TAB TOGGLE
                 Container(
@@ -347,6 +351,16 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                 ),
 
                 const SizedBox(height: 20),
+
+                KalkulatorInfoCard(
+                  title: _selectedTab == 0 ? 'Emas Fisik' : 'Pivot Point',
+                  summary: _selectedTab == 0
+                      ? 'Emas fisik adalah emas berwujud yang dapat disimpan sebagai aset riil.'
+                      : 'Pivot Point adalah harga acuan untuk menentukan aksi beli atau jual berdasarkan harga Open.',
+                  details: _selectedTab == 0
+                      ? 'Emas fisik adalah emas yang berwujud, dapat berupa batangan, koin, atau perhiasan, yang dibeli oleh investor dan disimpan sebagai aset riil. Emas fisik memiliki nilai intrinsik yang dihargai di seluruh dunia, dan karena bentuknya yang nyata, investor dapat menyimpannya di rumah dan atau di tempat penyimpanan khusus.'
+                      : 'Pivot Point adalah harga wajar atau harga pasaran untuk menentukan aksi beli dan jual yang mengacu pada harga pembukaan (Open).\n\nOpen < Pivot Point: BUY\nOpen > Pivot Point: SELL',
+                ),
 
                 if (_selectedTab == 1)
                   const PivotPointView()

@@ -28,6 +28,7 @@ class _LaporanViewState extends State<LaporanView> {
 
   final _historyStream = FirebaseFirestore.instance
       .collectionGroup('calculation_history')
+      .where('role', isEqualTo: 'staff')
       .snapshots();
   DateTimeRange _range = _currentMonth();
   String _period = 'Bulan Ini';
@@ -85,6 +86,9 @@ class _LaporanViewState extends State<LaporanView> {
               if (profile == null) return history;
               return history.copyWith(
                 userId: uid,
+                role:
+                    _profileValue(profile, ['role'], history.role) ??
+                    history.role,
                 userName: _profileValue(profile, [
                   'nama',
                   'name',
@@ -125,6 +129,7 @@ class _LaporanViewState extends State<LaporanView> {
 
   List<HistoryModel> _filter(List<HistoryModel> history) {
     return history.where((item) {
+      if (item.role.trim().toLowerCase() != 'staff') return false;
       final inRange =
           !item.createdAt.isBefore(_range.start) &&
           item.createdAt.isBefore(_range.end.add(const Duration(days: 1)));

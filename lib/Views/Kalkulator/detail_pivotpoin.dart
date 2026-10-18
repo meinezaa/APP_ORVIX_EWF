@@ -5,6 +5,7 @@ class DetailPivotPoint extends StatelessWidget {
   final VoidCallback onReset;
   final VoidCallback onDownload;
   final bool showActions;
+  final bool showBranding;
 
   const DetailPivotPoint({
     super.key,
@@ -20,6 +21,7 @@ class DetailPivotPoint extends StatelessWidget {
     required this.onReset,
     required this.onDownload,
     this.showActions = true,
+    this.showBranding = false,
   });
 
   String _format(double value) {
@@ -39,104 +41,105 @@ class DetailPivotPoint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFD67236),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'Formula & Hasil',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+        if (showBranding) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/ewf_logo.png',
+                  width: 72,
+                  height: 64,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 18),
+                Image.asset(
+                  'assets/kepompong-logo.png',
+                  width: 72,
+                  height: 64,
+                  fit: BoxFit.contain,
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        _card(
-          'R4',
-          'PP + (High - Low) x 3',
-          r4,
-          _midpoint(r4, r3),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFFD85A63),
-          const Color(0xFF8B2500),
-        ),
-        _card(
-          'R3',
-          'PP + (High - Low) x 2',
-          r3,
-          _midpoint(r3, r2),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFFD85A63),
-          const Color(0xFF8B2500),
-        ),
-        _card(
-          'R2',
-          'PP + (High - Low)',
-          r2,
-          _midpoint(r2, r1),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFFD85A63),
-          const Color(0xFF8B2500),
-        ),
-        _card(
-          'R1',
-          '2 x PP - Low',
-          r1,
-          _midpoint(r1, pp),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFFD85A63),
-          const Color(0xFF8B2500),
-        ),
-        _card(
-          'PP',
-          '(High + Low + Close) / 3',
-          pp,
-          _midpoint(pp, s1),
-          const Color(0xFFD65F68),
-          const Color(0xFF7F3F3F),
-          const Color(0xFFD85A63),
-          isPP: true,
-        ),
-        _card(
-          'S1',
-          '2 x PP - High',
-          s1,
-          _midpoint(s1, s2),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFF10A83A),
-          const Color(0xFFFF7A00),
-        ),
-        _card(
-          'S2',
-          'PP - (High - Low)',
-          s2,
-          _midpoint(s2, s3),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFF10A83A),
-          const Color(0xFFFF7A00),
-        ),
-        _card(
-          'S3',
-          'PP - (High - Low) x 2',
-          s3,
-          _midpoint(s3, s4),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFF10A83A),
-          const Color(0xFFFF7A00),
-        ),
-        _card(
-          'S4',
-          'PP - (High - Low) x 3',
-          s4,
-          _midpoint(s4, s3),
-          const Color(0xFFE8833A).withValues(alpha: 0.2),
-          const Color(0xFF10A83A),
-          const Color(0xFFFF7A00),
+        ],
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+          child: Column(
+            children: [
+              _card(
+                'R4',
+                r4,
+                _midpoint(r4, r3),
+                const Color(0xFF174A9C),
+                const Color(0xFF8B2500),
+              ),
+              _card(
+                'R3',
+                r3,
+                _midpoint(r3, r2),
+                const Color(0xFF174A9C),
+                const Color(0xFF8B2500),
+              ),
+              _card(
+                'R2',
+                r2,
+                _midpoint(r2, r1),
+                const Color(0xFF174A9C),
+                const Color(0xFF8B2500),
+              ),
+              _card(
+                'R1',
+                r1,
+                _midpoint(r1, pp),
+                const Color(0xFF174A9C),
+                const Color(0xFF8B2500),
+              ),
+              _card(
+                'PP',
+                pp,
+                _midpoint(pp, s1),
+                const Color(0xFFA83232),
+                const Color(0xFFD85A63),
+              ),
+              _card(
+                'S1',
+                s1,
+                _midpoint(s1, s2),
+                const Color(0xFF16823A),
+                const Color(0xFFFF7A00),
+              ),
+              _card(
+                'S2',
+                s2,
+                _midpoint(s2, s3),
+                const Color(0xFF16823A),
+                const Color(0xFFFF7A00),
+              ),
+              _card(
+                'S3',
+                s3,
+                _midpoint(s3, s4),
+                const Color(0xFF16823A),
+                const Color(0xFFFF7A00),
+              ),
+              _card(
+                'S4',
+                s4,
+                _midpoint(s4, s3),
+                const Color(0xFF16823A),
+                const Color(0xFFFF7A00),
+                showMidpoint: false,
+              ),
+            ],
+          ),
         ),
         if (showActions) ...[
           const SizedBox(height: 15),
@@ -184,140 +187,87 @@ class DetailPivotPoint extends StatelessWidget {
 
   Widget _card(
     String label,
-    String formula,
     double value,
     double midpoint,
-    Color background,
-    Color resultColor,
+    Color levelColor,
     Color midpointColor, {
-    bool isPP = false,
+    bool showMidpoint = true,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      constraints: const BoxConstraints(minHeight: 148),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFE8833A).withValues(alpha: 0.55),
-          width: 1.5,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
         children: [
           Row(
             children: [
-              _box(
-                label,
-                width: 54,
-                height: 48,
-                textColor: isPP ? const Color(0xFFA83232) : Colors.black87,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _box(
-                  formula,
-                  height: 48,
-                  textColor: isPP ? Colors.white : Colors.brown,
-                  backgroundColor: isPP
-                      ? Colors.white.withValues(alpha: 0.28)
-                      : Colors.white,
-                  borderColor: isPP
-                      ? Colors.white.withValues(alpha: 0.75)
-                      : Colors.brown.withValues(alpha: 0.35),
-                  fontSize: 12,
+              SizedBox(
+                width: 64,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: levelColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
               Expanded(
-                child: _box(
-                  _format(value),
-                  height: 48,
-                  textColor: resultColor,
-                  fontSize: 16,
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: const Color(0xFF888888)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 3,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _format(value),
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Color(0xFF6E2016),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 62),
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: _box(
-                        'midpoint',
-                        height: 48,
-                        textColor: isPP
-                            ? const Color(0xFFEF2020)
-                            : midpointColor,
-                        fontSize: 14,
-                        maxLines: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 22,
-                      child: Icon(
-                        Icons.arrow_forward,
-                        color: isPP ? Colors.white : midpointColor,
-                        size: 22,
-                      ),
-                    ),
-                  ],
+          if (showMidpoint) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: Text(
+                    'midpoint',
+                    style: TextStyle(color: midpointColor, fontSize: 13),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _box(
-                  _format(midpoint),
-                  height: 48,
-                  textColor: isPP ? const Color(0xFFEF2020) : midpointColor,
-                  fontSize: 16,
+                Expanded(
+                  child: Text(
+                    _format(midpoint),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: const Color(0xFF6E2016),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
-      ),
-    );
-  }
-
-  Widget _box(
-    String text, {
-    double? width,
-    double? height,
-    required Color textColor,
-    Color? backgroundColor,
-    Color? borderColor,
-    double fontSize = 14,
-    int maxLines = 2,
-  }) {
-    return Container(
-      width: width,
-      height: height,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: borderColor ?? textColor.withValues(alpha: 0.55),
-        ),
-      ),
-      child: Text(
-        text,
-        maxLines: maxLines,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.bold,
-          fontSize: fontSize,
-        ),
       ),
     );
   }

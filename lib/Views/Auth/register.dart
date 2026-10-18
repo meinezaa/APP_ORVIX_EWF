@@ -30,6 +30,7 @@ class _RegisterViewState extends State<RegisterView> {
 
   // State untuk indikator loading proses registrasi
   bool _isLoading = false;
+  String _selectedRole = 'staff';
 
   // Skema Warna dari UI
   final Color primaryOrange = const Color(0xFFE05813);
@@ -73,9 +74,8 @@ class _RegisterViewState extends State<RegisterView> {
 
               // Sub-judul / Deskripsi
               Text(
-                'Gunakan email yang sudah didaftarkan admin. Setelah membuat '
-                'akun, buka tautan verifikasi yang dikirim ke email Anda, '
-                'lalu tekan Daftar lagi untuk menyelesaikan pendaftaran.',
+                'Buat akun sebagai staff atau nasabah. Setelah terdaftar, '
+                'Anda bisa langsung masuk dan menggunakan sistem kalkulator.',
                 style: TextStyle(
                   fontSize: 15,
                   color: subtitleTextColor,
@@ -113,6 +113,55 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: _phoneController,
                 hintText: 'Contoh: 08123456789',
                 keyboardType: TextInputType.phone,
+              ),
+
+              const SizedBox(height: 20),
+
+              _buildInputLabel('Daftar Sebagai'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedRole,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: inputBgColor,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: inputBorderColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: primaryOrange, width: 1.5),
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'staff', child: Text('Staff')),
+                  DropdownMenuItem(value: 'nasabah', child: Text('Nasabah')),
+                ],
+                onChanged: _isLoading
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => _selectedRole = value);
+                        }
+                      },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _selectedRole == 'staff'
+                    ? 'Data perhitungan staff akan tersedia untuk admin.'
+                    : 'Data perhitungan nasabah hanya tersimpan di akun Anda.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: subtitleTextColor,
+                  height: 1.4,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -363,34 +412,20 @@ class _RegisterViewState extends State<RegisterView> {
     });
 
     try {
-      final result = await _authService.registerStaff(
+      await _authService.registerUser(
         email: email,
         password: password,
         nama: name,
+        role: _selectedRole,
         phone: phone,
       );
 
       if (!mounted) return;
 
-      if (result == StaffRegistrationStatus.verificationSent) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Tautan verifikasi sudah dikirim ke email Anda. Buka tautannya, '
-              'lalu kembali dan tekan Daftar lagi untuk menyelesaikan pendaftaran.',
-            ),
-            duration: Duration(seconds: 7),
-          ),
-        );
-        return;
-      }
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Pendaftaran berhasil. Silakan masuk dengan email dan password Anda.',
+            'Pendaftaran sebagai ${_selectedRole == 'staff' ? 'staff' : 'nasabah'} berhasil. Silakan masuk.',
           ),
         ),
       );

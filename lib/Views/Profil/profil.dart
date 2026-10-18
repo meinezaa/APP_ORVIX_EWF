@@ -656,12 +656,25 @@ class AppUsageTracker {
     final now = DateTime.now();
     final date =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    await FirebaseFirestore.instance
+    final userReference = FirebaseFirestore.instance
         .collection('users')
-        .doc(user.uid)
+        .doc(user.uid);
+    final userSnapshot = await userReference.get();
+    final userRole = userSnapshot.data()?['role']?.toString().trim();
+    final normalizedRole = userRole?.toLowerCase();
+    if (!userSnapshot.exists ||
+        userRole == null ||
+        normalizedRole == null ||
+        !{'admin', 'staff', 'nasabah'}.contains(normalizedRole)) {
+      throw StateError('Profil pengguna tidak ditemukan untuk mencatat aktivitas.');
+    }
+
+    await userReference
         .collection('app_usage')
         .doc(date)
         .set({
+          'user_id': user.uid,
+          'role': userRole,
           'date': date,
           'minutes': FieldValue.increment(1),
         }, SetOptions(merge: true));

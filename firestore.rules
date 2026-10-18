@@ -16,32 +16,10 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
-    function invitationPath(email) {
-      return /databases/$(database)/documents/users/$(email);
-    }
-
-    function isStaffInvitation(email) {
-      return exists(invitationPath(email))
-        && get(invitationPath(email)).data.email == email
-        && get(invitationPath(email)).data.role == 'staff'
-        && get(invitationPath(email)).data.account_created == false
-        && get(invitationPath(email)).data.pending_registration == true;
-    }
-
-    function isActiveStaffInvitation(email) {
-      return isStaffInvitation(email)
-        && get(invitationPath(email)).data.status == 'active'
-        && get(invitationPath(email)).data.isActive == true
-        && get(invitationPath(email)).data.aktif == true;
-    }
-
-    function canCreateStaffProfile(userId) {
+    function canCreateUserProfile(userId) {
       return signedIn()
         && request.auth.token.email is string
-        && request.auth.token.email_verified == true
         && userId == request.auth.uid
-        && isActiveStaffInvitation(request.auth.token.email)
-        && !existsAfter(invitationPath(request.auth.token.email))
         && request.resource.data.keys().hasOnly([
           'user_id',
           'nama',
@@ -54,8 +32,7 @@ service cloud.firestore {
           'aktif',
           'account_created',
           'pending_registration',
-          'createdAt',
-          'registeredAt'
+          'createdAt'
         ])
         && request.resource.data.user_id == userId
         && request.resource.data.nama is string
@@ -64,37 +41,14 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.phone is string
         && request.resource.data.phone.size() <= 40
-        && request.resource.data.jenis_kelamin == get(invitationPath(request.auth.token.email)).data.jenis_kelamin
-        && request.resource.data.role == 'staff'
+        && request.resource.data.jenis_kelamin is string
+        && request.resource.data.role in ['staff', 'nasabah']
         && request.resource.data.status == 'active'
-        && request.resource.data.status == get(invitationPath(request.auth.token.email)).data.status
         && request.resource.data.isActive == true
-        && request.resource.data.isActive == get(invitationPath(request.auth.token.email)).data.isActive
         && request.resource.data.aktif == true
-        && request.resource.data.aktif == get(invitationPath(request.auth.token.email)).data.aktif
         && request.resource.data.account_created == true
         && request.resource.data.pending_registration == false
-        && request.resource.data.createdAt == get(invitationPath(request.auth.token.email)).data.createdAt
-        && request.resource.data.registeredAt == request.time;
-    }
-
-    function canConsumeStaffInvitation(userId) {
-      return signedIn()
-        && request.auth.token.email is string
-        && userId == request.auth.token.email
-        && resource.data.email == request.auth.token.email
-        && resource.data.role == 'staff'
-        && resource.data.account_created == false
-        && resource.data.pending_registration == true
-        && resource.data.status == 'active'
-        && resource.data.isActive == true
-        && resource.data.aktif == true
-        && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == request.auth.token.email
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_id == request.auth.uid
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff'
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.account_created == true
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.pending_registration == false;
+        && request.resource.data.createdAt == request.time;
     }
 
     function canUpdateOwnProfile(userId) {
@@ -120,10 +74,6 @@ service cloud.firestore {
         ]);
     }
 
-    match /{path=**}/calculation_history/{historyId} {
-      allow read: if isAdmin();
-    }
-
     match /users/{userId} {
       allow read: if isAdmin()
         || isOwnProfile(userId)
@@ -131,13 +81,86 @@ service cloud.firestore {
           && request.auth.token.email is string
           && userId == request.auth.token.email);
 
-      allow create: if isAdmin() || canCreateStaffProfile(userId);
+      allow create: if isAdmin() || canCreateUserProfile(userId);
       allow update: if isAdmin() || canUpdateOwnProfile(userId);
-      allow delete: if isAdmin() || canConsumeStaffInvitation(userId);
+      allow delete: if isAdmin();
 
       match /{subcollection}/{document=**} {
-        allow read, write: if isAdmin() || isOwnProfile(userId);
+        allow read, write: if subcollection != 'calculation_history'
+          && subcollection != 'login_history'
+          && subcollection != 'app_usage'
+          && (isAdmin() || isOwnProfile(userId));
       }
+
+      match /app_usage/{usageId} {
+        function ownerRole() {
+          return get(/databases/$(database)/documents/users/$(userId)).data.role;
+        }
+
+        allow read: if isOwnProfile(userId)
+          || (isAdmin() && resource.data.role == 'staff');
+        allow create, update: if isOwnProfile(userId)
+          && request.resource.data.keys().hasOnly([
+            'user_id',
+            'role',
+            'date',
+            'minutes'
+          ])
+          && request.resource.data.user_id == userId
+          && request.resource.data.role == ownerRole()
+          && request.resource.data.date is string
+          && request.resource.data.minutes is number;
+        allow delete: if isOwnProfile(userId);
+      }
+
+      match /calculation_history/{historyId} {
+        function ownerRole() {
+          return get(/databases/$(database)/documents/users/$(userId)).data.role;
+        }
+
+        allow read: if (isAdmin() && resource.data.role == 'staff')
+          || isOwnProfile(userId);
+        allow create, update: if isOwnProfile(userId)
+          && request.resource.data.user_id == userId
+          && request.resource.data.role == ownerRole();
+        allow delete: if isOwnProfile(userId);
+      }
+
+      match /login_history/{loginId} {
+        allow read: if (isAdmin() && resource.data.role == 'staff')
+          || isOwnProfile(userId);
+        allow create: if isOwnProfile(userId)
+          && request.resource.data.user_id == userId
+          && request.resource.data.role
+            == get(/databases/$(database)/documents/users/$(userId)).data.role;
+        allow update: if (isOwnProfile(userId)
+            && request.resource.data.role
+              == get(/databases/$(database)/documents/users/$(userId)).data.role)
+          || (isAdmin()
+            && resource.data.role == 'staff'
+            && request.resource.data.role == 'staff');
+        allow delete: if isOwnProfile(userId)
+          || (isAdmin() && resource.data.role == 'staff');
+
+        match /activities/{activityId} {
+          allow read, write: if isOwnProfile(userId)
+            || (isAdmin()
+              && get(/databases/$(database)/documents/users/$(userId)/login_history/$(loginId)).data.role == 'staff');
+        }
+      }
+
+    }
+
+    match /{path=**}/calculation_history/{historyId} {
+      allow read: if isAdmin() && resource.data.role == 'staff';
+    }
+
+    match /{path=**}/login_history/{loginId} {
+      allow read: if isAdmin() && resource.data.role == 'staff';
+    }
+
+    match /{path=**}/app_usage/{usageId} {
+      allow read: if isAdmin() && resource.data.role == 'staff';
     }
   }
 }

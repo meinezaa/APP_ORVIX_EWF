@@ -330,13 +330,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collectionGroup('calculation_history')
+              .where('role', isEqualTo: 'staff')
               .snapshots(),
           builder: (context, historySnapshot) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collectionGroup('app_usage')
+                  .where('role', isEqualTo: 'staff')
                   .snapshots(),
               builder: (context, usageSnapshot) {
+                if (usersSnapshot.hasError) {
+                  return _buildSummaryStatus(
+                    'Gagal memuat pengguna',
+                    usersSnapshot.error!,
+                  );
+                }
+                if (historySnapshot.hasError) {
+                  return _buildSummaryStatus(
+                    'Gagal memuat perhitungan',
+                    historySnapshot.error!,
+                  );
+                }
+                if (usageSnapshot.hasError) {
+                  return _buildSummaryStatus(
+                    'Gagal memuat aktivitas',
+                    usageSnapshot.error!,
+                  );
+                }
+                if (usersSnapshot.connectionState == ConnectionState.waiting ||
+                    historySnapshot.connectionState ==
+                        ConnectionState.waiting ||
+                    usageSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFEE6C3A),
+                      ),
+                    ),
+                  );
+                }
+
                 final users = usersSnapshot.data?.docs ?? const [];
                 final histories = historySnapshot.data?.docs ?? const [];
                 final usage = usageSnapshot.data?.docs ?? const [];
@@ -353,8 +387,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final name = (data['nama'] ?? data['name'] ?? '')
                       .toString()
                       .trim();
-                  return role != 'admin' && name.isNotEmpty;
+                  return role == 'staff' &&
+                      data['account_created'] != false &&
+                      name.isNotEmpty;
                 }).length;
+                final staffIds = users
+                    .where((doc) {
+                      final data = doc.data();
+                      return (data['role'] ?? '')
+                                  .toString()
+                                  .trim()
+                                  .toLowerCase() ==
+                              'staff' &&
+                          data['account_created'] != false;
+                    })
+                    .map((doc) => doc.id)
+                    .toSet();
                 final todayCalculations = histories.where((doc) {
                   final date = _timestampFromMap(doc.data(), [
                     'created_at',
@@ -366,9 +414,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       date.day == today.day;
                 }).length;
                 final todayUsage = usage.where((doc) {
-                  return doc.data()['date']?.toString() == todayKey;
+                  final staffId = doc.reference.parent.parent?.id;
+                  return staffId != null &&
+                      staffIds.contains(staffId) &&
+                      doc.data()['date']?.toString() == todayKey;
                 }).toList();
-                final activeStaffToday = todayUsage.length;
+                final activeStaffToday = todayUsage
+                    .map((doc) => doc.reference.parent.parent!.id)
+                    .toSet()
+                    .length;
                 final activityMinutes = todayUsage.fold<int>(
                   0,
                   (total, doc) =>
@@ -387,6 +441,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildSummaryStatus(String title, Object error) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            '$error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 
@@ -577,6 +653,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, calcSnapshot) {
         final calcDocs =
@@ -836,6 +913,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, snapshot) {
         final docs =
@@ -1061,6 +1139,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, snapshot) {
         final docs =

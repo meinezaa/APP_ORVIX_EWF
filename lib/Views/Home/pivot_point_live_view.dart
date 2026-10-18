@@ -53,6 +53,7 @@ class _PivotPointLiveViewState extends State<PivotPointLiveView> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collectionGroup('calculation_history')
+          .where('role', isEqualTo: 'staff')
           .snapshots(),
       builder: (context, snapshot) {
         final docs =

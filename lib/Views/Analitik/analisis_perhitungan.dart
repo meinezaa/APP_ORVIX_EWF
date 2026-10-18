@@ -82,6 +82,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     super.initState();
     _historyStream = FirebaseFirestore.instance
         .collectionGroup('calculation_history')
+        .where('role', isEqualTo: 'staff')
         .snapshots();
   }
 
@@ -124,6 +125,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     final query = _searchText.trim().toLowerCase();
     return _sortHistory(
       history.where((item) {
+        if (item.role.trim().toLowerCase() != 'staff') return false;
         final inRange =
             _selectedRange == null ||
             (!item.createdAt.isBefore(_selectedRange!.start) &&
@@ -303,6 +305,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
               if (profile == null) return item;
               return item.copyWith(
                 userId: uid,
+                role: _profileValue(profile, ['role'], item.role) ?? item.role,
                 userName:
                     _profileValue(profile, ['nama', 'name'], item.userName) ??
                     item.userName,
@@ -815,7 +818,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     final staffCounts = <String, int>{};
     final staffNames = <String, String>{};
     for (final item in history) {
-      if (item.role.toLowerCase() == 'admin') continue;
+      if (item.role.trim().toLowerCase() != 'staff') continue;
       final name = item.userName.trim();
       if (name.isEmpty) continue;
       final identity = item.userId.trim().isNotEmpty
@@ -838,7 +841,7 @@ class _AnalisisPerhitunganViewState extends State<AnalisisPerhitunganView> {
     final namedHistoryCount = history
         .where(
           (item) =>
-              item.role.toLowerCase() != 'admin' &&
+              item.role.trim().toLowerCase() == 'staff' &&
               item.userName.trim().isNotEmpty,
         )
         .length;
