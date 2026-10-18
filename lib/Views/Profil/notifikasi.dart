@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../Models/historikalkulator_model.dart';
 import '../../Models/notifikasi_model.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
 
 class NotifikasiView extends StatefulWidget {
@@ -99,10 +101,11 @@ class _NotifikasiViewState extends State<NotifikasiView> {
                 time: notification.time,
                 icon: notification.icon,
                 isRead: readIds.contains(notification.id),
-                group: notification.group,
+                group: _localizedGroup(context, notification.group),
               ),
             ),
             ..._buildCalculationNotifications(
+              context,
               historySnapshot.data ?? const <HistoryModel>[],
               readIds,
             ),
@@ -117,17 +120,8 @@ class _NotifikasiViewState extends State<NotifikasiView> {
           return Scaffold(
             backgroundColor: Colors.transparent,
             body: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFFE9854D),
-                    Color(0xFFF8C7A8),
-                    Color(0xFFFFF8F3),
-                  ],
-                  stops: [0.0, 0.36, 0.86],
-                ),
+              decoration: BoxDecoration(
+                gradient: AppTheme.pageGradient(context),
               ),
               child: SafeArea(
                 child: Column(
@@ -139,8 +133,8 @@ class _NotifikasiViewState extends State<NotifikasiView> {
                     Expanded(
                       child: Container(
                         width: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFFDFC),
+                        decoration: BoxDecoration(
+                          color: AppTheme.background(context),
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(32),
                           ),
@@ -172,9 +166,11 @@ class _NotifikasiViewState extends State<NotifikasiView> {
   }
 
   List<NotifikasiModel> _buildCalculationNotifications(
+    BuildContext context,
     List<HistoryModel> history,
     Set<String> readIds,
   ) {
+    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
     final uniqueHistory = <HistoryModel>[];
     for (final item in history) {
       final type = item.jenisKalkulator.toLowerCase();
@@ -200,14 +196,22 @@ class _NotifikasiViewState extends State<NotifikasiView> {
           : 'physical';
       final id = '$idPrefix-${item.id}';
       final title = isPivot
-          ? 'Hasil Pivot Point: $indication'
+          ? '${isEnglish ? 'Pivot Point Result' : 'Hasil Pivot Point'}: $indication'
           : isNest
-          ? 'Hasil NEST: $indication'
+          ? '${isEnglish ? 'NEST Result' : 'Hasil NEST'}: $indication'
+          : isEnglish
+          ? 'Physical Gold Calculation'
           : 'Perhitungan Emas Fisik';
       final message = isPivot
-          ? 'Nilai Pivot Point Anda adalah ${item.hasil.toStringAsFixed(2)}. Indikasi: $indication.'
+          ? isEnglish
+                ? 'Your Pivot Point value is ${item.hasil.toStringAsFixed(2)}. Signal: $indication.'
+                : 'Nilai Pivot Point Anda adalah ${item.hasil.toStringAsFixed(2)}. Indikasi: $indication.'
           : isNest
-          ? 'Hasil NEST ${item.hasil.toStringAsFixed(2)}. Open: ${item.open?.toStringAsFixed(2) ?? '-'}, Close: ${item.close?.toStringAsFixed(2) ?? '-'}. Indikasi: $indication.'
+          ? isEnglish
+                ? 'NEST result: ${item.hasil.toStringAsFixed(2)}. Open: ${item.open?.toStringAsFixed(2) ?? '-'}, Close: ${item.close?.toStringAsFixed(2) ?? '-'}. Signal: $indication.'
+                : 'Hasil NEST ${item.hasil.toStringAsFixed(2)}. Open: ${item.open?.toStringAsFixed(2) ?? '-'}, Close: ${item.close?.toStringAsFixed(2) ?? '-'}. Indikasi: $indication.'
+          : isEnglish
+          ? 'Physical Gold calculation result: ${item.hasil.toStringAsFixed(2)}.'
           : 'Hasil perhitungan Emas Fisik adalah ${item.hasil.toStringAsFixed(2)}.';
       return NotifikasiModel(
         id: id,
@@ -220,7 +224,9 @@ class _NotifikasiViewState extends State<NotifikasiView> {
                   : Icons.trending_down
             : Icons.check_circle_outline,
         isRead: readIds.contains(id),
-        group: _isToday(item.createdAt) ? 'Hari ini' : 'Kemarin',
+        group: _isToday(item.createdAt)
+            ? (isEnglish ? 'Today' : 'Hari ini')
+            : (isEnglish ? 'Yesterday' : 'Kemarin'),
       );
     }).toList();
   }
@@ -235,14 +241,17 @@ class _NotifikasiViewState extends State<NotifikasiView> {
   String _formatTime(DateTime date) =>
       '${date.hour.toString().padLeft(2, '0')}.${date.minute.toString().padLeft(2, '0')}';
 
+  String _localizedGroup(BuildContext context, String group) =>
+      AppStrings.text(context, group);
+
   Widget _buildHeader() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 24),
     child: Row(
       children: [
         _circleButton(Icons.arrow_back, () => Navigator.pop(context)),
         const SizedBox(width: 12),
-        const Text(
-          'Notifikasi',
+        Text(
+          AppStrings.text(context, 'Notifikasi'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 23,
@@ -271,14 +280,14 @@ class _NotifikasiViewState extends State<NotifikasiView> {
     margin: const EdgeInsets.symmetric(horizontal: 26),
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(24),
     ),
     child: Row(
       children: [
-        _filterButton('Semua', 0),
-        _filterButton('Sudah dibaca', 1),
-        _filterButton('Belum dibaca', 2),
+        _filterButton(AppStrings.text(context, 'Semua'), 0),
+        _filterButton(AppStrings.text(context, 'Sudah dibaca'), 1),
+        _filterButton(AppStrings.text(context, 'Belum dibaca'), 2),
       ],
     ),
   );
@@ -289,7 +298,7 @@ class _NotifikasiViewState extends State<NotifikasiView> {
             ? null
             : () => _markAllAsRead(notifications),
         icon: const Icon(Icons.mark_email_read_outlined, size: 18),
-        label: const Text('Baca semua'),
+        label: Text(AppStrings.text(context, 'Baca semua')),
         style: TextButton.styleFrom(
           foregroundColor: const Color(0xFFD95D16),
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -326,7 +335,11 @@ class _NotifikasiViewState extends State<NotifikasiView> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notifikasi gagal ditandai dibaca.')),
+          SnackBar(
+            content: Text(
+              AppStrings.text(context, 'Notifikasi gagal ditandai dibaca.'),
+            ),
+          ),
         );
       }
     } finally {
@@ -371,7 +384,10 @@ class _NotifikasiViewState extends State<NotifikasiView> {
         (_selectedFilter == 0 || _selectedFilter == 2) &&
         allNotifications.any((item) => !item.isRead);
     var markAllButtonAdded = false;
-    for (final group in ['Hari ini', 'Kemarin']) {
+    for (final group in [
+      AppStrings.text(context, 'Hari ini'),
+      AppStrings.text(context, 'Kemarin'),
+    ]) {
       final groupItems = items.where((item) => item.group == group).toList();
       if (groupItems.isEmpty) continue;
       widgets.add(
@@ -379,7 +395,7 @@ class _NotifikasiViewState extends State<NotifikasiView> {
           children: [
             Text(
               group,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color(0xFFD95D16),
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -410,12 +426,10 @@ class _NotifikasiViewState extends State<NotifikasiView> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: notification.isRead
-            ? const Color(0xFFF8F8F8)
-            : const Color(0xFFFFE9DB),
+            ? AppTheme.surface(context)
+            : AppTheme.surfaceRaised(context),
         border: Border.all(
-          color: notification.isRead
-              ? const Color(0xFFD1D1D1)
-              : const Color(0xFFF1B487),
+          color: AppTheme.border(context),
         ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: const [
@@ -432,21 +446,21 @@ class _NotifikasiViewState extends State<NotifikasiView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  notification.title,
+                  AppStrings.text(context, notification.title),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: notification.isRead
                         ? FontWeight.w600
                         : FontWeight.w800,
-                    color: const Color(0xFF302622),
+                    color: AppTheme.text(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  notification.message,
-                  style: const TextStyle(
+                  AppStrings.text(context, notification.message),
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF756B66),
+                    color: AppTheme.mutedText(context),
                     height: 1.3,
                   ),
                 ),
@@ -456,18 +470,18 @@ class _NotifikasiViewState extends State<NotifikasiView> {
           const SizedBox(width: 8),
           Text(
             notification.time,
-            style: const TextStyle(fontSize: 10, color: Color(0xFF8B7D75)),
+            style: TextStyle(fontSize: 10, color: AppTheme.mutedText(context)),
           ),
         ],
       ),
     ),
   );
 
-  Widget _buildEmptyState() => const Center(
+  Widget _buildEmptyState() => Center(
     child: Text(
-      'Belum ada notifikasi',
+      AppStrings.text(context, 'Belum ada notifikasi'),
       style: TextStyle(
-        color: Color(0xFF766D68),
+        color: AppTheme.mutedText(context),
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),

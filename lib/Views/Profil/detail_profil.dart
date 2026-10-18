@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../Models/users_model.dart';
 import '../../Services/auth_services.dart';
 import '../../Services/cloudinary_services.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 
 class DetailProfilView extends StatefulWidget {
   const DetailProfilView({super.key});
@@ -40,10 +42,9 @@ class _DetailProfilViewState extends State<DetailProfilView> {
   Future<UserModel?> _loadUser() async {
     final user = await _authService.getCurrentUserData();
     final firebaseEmail = FirebaseAuth.instance.currentUser?.email ?? '';
-    final resolvedEmail = (user?.email.trim().isNotEmpty == true
-            ? user!.email
-            : firebaseEmail)
-        .trim();
+    final resolvedEmail =
+        (user?.email.trim().isNotEmpty == true ? user!.email : firebaseEmail)
+            .trim();
 
     _nameController.text = user?.nama ?? '';
     _emailController.text = resolvedEmail;
@@ -83,6 +84,19 @@ class _DetailProfilViewState extends State<DetailProfilView> {
       initialDate: DateTime(1995, 8, 15),
       firstDate: DateTime(1940),
       lastDate: DateTime.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: const Color(0xFFE87924),
+            surface: AppTheme.surface(context),
+            onSurface: AppTheme.text(context),
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: AppTheme.surface(context),
+          ),
+        ),
+        child: child!,
+      ),
     );
     if (date == null || !mounted) return;
     setState(
@@ -94,18 +108,27 @@ class _DetailProfilViewState extends State<DetailProfilView> {
     final gender = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Perempuan'),
-              onTap: () => Navigator.pop(context, 'Perempuan'),
-            ),
-            ListTile(
-              title: const Text('Laki-laki'),
-              onTap: () => Navigator.pop(context, 'Laki-laki'),
-            ),
-          ],
+        child: Container(
+          color: AppTheme.surface(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(
+                  AppStrings.text(context, 'Perempuan'),
+                  style: TextStyle(color: AppTheme.text(context)),
+                ),
+                onTap: () => Navigator.pop(context, 'Perempuan'),
+              ),
+              ListTile(
+                title: Text(
+                  AppStrings.text(context, 'Laki-laki'),
+                  style: TextStyle(color: AppTheme.text(context)),
+                ),
+                onTap: () => Navigator.pop(context, 'Laki-laki'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -145,13 +168,19 @@ class _DetailProfilViewState extends State<DetailProfilView> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil berhasil diperbarui')),
+        SnackBar(
+          content: Text(AppStrings.text(context, 'Profil berhasil diperbarui')),
+        ),
       );
       Navigator.pop(context, true);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal menyimpan perubahan profil')),
+        SnackBar(
+          content: Text(
+            AppStrings.text(context, 'Gagal menyimpan perubahan profil'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -161,21 +190,9 @@ class _DetailProfilViewState extends State<DetailProfilView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.background(context),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF4AA7A),
-              Color(0xFFF8C9A9),
-              Color(0xFFFFE8D8),
-              Color(0xFFFFF8F3),
-            ],
-            stops: [0.0, 0.3, 0.68, 1.0],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           child: FutureBuilder<UserModel?>(
             future: _userFuture,
@@ -201,10 +218,10 @@ class _DetailProfilViewState extends State<DetailProfilView> {
     children: [
       _circleButton(Icons.arrow_back, () => Navigator.pop(context)),
       const SizedBox(width: 16),
-      const Text(
-        'Informasi Profil',
+      Text(
+        AppStrings.text(context, 'Informasi Profil'),
         style: TextStyle(
-          color: Colors.white,
+          color: AppTheme.text(context),
           fontSize: 23,
           fontWeight: FontWeight.w700,
         ),
@@ -213,7 +230,7 @@ class _DetailProfilViewState extends State<DetailProfilView> {
   );
 
   Widget _circleButton(IconData icon, VoidCallback onTap) => Material(
-    color: Colors.white,
+    color: AppTheme.surface(context),
     shape: const CircleBorder(),
     child: InkWell(
       onTap: onTap,
@@ -221,7 +238,7 @@ class _DetailProfilViewState extends State<DetailProfilView> {
       child: SizedBox(
         width: 40,
         height: 40,
-        child: Icon(icon, color: const Color(0xFF332923), size: 24),
+        child: Icon(icon, color: AppTheme.text(context), size: 24),
       ),
     ),
   );
@@ -265,8 +282,8 @@ class _DetailProfilViewState extends State<DetailProfilView> {
             ],
           ),
           const SizedBox(height: 22),
-          const Text(
-            'Ubah Foto Profil',
+          Text(
+            AppStrings.text(context, 'Ubah Foto Profil'),
             style: TextStyle(
               color: Color(0xFFE87824),
               fontSize: 20,
@@ -330,10 +347,15 @@ class _DetailProfilViewState extends State<DetailProfilView> {
   Widget _buildForm() => Container(
     padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(13),
-      boxShadow: const [
-        BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
+      border: Border.all(color: AppTheme.border(context)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
       ],
     ),
     child: Column(
@@ -375,7 +397,11 @@ class _DetailProfilViewState extends State<DetailProfilView> {
       enabled: enabled,
       keyboardType: keyboardType,
       decoration: _inputDecoration(label, icon),
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.text(context),
+      ),
     ),
   );
 
@@ -392,17 +418,23 @@ class _DetailProfilViewState extends State<DetailProfilView> {
         children: [
           Expanded(
             child: Text(
-              value,
+              value == 'Perempuan' || value == 'Laki-laki'
+                  ? AppStrings.text(context, value)
+                  : value.startsWith('Pilih')
+                  ? AppStrings.text(context, value)
+                  : label == 'Tanggal Lahir'
+                  ? _localizedBirthDate(value)
+                  : value,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: value.startsWith('Pilih')
-                    ? Colors.grey
-                    : const Color(0xFF25201D),
+                    ? AppTheme.mutedText(context)
+                    : AppTheme.text(context),
               ),
             ),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFFD9BDA8)),
+          Icon(Icons.chevron_right, color: AppTheme.mutedText(context)),
         ],
       ),
     ),
@@ -410,14 +442,14 @@ class _DetailProfilViewState extends State<DetailProfilView> {
 
   InputDecoration _inputDecoration(String label, IconData icon) =>
       InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 12, color: Color(0xFF655851)),
+        labelText: AppStrings.text(context, label),
+        labelStyle: TextStyle(fontSize: 12, color: AppTheme.mutedText(context)),
         prefixIcon: Icon(icon, color: const Color(0xFFA95208)),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFFE0DAD6)),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: AppTheme.border(context)),
         ),
-        disabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFFE0DAD6)),
+        disabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: AppTheme.border(context)),
         ),
         focusedBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Color(0xFFA95208), width: 1.5),
@@ -446,25 +478,77 @@ class _DetailProfilViewState extends State<DetailProfilView> {
                 strokeWidth: 2,
               ),
             )
-          : const Text(
-              'Simpan Perubahan',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          : Text(
+              AppStrings.text(context, 'Simpan Perubahan'),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
     ),
   );
 
-  String _monthName(int month) => const [
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
-    'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
-  ][month - 1];
+  String _monthName(int month) {
+    const indonesian = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    const english = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return (Localizations.localeOf(context).languageCode == 'en'
+        ? english
+        : indonesian)[month - 1];
+  }
+
+  String _localizedBirthDate(String value) {
+    final parts = value.split(' ');
+    if (parts.length != 3) return value;
+
+    const months = {
+      'januari': 1,
+      'january': 1,
+      'februari': 2,
+      'february': 2,
+      'maret': 3,
+      'march': 3,
+      'april': 4,
+      'mei': 5,
+      'may': 5,
+      'juni': 6,
+      'june': 6,
+      'juli': 7,
+      'july': 7,
+      'agustus': 8,
+      'august': 8,
+      'september': 9,
+      'oktober': 10,
+      'october': 10,
+      'november': 11,
+      'desember': 12,
+      'december': 12,
+    };
+    final month = months[parts[1].toLowerCase()];
+    return month == null
+        ? value
+        : '${parts[0]} ${_monthName(month)} ${parts[2]}';
+  }
 }

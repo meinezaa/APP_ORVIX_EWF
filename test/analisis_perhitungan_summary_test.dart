@@ -2,6 +2,7 @@ import 'package:app_pt_ewf/Models/historikalkulator_model.dart';
 import 'package:app_pt_ewf/Views/Analitik/analisis_perhitungan.dart';
 import 'package:app_pt_ewf/Views/History/detail_histori.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -114,6 +115,13 @@ void main() {
   testWidgets('NEST history detail displays its saved inputs', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('id'),
+        supportedLocales: const [Locale('id'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: DetailHistoryScreen(
           history: HistoryModel(
             id: 'nest-history',

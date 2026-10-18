@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import 'login_histori.dart';
 import 'gold_detail.dart';
 import 'nest_detail.dart';
@@ -63,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F2),
+      backgroundColor: AppTheme.background(context),
       body: Stack(
         children: [
           // Background Scrollable Content
@@ -102,12 +104,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 40),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFDEC2), Color(0xFFFF853C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: BoxDecoration(
+        gradient: Theme.of(context).brightness == Brightness.dark
+            ? const LinearGradient(
+                colors: [Color(0xFF253034), Color(0xFF172124)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFFFDEC2), Color(0xFFFF853C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,9 +193,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 24),
           // Greeting Text
-          const Text(
-            'Selamat Datang, Admin',
-            style: TextStyle(
+          Text(
+            AppStrings.text(context, 'Selamat Datang, Admin'),
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -195,7 +203,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Pantau aktivitas dan performa ORVIX hari ini',
+            AppStrings.text(
+              context,
+              'Pantau aktivitas dan performa ORVIX hari ini',
+            ),
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: 13,
@@ -259,8 +270,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMainContent() {
     return Container(
       transform: Matrix4.translationValues(0, -16, 0),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8F6F2),
+      decoration: BoxDecoration(
+        color: AppTheme.background(context),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -302,11 +313,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Text(
-      title,
-      style: const TextStyle(
+      AppStrings.text(context, title),
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF1E1E1E),
+        color: AppTheme.text(context),
       ),
     );
   }
@@ -454,8 +465,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -480,10 +492,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  title,
-                  style: const TextStyle(
+                  AppStrings.text(context, title),
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6B7280),
+                    color: AppTheme.mutedText(context),
                     height: 1.2,
                   ),
                 ),
@@ -516,10 +528,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  subtext,
-                  style: const TextStyle(
+                  AppStrings.summaryText(context, subtext),
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF10B981),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF77D7A5)
+                        : const Color(0xFF10B981),
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -738,8 +752,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Column(children: activityTiles),
         );
@@ -778,27 +793,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: const TextStyle(
+                    AppStrings.text(context, title),
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: Color(0xFF1E1E1E),
+                      color: AppTheme.text(context),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    subtitle,
-                    style: const TextStyle(
+                    AppStrings.text(context, subtitle),
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     time,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF9CA3AF),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                 ],
@@ -972,8 +987,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border(context)),
         ),
         child: Row(
           children: [
@@ -986,11 +1002,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Row(
                     children: [
                       Text(
-                        title,
-                        style: const TextStyle(
+                        AppStrings.text(context, title),
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: Color(0xFF1E1E1E),
+                          color: AppTheme.text(context),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1024,10 +1040,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    info,
-                    style: const TextStyle(
+                    AppStrings.text(context, info),
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9CA3AF),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                 ],
@@ -1070,8 +1086,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Column(
             children: [
@@ -1141,17 +1158,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SizedBox(
           width: 80,
           child: Text(
-            title,
-            style: const TextStyle(
+            AppStrings.text(context, title),
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 12,
-              color: Color(0xFF1E1E1E),
+              color: AppTheme.text(context),
             ),
           ),
         ),
         Text(
           count,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 12, color: AppTheme.mutedText(context)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1168,10 +1185,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(width: 12),
         Text(
           percentage,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6B7280),
+            color: AppTheme.mutedText(context),
           ),
         ),
       ],
@@ -1240,7 +1257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            label,
+            AppStrings.text(context, label),
             style: TextStyle(
               color: Colors.white,
               fontSize: 10,

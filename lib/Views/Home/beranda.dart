@@ -7,26 +7,33 @@ import 'package:intl/intl.dart';
 import '../../Models/historidata_model.dart';
 import '../../Models/historikalkulator_model.dart';
 import '../../Services/api_services.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
+import '../../Services/market_news_service.dart';
 import '../History/detail_histori.dart';
+import 'market_news_detail.dart';
+import 'market_news_list.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback? onViewAllHistory;
   final VoidCallback? onViewNotifications;
   final VoidCallback? onViewProfile;
+  final bool historicalDataOnly;
 
   const HomeView({
     super.key,
     this.onViewAllHistory,
     this.onViewNotifications,
     this.onViewProfile,
+    this.historicalDataOnly = false,
   });
 
   @override
-  State<HomeView> createState() => _HomeViewState();
+  State<HomeView> createState() => HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class HomeViewState extends State<HomeView> {
   // Tanggal Filter Default (MM/DD/YYYY)
   DateTime? _startDate = DateTime(2026, 7, 8); // 8 Juli 2026
   DateTime? _endDate = DateTime(2026, 8, 20); // 20 Agustus 2026
@@ -40,12 +47,37 @@ class _HomeViewState extends State<HomeView> {
   String _userName = 'Pengguna';
   String? _userPhotoPath;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
+  final PageController _newsPageController = PageController(
+    viewportFraction: 0.94,
+  );
+  List<MarketNewsArticle> _latestNews = [];
+  bool _isLoadingNews = true;
+  String? _newsError;
+  int _newsPage = 0;
+  String? _newsLanguageCode;
+  int _newsRequestGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _watchCurrentUser();
-    _loadData();
+    if (widget.historicalDataOnly) {
+      _loadData();
+    } else {
+      _watchCurrentUser();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.historicalDataOnly) return;
+
+    final languageCode = Localizations.localeOf(context).languageCode;
+    if (_newsLanguageCode == languageCode) return;
+    _newsLanguageCode = languageCode;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadLatestNews(languageCode: languageCode);
+    });
   }
 
   void _watchCurrentUser() {
@@ -79,7 +111,597 @@ class _HomeViewState extends State<HomeView> {
   @override
   void dispose() {
     _userSubscription?.cancel();
+    _newsPageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadLatestNews({String? languageCode}) async {
+    final requestGeneration = ++_newsRequestGeneration;
+    if (mounted) {
+      setState(() {
+        _isLoadingNews = true;
+        _newsError = null;
+      });
+    }
+
+    try {
+      final articles = await MarketNewsService.fetchLatest(
+        languageCode: languageCode ?? _newsLanguageCode ?? 'id',
+      );
+      if (!mounted || requestGeneration != _newsRequestGeneration) return;
+      setState(() {
+        _latestNews = articles;
+        _isLoadingNews = false;
+        _newsPage = 0;
+      });
+      if (_newsPageController.hasClients) {
+        _newsPageController.jumpToPage(0);
+      }
+    } on Exception catch (error) {
+      if (!mounted || requestGeneration != _newsRequestGeneration) return;
+      setState(() {
+        _isLoadingNews = false;
+        _newsError =
+            '${AppStrings.text(context, 'Berita terbaru gagal dimuat.')} $error';
+      });
+    }
+  }
+
+  void _showCompanyInfo() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        height: MediaQuery.sizeOf(sheetContext).height * 0.9,
+        decoration: BoxDecoration(
+          color: AppTheme.background(sheetContext),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: AppTheme.border(sheetContext)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      AppStrings.text(sheetContext, 'PT. EQUITYWORLD FUTURES'),
+                      style: TextStyle(
+                        color: AppTheme.text(sheetContext),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: Icon(
+                      Icons.close,
+                      color: AppTheme.mutedText(sheetContext),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                children: [
+                  _companyInfoParagraph(
+                    sheetContext,
+                    'PT Equityworld Futures ("EWF") hadir sebagai mitra investasi yang mengutamakan kepercayaan dan profesionalisme di industri perdagangan berjangka. Dengan fokus pada kualitas layanan dan edukasi berkelanjutan, EWF membantu nasabah menavigasi peluang pasar secara lebih terarah dan aman.',
+                  ),
+                  const SizedBox(height: 12),
+                  _companyInfoParagraph(
+                    sheetContext,
+                    'Sejak mulai beroperasi pada tahun 2005, EWF terus tumbuh dan memperluas jangkauan layanan hingga memiliki tujuh kantor operasional di Jakarta, Surabaya, Semarang, Manado, dan Cirebon.',
+                  ),
+                  const SizedBox(height: 12),
+                  _companyInfoParagraph(
+                    sheetContext,
+                    'Sebagai perusahaan pialang berjangka resmi, EWF terdaftar dan diawasi oleh Badan Pengawas Perdagangan Berjangka Komoditi (BAPPEBTI), Otoritas Jasa Keuangan (OJK), dan Bank Indonesia (BI), serta menjadi anggota PT Bursa Berjangka Jakarta (BBJ) dan PT Kliring Berjangka Indonesia (Persero). Dengan landasan regulasi yang kuat, EWF berkomitmen memberikan pengalaman transaksi yang transparan, akuntabel, dan berstandar tinggi.',
+                  ),
+                  _companyInfoHeading(sheetContext, 'Visi'),
+                  _companyInfoParagraph(
+                    sheetContext,
+                    'Menjadi perusahaan pialang berjangka yang unggul dan terpercaya, dengan standar operasional yang modern, transparan, serta memberikan nilai strategis bagi perkembangan industri dan perekonomian nasional.',
+                  ),
+                  _companyInfoHeading(sheetContext, 'Misi'),
+                  for (final mission in const [
+                    'Menyediakan layanan perdagangan berjangka yang profesional, aman, dan berintegritas tinggi.',
+                    'Mengembangkan kualitas sumber daya manusia untuk menghadirkan layanan yang kompeten dan berdaya saing.',
+                    'Mengimplementasikan tata kelola perusahaan yang transparan dan akuntabel.',
+                    'Memperluas akses edukasi serta literasi perdagangan berjangka kepada masyarakat.',
+                    'Mengoptimalkan teknologi untuk mendukung operasional dan pengalaman nasabah secara efisien.',
+                  ])
+                    _companyInfoBullet(sheetContext, mission),
+                  _companyInfoHeading(sheetContext, 'Nilai-Nilai Perusahaan'),
+                  for (final value in const [
+                    (
+                      'Integritas Profesional',
+                      'Menegakkan standar etika yang tinggi serta menjaga konsistensi tindakan dan keputusan dalam setiap aktivitas perusahaan.',
+                    ),
+                    (
+                      'Fokus pada Nasabah',
+                      'Mengutamakan kebutuhan dan tujuan investasi nasabah melalui layanan yang responsif, akurat, dan transparan.',
+                    ),
+                    (
+                      'Disiplin Kepatuhan',
+                      'Menjalankan seluruh proses bisnis sesuai kerangka regulasi dengan kontrol internal yang kuat dan berkelanjutan.',
+                    ),
+                    (
+                      'Inovasi Berkelanjutan',
+                      'Mendorong pengembangan teknologi, produk, dan proses kerja untuk menghadirkan pengalaman transaksi yang semakin efisien dan kompetitif.',
+                    ),
+                  ]) ...[
+                    _companyInfoSubheading(sheetContext, value.$1),
+                    _companyInfoParagraph(sheetContext, value.$2),
+                  ],
+                  _companyInfoHeading(sheetContext, 'Apa arti ORVIX?'),
+                  _companyInfoParagraph(
+                    sheetContext,
+                    'OR terinspirasi dari kata or dalam bahasa Prancis yang berarti emas. VIX menggambarkan kesan teknologi, kecepatan, dan inovasi.',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _companyInfoParagraph(BuildContext context, String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Text(
+      AppStrings.text(context, text),
+      style: TextStyle(
+        color: AppTheme.mutedText(context),
+        fontSize: 13,
+        height: 1.55,
+      ),
+    ),
+  );
+
+  Widget _companyInfoHeading(BuildContext context, String text) => Padding(
+    padding: const EdgeInsets.only(top: 22, bottom: 8),
+    child: Text(
+      AppStrings.text(context, text),
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.primary,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+
+  Widget _companyInfoSubheading(BuildContext context, String text) => Padding(
+    padding: const EdgeInsets.only(top: 10, bottom: 4),
+    child: Text(
+      AppStrings.text(context, text),
+      style: TextStyle(
+        color: AppTheme.text(context),
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+
+  Widget _companyInfoBullet(BuildContext context, String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 7, right: 9),
+          child: Icon(
+            Icons.circle,
+            size: 6,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            AppStrings.text(context, text),
+            style: TextStyle(
+              color: AppTheme.mutedText(context),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildCompanyInfoCard() => Material(
+    color: Colors.transparent,
+    borderRadius: BorderRadius.circular(16),
+    child: InkWell(
+      onTap: _showCompanyInfo,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.apartment_outlined,
+                color: Colors.white,
+                size: 27,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.text(context, 'PT. EQUITYWORLD FUTURES'),
+                    style: TextStyle(
+                      color: AppTheme.text(context),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppStrings.text(
+                      context,
+                      'Profil perusahaan, visi, misi, nilai, legalitas dan informasi ORVIX',
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.mutedText(context),
+                      fontSize: 11,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.primary,
+              size: 25,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildNewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                AppStrings.text(context, 'Berita & Analisis Terbaru'),
+                style: TextStyle(
+                  color: AppTheme.text(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: AppStrings.text(context, 'Perbarui berita'),
+              onPressed: _loadLatestNews,
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Icons.refresh,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            InkWell(
+              onTap: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const MarketNewsListScreen(),
+                ),
+              ),
+              child: Text(
+                AppStrings.text(context, 'Lihat Semua >'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_isLoadingNews)
+          SizedBox(
+            height: 270,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          )
+        else if (_newsError != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.border(context)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  color: AppTheme.mutedText(context),
+                  size: 28,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _newsError!,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: _loadLatestNews,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(AppStrings.text(context, 'Coba Lagi')),
+                ),
+              ],
+            ),
+          )
+        else if (_latestNews.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.border(context)),
+            ),
+            child: Text(
+              AppStrings.text(context, 'Belum ada berita terbaru.'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.mutedText(context)),
+            ),
+          )
+        else ...[
+          SizedBox(
+            height: 350,
+            child: PageView.builder(
+              controller: _newsPageController,
+              itemCount: _latestNews.length,
+              onPageChanged: (page) => setState(() => _newsPage = page),
+              itemBuilder: (context, index) =>
+                  _buildNewsArticleCard(_latestNews[index]),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              _latestNews.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: _newsPage == index ? 18 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: _newsPage == index
+                      ? Theme.of(context).colorScheme.primary
+                      : AppTheme.border(context),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNewsArticleCard(MarketNewsArticle article) => Container(
+    margin: const EdgeInsets.only(right: 10, bottom: 2),
+    decoration: BoxDecoration(
+      color: AppTheme.surface(context),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppTheme.border(context)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => MarketNewsDetailScreen(article: article),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 160,
+              width: double.infinity,
+              child: article.imageUrl == null
+                  ? _newsImagePlaceholder(article.category)
+                  : Image.network(
+                      article.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _newsImagePlaceholder(article.category),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          article.category.isEmpty
+                              ? article.source
+                              : AppStrings.text(context, article.category),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${article.source}  •  ${_formatNewsDate(article.publishedAt)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppTheme.mutedText(context),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    article.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.text(context),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                  if (article.summary.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      article.summary,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppTheme.mutedText(context),
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _newsImagePlaceholder(String category) => Container(
+    color: AppTheme.surfaceRaised(context),
+    alignment: Alignment.center,
+    child: Icon(
+      category.toLowerCase().contains('gold') ||
+              category.toLowerCase().contains('emas')
+          ? Icons.monetization_on_outlined
+          : Icons.show_chart,
+      color: Theme.of(context).colorScheme.primary,
+      size: 56,
+    ),
+  );
+
+  String _formatNewsDate(DateTime? date) {
+    if (date == null) return '';
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final months = english
+        ? const [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec',
+          ]
+        : const [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'Mei',
+            'Jun',
+            'Jul',
+            'Agu',
+            'Sep',
+            'Okt',
+            'Nov',
+            'Des',
+          ];
+    final day = date.day.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$day ${months[date.month - 1]} ${date.year} • $hour:$minute';
   }
 
   // 1. Ambil seluruh data dari slide 1 hingga slide terakhir
@@ -94,23 +716,33 @@ class _HomeViewState extends State<HomeView> {
         maxPages: 10,
         category: _selectedCategory,
       );
+      if (!mounted) return;
       setState(() {
         _rawHistoricalData = data;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loadError =
-            'Data historical gagal dimuat. Periksa koneksi lalu coba lagi.';
+        _loadError = AppStrings.text(
+          context,
+          'Data historical gagal dimuat. Periksa koneksi lalu coba lagi.',
+        );
       });
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppStrings.text(context, 'Gagal memuat data: ')}$e',
+            ),
+          ),
+        );
       }
     }
   }
+
+  Future<void> refreshHistoricalData() => _loadData();
 
   // 2. Parser Teks Tanggal ("08 Jul 2026" / "12 Aug 2026" -> DateTime)
   DateTime? _parseDate(String dateStr) {
@@ -188,21 +820,7 @@ class _HomeViewState extends State<HomeView> {
     final date = _parseDate(dateStr);
     if (date == null) return dateStr;
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+    return '${date.day.toString().padLeft(2, '0')} ${AppStrings.monthName(date.month)} ${date.year}';
   }
 
   // 3. Filter Data Berdasarkan Rentang Tanggal yang Dipilih User
@@ -306,13 +924,259 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHistoricalDataSection() {
     final maxPagesToShow = _totalPages > 4 ? 4 : _totalPages;
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD36A28),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(
+                Icons.info_outline,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              AppStrings.text(context, 'Historical Data'),
+              style: TextStyle(
+                fontFamily: 'sans-serif',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.text(context),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: ApiService.supportedCategories.indexed.map((entry) {
+            final index = entry.$1;
+            final category = entry.$2;
+            final selected = _selectedCategory == category;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: index == ApiService.supportedCategories.length - 1
+                      ? 0
+                      : 8,
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    if (selected) return;
+                    setState(() {
+                      _selectedCategory = category;
+                      _currentPage = 1;
+                    });
+                    _loadData();
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFFD36A28)
+                          : AppTheme.surface(context),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFFD36A28)
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Text(
+                      category,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? Colors.white : AppTheme.text(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Text(
+              AppStrings.text(context, 'Mulai  '),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.text(context),
+              ),
+            ),
+            Expanded(child: _buildDateField(true)),
+            const SizedBox(width: 10),
+            Text(
+              AppStrings.text(context, 'Sampai  '),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.text(context),
+              ),
+            ),
+            Expanded(child: _buildDateField(false)),
+          ],
+        ),
+        if (_dateRangeNotice != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _dateRangeNotice!,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A5A3B)),
+          ),
+        ],
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceRaised(context),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    _buildTableCell('Date', isHeader: true),
+                    _buildTableCell('Open', isHeader: true),
+                    _buildTableCell('High', isHeader: true),
+                    _buildTableCell('Low', isHeader: true),
+                    _buildTableCell('Close', isHeader: true),
+                  ],
+                ),
+              ),
+              const Divider(),
+              _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFD36A28),
+                      ),
+                    )
+                  : _loadError != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Text(
+                            _loadError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _loadData,
+                            child: const Text('Coba lagi'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _paginatedData.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Tidak ada data pada rentang tanggal yang dipilih',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    )
+                  : Column(
+                      children: _paginatedData.map((data) {
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                              child: Row(
+                                children: [
+                                  _buildTableCell(
+                                    _formatDisplayDate(data.date),
+                                  ),
+                                  _buildTableCell(
+                                    _formatDisplayNumber(data.open),
+                                  ),
+                                  _buildTableCell(
+                                    _formatDisplayNumber(data.high),
+                                  ),
+                                  _buildTableCell(
+                                    _formatDisplayNumber(data.low),
+                                  ),
+                                  _buildTableCell(
+                                    _formatDisplayNumber(data.close),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Colors.black.withValues(alpha: 0.14),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildPageBtn('<<', onTap: () => _goToPage(1)),
+            _buildPageBtn('<', onTap: () => _goToPage(_currentPage - 1)),
+            for (int i = 1; i <= maxPagesToShow; i++)
+              _buildPageBtn(
+                '$i',
+                isActive: _currentPage == i,
+                onTap: () => _goToPage(i),
+              ),
+            _buildPageBtn('>', onTap: () => _goToPage(_currentPage + 1)),
+            _buildPageBtn('>>', onTap: () => _goToPage(_totalPages)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.historicalDataOnly) {
+      return SizedBox(
+        width: double.infinity,
+        child: _buildHistoricalDataSection(),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF8F5),
+      backgroundColor: AppTheme.background(context),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             Positioned(
@@ -321,11 +1185,13 @@ class _HomeViewState extends State<HomeView> {
               right: 0,
               height: 250,
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFFF2A674), Color(0xFFFFF8F3)],
+                    colors: Theme.of(context).brightness == Brightness.dark
+                        ? const [Color(0xFF253034), Color(0xFF0B1113)]
+                        : const [Color(0xFFF2A674), Color(0xFFFFF8F3)],
                   ),
                   borderRadius: BorderRadius.vertical(
                     bottom: Radius.circular(32),
@@ -334,7 +1200,12 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.of(context).padding.top + 16,
+                20,
+                16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -359,14 +1230,23 @@ class _HomeViewState extends State<HomeView> {
                                   width: 45,
                                   height: 45,
                                   child: Material(
-                                    color: Colors.white,
+                                    color: AppTheme.surface(context),
                                     shape: const CircleBorder(),
+                                    clipBehavior: Clip.antiAlias,
                                     child: InkWell(
                                       customBorder: const CircleBorder(),
                                       onTap: widget.onViewNotifications,
-                                      child: const Icon(
-                                        Icons.notifications_none,
-                                        color: Colors.black87,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: AppTheme.border(context),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.notifications_none,
+                                          color: AppTheme.text(context),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -376,7 +1256,7 @@ class _HomeViewState extends State<HomeView> {
                                   width: 45,
                                   height: 45,
                                   child: Material(
-                                    color: Colors.white,
+                                    color: AppTheme.surface(context),
                                     shape: const CircleBorder(),
                                     clipBehavior: Clip.antiAlias,
                                     child: Image.asset(
@@ -392,7 +1272,7 @@ class _HomeViewState extends State<HomeView> {
                                   width: 45,
                                   height: 45,
                                   child: Material(
-                                    color: const Color(0xFFE8E0D8),
+                                    color: AppTheme.surfaceRaised(context),
                                     shape: const CircleBorder(),
                                     child: InkWell(
                                       customBorder: const CircleBorder(),
@@ -408,11 +1288,11 @@ class _HomeViewState extends State<HomeView> {
                         const SizedBox(height: 12),
                         RichText(
                           text: TextSpan(
-                            text: 'Halo, ',
+                            text: AppStrings.text(context, 'Halo, '),
                             style: TextStyle(
                               fontFamily: 'sans-serif',
                               fontSize: 22,
-                              color: Color(0xFFD36A28),
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.normal,
                             ),
                             children: [
@@ -428,13 +1308,16 @@ class _HomeViewState extends State<HomeView> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Siap melakukan perhitungan hari ini?',
+                        Text(
+                          AppStrings.text(
+                            context,
+                            'Siap melakukan perhitungan hari ini?',
+                          ),
                           style: TextStyle(
                             fontFamily: 'sans-serif-medium',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF9E4E27),
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ],
@@ -449,12 +1332,22 @@ class _HomeViewState extends State<HomeView> {
                     height: 146,
                     padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Color(0xFFFFF0D9), Color(0xFFE9B18F)],
-                      ),
+                      gradient: Theme.of(context).brightness == Brightness.dark
+                          ? const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Color(0xFF263235), Color(0xFF192326)],
+                            )
+                          : const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Color(0xFFFFF0D9), Color(0xFFE9B18F)],
+                            ),
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppTheme.border(context),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -465,41 +1358,53 @@ class _HomeViewState extends State<HomeView> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               RichText(
-                                text: const TextSpan(
-                                  text: 'Hitung dengan ',
+                                text: TextSpan(
+                                  text: AppStrings.text(
+                                    context,
+                                    'Hitung dengan ',
+                                  ),
                                   style: TextStyle(
                                     fontFamily: 'sans-serif',
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2E1A0C),
+                                    color: AppTheme.text(context),
                                   ),
                                   children: [
                                     TextSpan(
-                                      text: 'Cepat ',
+                                      text: AppStrings.text(context, 'Cepat '),
                                       style: TextStyle(
                                         fontFamily: 'sans-serif',
-                                        color: Color(0xFFD36A28),
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
                                       ),
                                     ),
-                                    TextSpan(text: 'dan '),
                                     TextSpan(
-                                      text: 'Akurat',
+                                      text: AppStrings.text(context, 'dan '),
+                                    ),
+                                    TextSpan(
+                                      text: AppStrings.text(context, 'Akurat'),
                                       style: TextStyle(
                                         fontFamily: 'sans-serif',
-                                        color: Color(0xFFD36A28),
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'ORVIX membantu perhitungan Emas Fisik, Pivot Point, dan NEST lebih mudah',
+                              Text(
+                                AppStrings.text(
+                                  context,
+                                  'ORVIX membantu perhitungan Emas Fisik, Pivot Point, dan NEST lebih mudah',
+                                ),
                                 style: TextStyle(
                                   fontFamily: 'sans-serif-medium',
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF6E5544),
+                                  color: AppTheme.mutedText(context),
                                 ),
                               ),
                             ],
@@ -516,264 +1421,10 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // HISTORICAL DATA HEADER & FILTER TANGGAL
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD36A28),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.info_outline,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Historical Data',
-                        style: TextStyle(
-                          fontFamily: 'sans-serif',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF211A17),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: ApiService.supportedCategories.map((
-                          category,
-                        ) {
-                          final selected = _selectedCategory == category;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () {
-                                if (selected) return;
-                                setState(() {
-                                  _selectedCategory = category;
-                                  _currentPage = 1;
-                                });
-                                _loadData();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? const Color(0xFFD36A28)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: selected
-                                        ? const Color(0xFFD36A28)
-                                        : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Text(
-                                  category,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: selected
-                                        ? Colors.white
-                                        : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Text(
-                        'Start  ',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Expanded(child: _buildDateField(true)),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'End  ',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Expanded(child: _buildDateField(false)),
-                    ],
-                  ),
-                  if (_dateRangeNotice != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _dateRangeNotice!,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF8A5A3B),
-                      ),
-                    ),
-                  ],
-
                   const SizedBox(height: 16),
-
-                  // TABEL DATA (Realtime API)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE8E0D8)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEAEAEA),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              _buildTableCell('Date', isHeader: true),
-                              _buildTableCell('Open', isHeader: true),
-                              _buildTableCell('High', isHeader: true),
-                              _buildTableCell('Low', isHeader: true),
-                              _buildTableCell('Close', isHeader: true),
-                            ],
-                          ),
-                        ),
-                        const Divider(),
-                        _isLoading
-                            ? const Padding(
-                                padding: EdgeInsets.all(20.0),
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFFD36A28),
-                                ),
-                              )
-                            : _loadError != null
-                            ? Padding(
-                                padding: const EdgeInsets.all(20.0),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      _loadError!,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: _loadData,
-                                      child: const Text('Coba lagi'),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : _paginatedData.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.all(20.0),
-                                child: Text(
-                                  'Tidak ada data pada rentang tanggal yang dipilih',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              )
-                            : Column(
-                                children: _paginatedData.map((data) {
-                                  return Column(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 7,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            _buildTableCell(
-                                              _formatDisplayDate(data.date),
-                                            ),
-                                            _buildTableCell(
-                                              _formatDisplayNumber(data.open),
-                                            ),
-                                            _buildTableCell(
-                                              _formatDisplayNumber(data.high),
-                                            ),
-                                            _buildTableCell(
-                                              _formatDisplayNumber(data.low),
-                                            ),
-                                            _buildTableCell(
-                                              _formatDisplayNumber(data.close),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Divider(
-                                        height: 1,
-                                        thickness: 1,
-                                        color: Colors.black.withValues(
-                                          alpha: 0.14,
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // PAGINASI TABEL
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildPageBtn('<<', onTap: () => _goToPage(1)),
-                      _buildPageBtn(
-                        '<',
-                        onTap: () => _goToPage(_currentPage - 1),
-                      ),
-                      for (int i = 1; i <= maxPagesToShow; i++)
-                        _buildPageBtn(
-                          '$i',
-                          isActive: _currentPage == i,
-                          onTap: () => _goToPage(i),
-                        ),
-                      _buildPageBtn(
-                        '>',
-                        onTap: () => _goToPage(_currentPage + 1),
-                      ),
-                      _buildPageBtn('>>', onTap: () => _goToPage(_totalPages)),
-                    ],
-                  ),
-
+                  _buildCompanyInfoCard(),
+                  const SizedBox(height: 22),
+                  _buildNewsSection(),
                   const SizedBox(height: 24),
 
                   // PERHITUNGAN TERAKHIR
@@ -795,23 +1446,24 @@ class _HomeViewState extends State<HomeView> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Perhitungan Terakhir',
+                          Text(
+                            AppStrings.text(context, 'Perhitungan Terakhir'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: AppTheme.text(context),
                             ),
                           ),
                         ],
                       ),
                       GestureDetector(
                         onTap: widget.onViewAllHistory,
-                        child: const Text(
-                          'Lihat Semua >',
+                        child: Text(
+                          AppStrings.text(context, 'Lihat Semua >'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFD36A28),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -826,12 +1478,17 @@ class _HomeViewState extends State<HomeView> {
                       }
                       final recent = (snapshot.data ?? []).take(4).toList();
                       if (recent.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
                           child: Center(
                             child: Text(
-                              'Belum ada perhitungan.',
-                              style: TextStyle(color: Colors.grey),
+                              AppStrings.text(
+                                context,
+                                'Belum ada perhitungan.',
+                              ),
+                              style: TextStyle(
+                                color: AppTheme.mutedText(context),
+                              ),
                             ),
                           ),
                         );
@@ -873,20 +1530,20 @@ class _HomeViewState extends State<HomeView> {
     return Expanded(
       child: Center(
         child: Text(
-          value,
+          AppStrings.text(context, value),
           textAlign: TextAlign.center,
           style: isHeader
-              ? const TextStyle(
+              ? TextStyle(
                   fontFamily: 'sans-serif',
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF211A17),
+                  color: AppTheme.text(context),
                 )
-              : const TextStyle(
+              : TextStyle(
                   fontFamily: 'sans-serif-medium',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF302A27),
+                  color: AppTheme.text(context),
                 ),
         ),
       ),
@@ -903,7 +1560,7 @@ class _HomeViewState extends State<HomeView> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey.shade300),
         ),
@@ -914,7 +1571,9 @@ class _HomeViewState extends State<HomeView> {
               text,
               style: TextStyle(
                 fontSize: 11,
-                color: date == null ? Colors.grey : Colors.black,
+                color: date == null
+                    ? AppTheme.mutedText(context)
+                    : AppTheme.text(context),
               ),
             ),
             const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
@@ -948,9 +1607,9 @@ class _HomeViewState extends State<HomeView> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE8E0D8)),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -960,21 +1619,27 @@ class _HomeViewState extends State<HomeView> {
                 children: [
                   Text(
                     history.jenisKalkulator,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFD36A28),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Hasil: ${history.hasil.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 12),
+                    '${AppStrings.text(context, 'Hasil: ')}${history.hasil.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.text(context),
+                    ),
                   ),
                 ],
               ),
               Text(
                 dateText,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.mutedText(context),
+                ),
               ),
             ],
           ),
@@ -1004,7 +1669,7 @@ class _HomeViewState extends State<HomeView> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isActive ? Colors.white : Colors.black87,
+              color: isActive ? Colors.white : AppTheme.text(context),
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -1013,21 +1678,5 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  String _monthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
+  String _monthName(int month) => AppStrings.monthName(month);
 }

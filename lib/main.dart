@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -11,10 +12,12 @@ import 'package:app_pt_ewf/Views/Onbording/splash_screen.dart';
 import 'package:app_pt_ewf/Views/Onbording/onboarding_screen.dart';
 import 'package:app_pt_ewf/Views/Auth/reset_password.dart';
 import 'package:app_pt_ewf/Services/auth_services.dart';
+import 'package:app_pt_ewf/Services/app_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID');
+  await AppPreferences.instance.load();
 
   // Inisialisasi Firebase dengan opsi platform
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -256,13 +259,75 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         onPointerDown: (_) => _recordActivity(),
         onPointerMove: (_) => _recordActivity(),
         onPointerSignal: (_) => _recordActivity(),
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Orvix App',
-          navigatorKey: _navigatorKey,
-          theme: ThemeData(useMaterial3: true),
-          home:
-              const SplashScreen(), // Memanggil SplashScreen sebagai halaman awal
+        child: AnimatedBuilder(
+          animation: AppPreferences.instance,
+          builder: (context, child) => MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Orvix App',
+            navigatorKey: _navigatorKey,
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFFE75D1C),
+                brightness: Brightness.light,
+                surface: const Color(0xFFFFF8F3),
+              ).copyWith(
+                onSurface: const Color(0xFF261D19),
+                surfaceContainer: const Color(0xFFFFF4EC),
+                outlineVariant: const Color(0xFFE8E0D8),
+              ),
+              scaffoldBackgroundColor: const Color(0xFFFFF8F3),
+              cardTheme: const CardThemeData(
+                color: Color(0xFFFFFFFF),
+                surfaceTintColor: Colors.transparent,
+              ),
+              dialogTheme: const DialogThemeData(
+                backgroundColor: Color(0xFFFFFFFF),
+                surfaceTintColor: Colors.transparent,
+              ),
+              inputDecorationTheme: const InputDecorationTheme(
+                filled: true,
+                fillColor: Color(0xFFFFFFFF),
+              ),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFFE75D1C),
+                brightness: Brightness.dark,
+                surface: const Color(0xFF11191B),
+              ).copyWith(
+                onSurface: const Color(0xFFE7ECEE),
+                surfaceContainer: const Color(0xFF172124),
+                surfaceContainerHigh: const Color(0xFF202B2E),
+                outlineVariant: const Color(0xFF354346),
+              ),
+              scaffoldBackgroundColor: const Color(0xFF0B1113),
+              cardTheme: const CardThemeData(
+                color: Color(0xFF172124),
+                surfaceTintColor: Colors.transparent,
+              ),
+              dialogTheme: const DialogThemeData(
+                backgroundColor: Color(0xFF172124),
+                surfaceTintColor: Colors.transparent,
+              ),
+              inputDecorationTheme: const InputDecorationTheme(
+                filled: true,
+                fillColor: Color(0xFF172124),
+              ),
+            ),
+            themeMode: AppPreferences.instance.themeMode,
+            locale: AppPreferences.instance.locale,
+            supportedLocales: const [Locale('id'), Locale('en')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home:
+                const SplashScreen(), // Memanggil SplashScreen sebagai halaman awal
+          ),
         ),
       ),
     );

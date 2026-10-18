@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
@@ -554,17 +556,19 @@ class _PivotPointViewState extends State<PivotPointView> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Hasil Pivot Point',
+                    Text(
+                      AppStrings.text(context, 'Hasil Pivot Point'),
                       style: TextStyle(
-                        color: Color(0xFF8B2500),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       _formatResultDate(),
-                      style: const TextStyle(
-                        color: Color(0xFF8B2500),
+                      style: TextStyle(
+                        color: AppTheme.mutedText(context),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -575,8 +579,9 @@ class _PivotPointViewState extends State<PivotPointView> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.border(context)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withValues(alpha: 0.1),
@@ -593,10 +598,13 @@ class _PivotPointViewState extends State<PivotPointView> {
                         child: Transform.translate(
                           offset: const Offset(18, 0),
                           child: Opacity(
-                            opacity: 0.50,
-                            child: Image.asset(
-                              'assets/ewf_logo.png',
-                              fit: BoxFit.contain,
+                            opacity: 0.5,
+                            child: Transform.scale(
+                              scale: 0.85,
+                              child: Image.asset(
+                                'assets/ewf_logo.png',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ),
@@ -617,10 +625,7 @@ class _PivotPointViewState extends State<PivotPointView> {
                         if (_historicalError != null)
                           Text(
                             _historicalError!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.red,
-                            ),
+                            style: TextStyle(fontSize: 10, color: Colors.red),
                           ),
                         _buildCategorySelector(),
                         const SizedBox(height: 12),
@@ -648,10 +653,10 @@ class _PivotPointViewState extends State<PivotPointView> {
                       margin: const EdgeInsets.only(top: 16),
                       padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8E5D6).withValues(alpha: 0.75),
+                        color: AppTheme.surfaceRaised(context),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: AppTheme.border(context),
                           width: 1.5,
                         ),
                         boxShadow: [
@@ -664,12 +669,16 @@ class _PivotPointViewState extends State<PivotPointView> {
                       ),
                       child: Column(
                         children: [
-                          const Text(
-                            'Hasil Pivot Point',
+                          Text(
+                            AppStrings.text(context, 'Hasil Pivot Point'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF6E2E1A),
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppTheme.text(context)
+                                  : Colors.black,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -680,7 +689,7 @@ class _PivotPointViewState extends State<PivotPointView> {
                               horizontal: 14,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: AppTheme.surface(context),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: const Color(0xFFE8833A),
@@ -692,19 +701,19 @@ class _PivotPointViewState extends State<PivotPointView> {
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF801B00),
+                                color: Color(0xFFD95B14),
                                 letterSpacing: 0.2,
                               ),
                               textAlign: TextAlign.center,
                             ),
                           ),
                           const SizedBox(height: 14),
-                          const Text(
-                            'Action',
+                          Text(
+                            AppStrings.text(context, 'Action'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF6E2E1A),
+                              color: AppTheme.text(context),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -741,9 +750,12 @@ class _PivotPointViewState extends State<PivotPointView> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            _indication == 'BUY'
-                                ? 'Open dibawah Pivot = BUY'
-                                : 'Open diatas Pivot = SELL',
+                            AppStrings.text(
+                              context,
+                              _indication == 'BUY'
+                                  ? 'Open dibawah Pivot = BUY'
+                                  : 'Open diatas Pivot = SELL',
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -816,13 +828,15 @@ class _PivotPointViewState extends State<PivotPointView> {
     return Row(
       children: [
         SizedBox(
-          width: 60,
+          width: 76,
           child: Text(
-            label,
-            style: const TextStyle(
+            AppStrings.text(context, label),
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppTheme.text(context),
             ),
+            maxLines: 1,
+            softWrap: false,
           ),
         ),
         const SizedBox(width: 10),
@@ -840,14 +854,14 @@ class _PivotPointViewState extends State<PivotPointView> {
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: AppTheme.surface(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF888888)),
+                  borderSide: BorderSide(color: AppTheme.border(context)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF888888)),
+                  borderSide: BorderSide(color: AppTheme.border(context)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -874,13 +888,13 @@ class _PivotPointViewState extends State<PivotPointView> {
   Widget _buildCategorySelector() {
     return Row(
       children: [
-        const SizedBox(
-          width: 60,
+        SizedBox(
+          width: 76,
           child: Text(
-            'Kategori',
+            AppStrings.text(context, 'Kategori'),
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppTheme.text(context),
             ),
           ),
         ),
@@ -895,11 +909,11 @@ class _PivotPointViewState extends State<PivotPointView> {
                 vertical: 10,
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppTheme.surface(context),
               constraints: const BoxConstraints.tightFor(height: 42),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF888888)),
+                borderSide: BorderSide(color: AppTheme.border(context)),
               ),
             ),
             items: const [

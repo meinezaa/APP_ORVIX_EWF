@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Home/beranda_admin.dart';
 import '../Auth/login.dart';
 import '../../Services/auth_services.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../Analitik/analisis_perhitungan.dart';
 import 'edit_profil_admin.dart';
 import 'ganti_password_admin.dart';
@@ -271,8 +273,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Transform.translate(
                 offset: const Offset(0, -20),
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8F6F2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.background(context),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
@@ -285,22 +287,29 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       const SizedBox(height: 12),
                       _buildStatCards(),
                       const SizedBox(height: 24),
-                      _buildSectionHeader('INFORMASI AKUN'),
+                      _buildSectionHeader(
+                        AppStrings.text(context, 'INFORMASI AKUN'),
+                      ),
                       const SizedBox(height: 8),
                       _buildAccountInfoSection(),
                       const SizedBox(height: 20),
-                      _buildSectionHeader('HAK AKSES & KEAMANAN'),
+                      _buildSectionHeader(
+                        AppStrings.text(context, 'HAK AKSES & KEAMANAN'),
+                      ),
                       const SizedBox(height: 8),
                       _buildSecuritySection(),
                       const SizedBox(height: 24),
                       _buildLogoutButton(),
                       const SizedBox(height: 16),
-                      const Center(
+                      Center(
                         child: Text(
-                          'ORVIX Management System © 2026',
+                          AppStrings.text(
+                            context,
+                            'ORVIX Management System © 2026',
+                          ),
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF9CA3AF),
+                            color: AppTheme.mutedText(context),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -330,12 +339,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 48, 20, 40),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF8A76D), Color(0xFFEE7E49)],
-        ),
+      decoration: BoxDecoration(
+        gradient: Theme.of(context).brightness == Brightness.dark
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF253034), Color(0xFF172124)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF8A76D), Color(0xFFEE7E49)],
+              ),
       ),
       child: Column(
         children: [
@@ -346,7 +361,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               const SizedBox(width: 36, height: 36),
               // Title Header
               Column(
-                children: const [
+                children: [
                   Text(
                     'SISTEM ORVIX',
                     style: TextStyle(
@@ -358,7 +373,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Profil Administrator',
+                    AppStrings.text(context, 'Profil Administrator'),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -497,7 +512,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -526,12 +541,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'STAFF DIAWASI',
+                      Text(
+                        AppStrings.text(context, 'STAFF DIAWASI'),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF6B7280),
+                          color: AppTheme.mutedText(context),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -543,11 +558,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E1E1E),
+                                color: AppTheme.text(context),
                               ),
                             ),
                             TextSpan(
-                              text: 'Aktif',
+                              text: AppStrings.text(context, 'Aktif'),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -571,7 +586,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -600,21 +615,21 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'BERGABUNG SEJAK',
+                      Text(
+                        AppStrings.text(context, 'BERGABUNG SEJAK'),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF6B7280),
+                          color: AppTheme.mutedText(context),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _joinedDateText(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E1E1E),
+                          color: AppTheme.text(context),
                         ),
                       ),
                     ],
@@ -632,10 +647,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget _buildSectionHeader(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF9CA3AF),
+        color: AppTheme.mutedText(context),
         letterSpacing: 0.5,
       ),
     );
@@ -645,7 +660,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget _buildAccountInfoSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -672,7 +687,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               if (updated == true) _loadAdminProfile();
             },
           ),
-          const Divider(height: 1, indent: 60, color: Color(0xFFF3F4F6)),
+          Divider(height: 1, indent: 60, color: AppTheme.border(context)),
           _buildMenuItem(
             icon: Icons.lock_outline_rounded,
             iconBg: const Color(0xFFFFF0EB),
@@ -694,7 +709,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget _buildSecuritySection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -720,15 +735,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             trailingBadge: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: AppTheme.surfaceRaised(context),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Text(
-                '1 Online',
+              child: Text(
+                '1 ${AppStrings.text(context, 'Online')}',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF4B5563),
+                  color: AppTheme.text(context),
                 ),
               ),
             ),
@@ -770,19 +785,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: const TextStyle(
+                    AppStrings.text(context, title),
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E1E1E),
+                      color: AppTheme.text(context),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    subtitle,
-                    style: const TextStyle(
+                    AppStrings.text(context, subtitle),
+                    style: TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF9CA3AF),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                 ],

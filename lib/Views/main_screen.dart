@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'Home/beranda.dart';
 import 'Kalkulator/emasfisik.dart';
-import 'Kalkulator/nest.dart';
 import 'History/histori.dart';
 import 'Profil/profil.dart';
 import 'Profil/notifikasi.dart';
+import '../Services/app_strings.dart';
+import '../Services/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -39,13 +40,10 @@ class _MainScreenState extends State<MainScreen> {
         onViewNotifications: _openNotifications,
         onViewProfile: () => _selectNavIndex(3),
       ),
-      if (widget.calculatorTab == 2)
-        const OrvixKalkulatorScreen(showBottomNavigation: false)
-      else
-        KalkulatorEmasFisikView(
-          initialTab: widget.calculatorTab,
-          showBottomNavigation: false,
-        ),
+      KalkulatorEmasFisikView(
+        initialTab: widget.calculatorTab,
+        showBottomNavigation: false,
+      ),
       const HistoryScreen(),
       const ProfileView(),
     ];
@@ -71,7 +69,7 @@ class _MainScreenState extends State<MainScreen> {
       'iconSelected': Icons.home_rounded,
     },
     {
-      'label': 'Calculate',
+      'label': 'Kalkulator',
       'iconUnselected': Icons.calculate_outlined,
       'iconSelected': Icons.calculate_rounded,
     },
@@ -155,7 +153,10 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _navItems[index]['label'],
+                                AppStrings.text(
+                                  context,
+                                  _navItems[index]['label'],
+                                ),
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -184,7 +185,7 @@ class _MainScreenState extends State<MainScreen> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.surface(context),
                         shape: BoxShape.circle,
                         border: Border.all(color: primaryOrange, width: 3),
                         boxShadow: [
@@ -203,7 +204,10 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _navItems[_selectedNavIndex]['label'],
+                      AppStrings.text(
+                        context,
+                        _navItems[_selectedNavIndex]['label'],
+                      ),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,

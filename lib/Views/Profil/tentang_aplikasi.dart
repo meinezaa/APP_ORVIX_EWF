@@ -1,29 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
+
 class TentangAplikasiView extends StatelessWidget {
   const TentangAplikasiView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7EDE6),
+      backgroundColor: AppTheme.background(context),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFE88A52),
-              Color(0xFFF0B184),
-              Color(0xFFF4CBAA),
-              Color(0xFFF9EEE7),
-              Color(0xFFF9EEE7),
-            ],
-            stops: [0.0, 0.22, 0.42, 0.72, 1.0],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
@@ -41,8 +31,8 @@ class TentangAplikasiView extends StatelessWidget {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface(context),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -57,8 +47,8 @@ class TentangAplikasiView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Tentang Aplikasi',
+                      Text(
+                        AppStrings.text(context, 'Tentang Aplikasi'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 23,
@@ -75,35 +65,43 @@ class TentangAplikasiView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeroCard(),
+                        _buildHeroCard(context),
                         const SizedBox(height: 18),
-                        _buildSectionTitle('Informasi Aplikasi'),
+                        _buildSectionTitle(context, 'Informasi Aplikasi'),
                         const SizedBox(height: 8),
                         _buildInfoRow(
+                          context,
                           'Nama Aplikasi',
                           'ORVIX',
                           Icons.info_rounded,
                         ),
                         _buildInfoRow(
+                          context,
                           'Platform',
                           'Android',
                           Icons.phone_android_rounded,
                         ),
                         _buildInfoRow(
+                          context,
                           'Bahasa',
-                          'Indonesia',
+                          Localizations.localeOf(context).languageCode == 'en'
+                              ? 'English'
+                              : 'Bahasa Indonesia',
                           Icons.language_rounded,
                         ),
                         const SizedBox(height: 20),
-                        _buildSectionTitle('Dikembangkan Oleh'),
+                        _buildSectionTitle(context, 'Dikembangkan Oleh'),
                         const SizedBox(height: 8),
-                        _buildDeveloperCard(),
+                        _buildDeveloperCard(context),
                         const SizedBox(height: 20),
-                        const Center(
+                        Center(
                           child: Text(
-                            '© 2026 ORVIX. Semua hak dilindungi',
+                            AppStrings.text(
+                              context,
+                              '© 2026 ORVIX. Semua hak dilindungi',
+                            ),
                             style: TextStyle(
-                              color: Color(0xFF6C5F5A),
+                              color: AppTheme.mutedText(context),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -121,7 +119,7 @@ class TentangAplikasiView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 285,
@@ -140,6 +138,10 @@ class TentangAplikasiView extends StatelessWidget {
               ),
             ),
           ),
+          if (Theme.of(context).brightness == Brightness.dark)
+            Positioned.fill(
+              child: Container(color: Colors.black.withValues(alpha: 0.45)),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             child: Column(
@@ -159,11 +161,14 @@ class TentangAplikasiView extends StatelessWidget {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'ORVIX adalah aplikasi yang membantu Anda memantau harga emas terkini, menghitung nilai emas, serta memudahkan transaksi dengan lebih cepat dan akurat.',
+                Text(
+                  AppStrings.text(
+                    context,
+                    'ORVIX adalah aplikasi yang membantu Anda memantau harga emas terkini, menghitung nilai emas, serta memudahkan transaksi dengan lebih cepat dan akurat.',
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Color(0xFF2E2A28),
+                    color: AppTheme.text(context),
                     fontSize: 12.5,
                     height: 1.3,
                     fontWeight: FontWeight.w500,
@@ -177,25 +182,31 @@ class TentangAplikasiView extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
-      title,
-      style: const TextStyle(
-        color: Color(0xFF2E2A28),
+      AppStrings.text(context, title),
+      style: TextStyle(
+        color: AppTheme.text(context),
         fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         children: [
@@ -211,9 +222,9 @@ class TentangAplikasiView extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF2B2B2B),
+              AppStrings.text(context, label),
+              style: TextStyle(
+                color: AppTheme.text(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -221,9 +232,9 @@ class TentangAplikasiView extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF2B2B2B),
+            AppStrings.text(context, value),
+            style: TextStyle(
+              color: AppTheme.text(context),
               fontSize: 15,
               fontWeight: FontWeight.w400,
             ),
@@ -233,13 +244,14 @@ class TentangAplikasiView extends StatelessWidget {
     );
   }
 
-  Widget _buildDeveloperCard() {
+  Widget _buildDeveloperCard(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         children: [
@@ -255,20 +267,22 @@ class TentangAplikasiView extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: RichText(
-              text: const TextSpan(
+              text: TextSpan(
                 style: TextStyle(
-                  color: Color(0xFF2B2B2B),
+                  color: AppTheme.text(context),
                   fontSize: 13,
                   height: 1.45,
                 ),
                 children: [
                   TextSpan(
-                    text: 'Tim ORVIX\n',
+                    text: '${AppStrings.text(context, 'Tim ORVIX')}\n',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   TextSpan(
-                    text:
-                        'Kami berkomitmen untuk memberikan pengalaman terbaik dalam setiap fitur.',
+                    text: AppStrings.text(
+                      context,
+                      'Kami berkomitmen untuk memberikan pengalaman terbaik dalam setiap fitur.',
+                    ),
                   ),
                 ],
               ),
@@ -278,5 +292,4 @@ class TentangAplikasiView extends StatelessWidget {
       ),
     );
   }
-
 }

@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:app_pt_ewf/Views/Kalkulator/detail_emasfisik.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
 import '../main_screen.dart';
 import 'pivotpoin.dart';
+import 'nest.dart';
 
 class KalkulatorEmasFisikView extends StatefulWidget {
   final int initialTab;
@@ -209,14 +212,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFEA8648), Color(0xFFFDF7F2)],
-            stops: [0.0, 0.6],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -243,8 +239,8 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       },
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Kalkulator',
+                    Text(
+                      AppStrings.text(context, 'Kalkulator'),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -260,8 +256,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface(context),
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: AppTheme.border(context)),
                   ),
                   child: Row(
                     children: [
@@ -278,7 +275,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                             ),
                             child: Center(
                               child: Text(
-                                'Emas Fisik',
+                                AppStrings.text(context, 'Emas Fisik'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -304,7 +301,7 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                             ),
                             child: Center(
                               child: Text(
-                                'Pivot Point',
+                                AppStrings.text(context, 'Pivot Point'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -319,33 +316,26 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       ),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).pushReplacement(
-                            PageRouteBuilder<void>(
-                              transitionDuration: Duration.zero,
-                              reverseTransitionDuration: Duration.zero,
-                              pageBuilder:
-                                  (context, animation, secondaryAnimation) =>
-                                      const MainScreen(
-                                        initialIndex: 1,
-                                        calculatorTab: 2,
-                                      ),
-                            ),
-                          ),
+                          onTap: () => setState(() => _selectedTab = 2),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: const BoxDecoration(
-                              color: Colors.transparent,
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 2
+                                  ? primaryOrange
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.all(
                                 Radius.circular(25),
                               ),
                             ),
                             child: Center(
                               child: Text(
-                                'Nest',
+                                AppStrings.text(context, 'Nest'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
-                                  color: primaryOrange,
+                                  color: _selectedTab == 2
+                                      ? Colors.white
+                                      : primaryOrange,
                                 ),
                               ),
                             ),
@@ -360,13 +350,19 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
 
                 if (_selectedTab == 1)
                   const PivotPointView()
+                else if (_selectedTab == 2)
+                  const OrvixKalkulatorScreen(
+                    embedded: true,
+                    showBottomNavigation: false,
+                  )
                 else ...[
                   // FORM INPUT CARD
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.surface(context),
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppTheme.border(context)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.06),
@@ -379,11 +375,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                       children: [
                         Row(
                           children: [
-                            const Text(
+                            Text(
                               'ToZ',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF555555),
+                                color: AppTheme.mutedText(context),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -445,9 +441,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Hitung',
-                                    style: TextStyle(
+                                  child: Text(
+                                    AppStrings.text(context, 'Hitung'),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
                                       color: Colors.white,
@@ -471,8 +467,8 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Reset',
+                                  child: Text(
+                                    AppStrings.text(context, 'Reset'),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
@@ -499,8 +495,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppTheme.surface(context),
                           borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppTheme.border(context)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.06),
@@ -528,14 +525,14 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF666666),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.border(context),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF666666),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.border(context),
                                     ),
                                   ),
                                 ),
@@ -553,12 +550,17 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                   color: primaryOrange,
                                   size: 24,
                                 ),
-                                label: const Text(
-                                  'Detail Perhitungan',
+                                label: Text(
+                                  AppStrings.text(
+                                    context,
+                                    'Detail Perhitungan',
+                                  ),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: primaryOrange,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
@@ -594,9 +596,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                               ),
                             ],
                           ),
-                          child: const Text(
-                            'Hasil Perhitungan',
-                            style: TextStyle(
+                          child: Text(
+                            AppStrings.text(context, 'Hasil Perhitungan'),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               fontSize: 14,
@@ -715,10 +717,10 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         SizedBox(
           width: 90,
           child: Text(
-            label,
-            style: const TextStyle(
+            AppStrings.text(context, label),
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Color(0xFF555555),
+              color: AppTheme.mutedText(context),
               fontSize: 13,
             ),
           ),
@@ -746,7 +748,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         textAlign: textAlign,
         keyboardType: TextInputType.number,
         inputFormatters: inputFormatters,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 10,
@@ -767,11 +773,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
               : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF888888)),
+            borderSide: BorderSide(color: AppTheme.border(context)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF888888)),
+            borderSide: BorderSide(color: AppTheme.border(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),

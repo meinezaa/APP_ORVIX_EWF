@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../Models/historikalkulator_model.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 
 class DetailHistoryScreen extends StatelessWidget {
   final HistoryModel history;
@@ -13,17 +16,11 @@ class DetailHistoryScreen extends StatelessWidget {
     final isPivot = history.jenisKalkulator.toLowerCase().contains('pivot');
     final isNest = history.jenisKalkulator.toLowerCase().contains('nest');
     return Scaffold(
+      backgroundColor: AppTheme.background(context),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFEA8648), Color(0xFFFDF7F2)],
-            stops: [0.0, 0.6],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -38,7 +35,7 @@ class DetailHistoryScreen extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppTheme.surface(context),
                         shape: const CircleBorder(),
                       ),
                       icon: const Icon(
@@ -48,11 +45,12 @@ class DetailHistoryScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      'Detail History',
+                    Text(
+                      AppStrings.text(context, 'Detail History'),
                       style: TextStyle(
                         fontSize: 23,
                         fontWeight: FontWeight.w700,
+                        color: AppTheme.text(context),
                       ),
                     ),
                   ],
@@ -61,8 +59,8 @@ class DetailHistoryScreen extends StatelessWidget {
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF9FAFC),
+                  decoration: BoxDecoration(
+                    color: AppTheme.background(context),
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(32),
                     ),
@@ -72,49 +70,60 @@ class DetailHistoryScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildMetaCard(),
+                        _buildMetaCard(context),
                         const SizedBox(height: 20),
-                        const Text(
-                          'Hasil Perhitungan',
+                        Text(
+                          AppStrings.text(context, 'Hasil Perhitungan'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
                           ),
                         ),
                         const SizedBox(height: 10),
-                        _buildResultCard(),
+                        _buildResultCard(context),
                         const SizedBox(height: 20),
                         Text(
-                          isPivot || isNest ? 'Data Harga' : 'Data Emas Fisik',
-                          style: const TextStyle(
+                          AppStrings.text(
+                            context,
+                            isPivot || isNest
+                                ? 'Data Harga'
+                                : 'Data Emas Fisik',
+                          ),
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
                           ),
                         ),
                         const SizedBox(height: 10),
                         isPivot
-                            ? _buildPriceCard()
+                            ? _buildPriceCard(context)
                             : isNest
-                            ? _buildNestPriceCard()
-                            : _buildGoldPriceCard(),
+                            ? _buildNestPriceCard(context)
+                            : _buildGoldPriceCard(context),
                         const SizedBox(height: 20),
                         Text(
-                          isPivot
-                              ? 'Detail Pivot Point'
-                              : isNest
-                              ? 'Detail NEST'
-                              : 'Detail Emas Fisik',
-                          style: const TextStyle(
+                          AppStrings.text(
+                            context,
+                            isPivot
+                                ? 'Detail Pivot Point'
+                                : isNest
+                                ? 'Detail NEST'
+                                : 'Detail Emas Fisik',
+                          ),
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
                           ),
                         ),
                         const SizedBox(height: 10),
                         isPivot
-                            ? _buildTypeCard(isPivot)
+                            ? _buildTypeCard(context, isPivot)
                             : isNest
-                            ? _buildTypeCard(isPivot, isNest: true)
-                            : _buildGoldFormulaCard(),
+                            ? _buildTypeCard(context, isPivot, isNest: true)
+                            : _buildGoldFormulaCard(context),
                       ],
                     ),
                   ),
@@ -127,8 +136,9 @@ class DetailHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMetaCard() {
+  Widget _buildMetaCard(BuildContext context) {
     return _card(
+      context,
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -141,26 +151,30 @@ class DetailHistoryScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text('ID Histori: ${history.id}', style: _secondaryStyle),
+          Text(
+            '${AppStrings.text(context, 'ID Histori')}: ${history.id}',
+            style: _secondaryStyle(context),
+          ),
           const SizedBox(height: 4),
-          Text(_formatDate(history.createdAt), style: _secondaryStyle),
+          Text(_formatDate(history.createdAt), style: _secondaryStyle(context)),
         ],
       ),
     );
   }
 
-  Widget _buildResultCard() {
+  Widget _buildResultCard(BuildContext context) {
     return _card(
+      context,
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Hasil akhir',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+          Text(
+            AppStrings.text(context, 'Hasil akhir'),
+            style: TextStyle(fontSize: 14, color: AppTheme.mutedText(context)),
           ),
           Text(
             _formatWholeNumber(history.hasil),
-            style: const TextStyle(
+            style: TextStyle(
               color: primaryOrange,
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -171,105 +185,133 @@ class DetailHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeCard(bool isPivot, {bool isNest = false}) {
+  Widget _buildTypeCard(
+    BuildContext context,
+    bool isPivot, {
+    bool isNest = false,
+  }) {
     return _card(
+      context,
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoRow(
-            'Jenis proses',
+            context,
+            AppStrings.text(context, 'Jenis proses'),
             isPivot
-                ? 'Perhitungan Pivot Point'
+                ? AppStrings.text(context, 'Perhitungan Pivot Point')
                 : isNest
-                ? 'Perhitungan NEST'
-                : 'Perhitungan Emas Fisik',
+                ? AppStrings.text(context, 'Perhitungan NEST')
+                : AppStrings.text(context, 'Perhitungan Emas Fisik'),
           ),
           if (isPivot && history.kategori != null) ...[
             const Divider(height: 20),
-            _buildInfoRow('Kategori', history.kategori!.toUpperCase()),
+            _buildInfoRow(
+              context,
+              AppStrings.text(context, 'Kategori'),
+              history.kategori!.toUpperCase(),
+            ),
           ],
           const Divider(height: 20),
-          _buildInfoRow('Status', 'Selesai'),
+          _buildInfoRow(
+            context,
+            AppStrings.text(context, 'Status'),
+            AppStrings.text(context, 'Selesai'),
+          ),
           const SizedBox(height: 12),
-          const Text(
-            'Input rinci tersimpan pada histori akan ditampilkan di bagian ini.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+          Text(
+            AppStrings.text(
+              context,
+              'Input rinci tersimpan pada histori akan ditampilkan di bagian ini.',
+            ),
+            style: TextStyle(fontSize: 12, color: AppTheme.mutedText(context)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPriceCard() {
+  Widget _buildPriceCard(BuildContext context) {
     return _card(
+      context,
       Column(
         children: [
-          _buildInfoRow('Open', _formatPrice(history.open)),
+          _buildInfoRow(context, 'Open', _formatPrice(history.open)),
           const Divider(height: 20),
-          _buildInfoRow('High', _formatPrice(history.high)),
+          _buildInfoRow(context, 'High', _formatPrice(history.high)),
           const Divider(height: 20),
-          _buildInfoRow('Low', _formatPrice(history.low)),
+          _buildInfoRow(context, 'Low', _formatPrice(history.low)),
           const Divider(height: 20),
-          _buildInfoRow('Close', _formatPrice(history.close)),
+          _buildInfoRow(context, 'Close', _formatPrice(history.close)),
           const Divider(height: 20),
-          _buildInfoRow('Indikasi', history.indikasi ?? '-'),
+          _buildInfoRow(context, 'Indikasi', history.indikasi ?? '-'),
         ],
       ),
     );
   }
 
-  Widget _buildNestPriceCard() {
+  Widget _buildNestPriceCard(BuildContext context) {
     return _card(
+      context,
       Column(
         children: [
-          _buildInfoRow('Open', _formatPrice(history.open)),
+          _buildInfoRow(context, 'Open', _formatPrice(history.open)),
           const Divider(height: 20),
-          _buildInfoRow('Close', _formatPrice(history.close)),
+          _buildInfoRow(context, 'Close', _formatPrice(history.close)),
           const Divider(height: 20),
-          _buildInfoRow('Action', history.indikasi ?? '-'),
+          _buildInfoRow(context, 'Action', history.indikasi ?? '-'),
         ],
       ),
     );
   }
 
-  Widget _buildGoldPriceCard() {
+  Widget _buildGoldPriceCard(BuildContext context) {
     return _card(
+      context,
       Column(
         children: [
-          _buildInfoRow('Modal', _formatPrice(history.modal)),
+          _buildInfoRow(context, 'Modal', _formatPrice(history.modal)),
           const Divider(height: 20),
-          _buildInfoRow('Harga Beli', _formatPrice(history.hargaBeli)),
+          _buildInfoRow(context, 'Harga Beli', _formatPrice(history.hargaBeli)),
           const Divider(height: 20),
-          _buildInfoRow('Harga Jual', _formatPrice(history.hargaJual)),
+          _buildInfoRow(context, 'Harga Jual', _formatPrice(history.hargaJual)),
         ],
       ),
     );
   }
 
-  Widget _buildGoldFormulaCard() {
+  Widget _buildGoldFormulaCard(BuildContext context) {
     return _card(
+      context,
       Column(
         children: [
-          _buildInfoRow('ToZ', _formatPrice(history.toz)),
+          _buildInfoRow(context, 'ToZ', _formatPrice(history.toz)),
           const Divider(height: 20),
-          _buildInfoRow('Kurs', _formatWholeNumber(history.kurs)),
+          _buildInfoRow(context, 'Kurs', _formatWholeNumber(history.kurs)),
           const Divider(height: 20),
           _buildInfoRow(
+            context,
             'Harga beli / gram',
             _formatPrice(history.hargaBeliPerGram),
           ),
           const Divider(height: 20),
           _buildInfoRow(
+            context,
             'Harga jual / gram',
             _formatPrice(history.hargaJualPerGram),
           ),
           const Divider(height: 20),
           _buildInfoRow(
+            context,
             'Selisih / gram (2 - 1)',
             _formatPrice(history.selisihPerGram),
           ),
           const Divider(height: 20),
-          _buildInfoRow('Jumlah emas', _formatPrice(history.jumlahEmas)),
+          _buildInfoRow(
+            context,
+            'Jumlah emas',
+            _formatPrice(history.jumlahEmas),
+          ),
         ],
       ),
     );
@@ -296,14 +338,14 @@ class DetailHistoryScreen extends StatelessWidget {
     return '$integer,${fixed[1]}';
   }
 
-  Widget _card(Widget child) {
+  Widget _card(BuildContext context, Widget child) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppTheme.border(context)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -316,12 +358,18 @@ class DetailHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: _secondaryStyle),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(AppStrings.text(context, label), style: _secondaryStyle(context)),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.text(context),
+          ),
+        ),
       ],
     );
   }
@@ -344,8 +392,6 @@ class DetailHistoryScreen extends StatelessWidget {
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
 
-  static const TextStyle _secondaryStyle = TextStyle(
-    fontSize: 12,
-    color: Colors.grey,
-  );
+  TextStyle _secondaryStyle(BuildContext context) =>
+      TextStyle(fontSize: 12, color: AppTheme.mutedText(context));
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
+
 class GantiPasswordView extends StatefulWidget {
   const GantiPasswordView({super.key});
 
@@ -152,14 +155,18 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
   void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(AppStrings.text(context, message)),
         backgroundColor: isError ? Colors.red : Colors.green,
         duration: const Duration(seconds: 3),
       ),
     );
   }
 
-  Widget _buildPasswordRequirementItem(bool isMet, String text) {
+  Widget _buildPasswordRequirementItem(
+    BuildContext context,
+    bool isMet,
+    String text,
+  ) {
     return Row(
       children: [
         Container(
@@ -179,10 +186,10 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
         ),
         const SizedBox(width: 12),
         Text(
-          text,
+          AppStrings.text(context, text),
           style: TextStyle(
             fontSize: 14,
-            color: isMet ? Colors.black87 : Colors.grey.shade600,
+            color: isMet ? AppTheme.text(context) : AppTheme.mutedText(context),
           ),
         ),
       ],
@@ -190,6 +197,7 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
   }
 
   Widget _buildPasswordField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required bool obscure,
@@ -201,14 +209,17 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
       enabled: isEnabled,
       obscureText: obscure,
       decoration: InputDecoration(
-        labelText: label,
+        filled: true,
+        fillColor: AppTheme.surface(context),
+        labelText: AppStrings.text(context, label),
+        labelStyle: TextStyle(color: AppTheme.mutedText(context)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.grey),
+          borderSide: BorderSide(color: AppTheme.border(context)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppTheme.border(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -236,11 +247,11 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        title: const Text(
-          'Ganti Password',
-          style: TextStyle(
+        title: Text(
+          AppStrings.text(context, 'Ganti Password'),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 23,
             fontWeight: FontWeight.w700,
@@ -249,7 +260,9 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
         centerTitle: false,
         titleSpacing: 8,
         elevation: 0,
-        backgroundColor: const Color(0xFFE07856),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF253034)
+            : const Color(0xFFE07856),
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
@@ -273,13 +286,23 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFE07856), Color(0xFFF8C9A9), Color(0xFFFFF8F3)],
-            stops: [0.0, 0.4, 0.8],
-          ),
+        decoration: BoxDecoration(
+          gradient: Theme.of(context).brightness == Brightness.dark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF253034), Color(0xFF0B1113)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFE07856),
+                    Color(0xFFF3B184),
+                    Color(0xFFFFF8F3),
+                  ],
+                  stops: [0.0, 0.48, 1.0],
+                ),
         ),
         child: Column(
           children: [
@@ -292,7 +315,8 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.surface(context),
+                      border: Border.all(color: AppTheme.border(context)),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -312,29 +336,33 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFF4E6),
+                              color: AppTheme.surfaceRaised(context),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
-                              'Silakan masukkan password lama Anda dan buat password baru yang lebih aman.',
+                            child: Text(
+                              AppStrings.text(
+                                context,
+                                'Silakan masukkan password lama Anda dan buat password baru yang lebih aman.',
+                              ),
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.black87,
+                                color: AppTheme.text(context),
                               ),
                             ),
                           ),
                           const SizedBox(height: 28),
                           // Old Password Field
-                          const Text(
-                            'Password Lama',
+                          Text(
+                            AppStrings.text(context, 'Password Lama'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                              color: AppTheme.text(context),
                             ),
                           ),
                           const SizedBox(height: 8),
                           _buildPasswordField(
+                            context: context,
                             controller: _oldPasswordController,
                             label: 'Masukkan password lama',
                             obscure: _obscureOldPassword,
@@ -347,16 +375,17 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                           ),
                           const SizedBox(height: 24),
                           // New Password Field
-                          const Text(
-                            'Password Baru',
+                          Text(
+                            AppStrings.text(context, 'Password Baru'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                              color: AppTheme.text(context),
                             ),
                           ),
                           const SizedBox(height: 8),
                           _buildPasswordField(
+                            context: context,
                             controller: _newPasswordController,
                             label: 'Masukkan password baru',
                             obscure: _obscureNewPassword,
@@ -369,16 +398,20 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                           ),
                           const SizedBox(height: 24),
                           // Confirm Password Field
-                          const Text(
-                            'Konfirmasi Password Baru',
+                          Text(
+                            AppStrings.text(
+                              context,
+                              'Konfirmasi Password Baru',
+                            ),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                              color: AppTheme.text(context),
                             ),
                           ),
                           const SizedBox(height: 8),
                           _buildPasswordField(
+                            context: context,
                             controller: _confirmPasswordController,
                             label: 'Ulangi password baru',
                             obscure: _obscureConfirmPassword,
@@ -392,31 +425,35 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                           ),
                           const SizedBox(height: 28),
                           // Password Requirements
-                          const Text(
-                            'Persyaratan Password',
+                          Text(
+                            AppStrings.text(context, 'Persyaratan Password'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                              color: AppTheme.text(context),
                             ),
                           ),
                           const SizedBox(height: 16),
                           _buildPasswordRequirementItem(
+                            context,
                             _hasUppercase,
                             'Memperbolehkan huruf besar (A-Z)',
                           ),
                           const SizedBox(height: 12),
                           _buildPasswordRequirementItem(
+                            context,
                             _hasLowercase,
                             'Memperbolehkan huruf kecil (a-z)',
                           ),
                           const SizedBox(height: 12),
                           _buildPasswordRequirementItem(
+                            context,
                             _hasNumber,
                             'Memperbolehkan angka (0-9)',
                           ),
                           const SizedBox(height: 12),
                           _buildPasswordRequirementItem(
+                            context,
                             _hasSpecialChar,
                             'Memperbolehkan simbol atau tanda baca',
                           ),
@@ -448,9 +485,9 @@ class _GantiPasswordViewState extends State<GantiPasswordView> {
                                             ),
                                       ),
                                     )
-                                  : const Text(
-                                      'Simpan',
-                                      style: TextStyle(
+                                  : Text(
+                                      AppStrings.text(context, 'Simpan'),
+                                      style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,

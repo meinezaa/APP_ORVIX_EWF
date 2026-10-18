@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../Models/historikalkulator_model.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
+import '../Home/beranda.dart';
 import 'detail_histori.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -12,13 +15,20 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   static const Color primaryOrange = Color(0xFFDC6B38);
-  static const Color cardBgColor = Color(0xFFEFEFEF);
-  static const Color cardBorderColor = Color(0xFFCCCCCC);
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   String _selectedCalculator = 'Semua Kalkulator';
   final Set<String> _selectedHistoryIds = {};
   bool _isDeleting = false;
   bool _isSelectionMode = false;
+  final GlobalKey<HomeViewState> _historicalDataKey =
+      GlobalKey<HomeViewState>();
+
+  Future<void> _refreshHistoricalData() async {
+    final historicalDataState = _historicalDataKey.currentState;
+    if (historicalDataState != null) {
+      await historicalDataState.refreshHistoricalData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +36,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFEA8648), Color(0xFFFDF7F2)],
-            stops: [0.0, 0.6],
-          ),
+        decoration: BoxDecoration(
+          gradient: AppTheme.pageGradient(context),
         ),
         child: SafeArea(
           bottom: false,
@@ -46,7 +51,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Image.asset('assets/text_logo.png', width: 92),
                     const SizedBox(width: 8),
                     Text(
-                      'History',
+                      AppStrings.text(context, 'History'),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 23,
@@ -59,8 +64,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: AppTheme.background(context),
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(32),
                     ),
@@ -74,8 +79,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       initialData: const <HistoryModel>[],
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
-                          return const Center(
-                            child: Text('Histori belum dapat dimuat.'),
+                          return Center(
+                            child: Text(
+                              AppStrings.text(context, 'Histori belum dapat dimuat.'),
+                            ),
                           );
                         }
 
@@ -84,37 +91,53 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           allHistory,
                         );
                         final filteredHistory = _filterHistory(history);
-                        return ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
-                          children: [
-                            _buildFilters(),
-                            const SizedBox(height: 12),
-                            _buildSelectionToolbar(filteredHistory, allHistory),
-                            const SizedBox(height: 8),
-                            if (filteredHistory.isEmpty)
-                              Padding(
-                                padding: EdgeInsets.symmetric(vertical: 48),
-                                child: Center(
-                                  child: Text(
-                                    DateUtils.isSameDay(
-                                          _selectedDate,
-                                          DateTime.now(),
-                                        )
-                                        ? 'Hari ini tidak ada perhitungan.'
-                                        : 'Tidak ada perhitungan pada ${_formatDate(_selectedDate)}.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 14,
+                        return RefreshIndicator(
+                          onRefresh: _refreshHistoricalData,
+                          child: ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                            children: [
+                              HomeView(
+                                key: _historicalDataKey,
+                                historicalDataOnly: true,
+                              ),
+                              const SizedBox(height: 24),
+                              _buildFilters(),
+                              const SizedBox(height: 12),
+                              _buildSelectionToolbar(
+                                filteredHistory,
+                                allHistory,
+                              ),
+                              const SizedBox(height: 8),
+                              if (filteredHistory.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 48,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      DateUtils.isSameDay(
+                                            _selectedDate,
+                                            DateTime.now(),
+                                          )
+                                          ? AppStrings.text(context,
+                                              'Hari ini tidak ada perhitungan.',
+                                            )
+                                          : '${AppStrings.text(context, 'Tidak ada perhitungan pada')} ${_formatDate(_selectedDate)}.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: AppTheme.mutedText(context),
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
+                                )
+                              else
+                                ...filteredHistory.map(
+                                  (item) => _buildHistoryCard(item, allHistory),
                                 ),
-                              )
-                            else
-                              ...filteredHistory.map(
-                                (item) => _buildHistoryCard(item, allHistory),
-                              ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -144,9 +167,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4EC),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF30251F)
+            : const Color(0xFFFFF0E4),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0C5A8)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
         children: [
@@ -157,9 +182,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_month_outlined,
-                    color: primaryOrange,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
@@ -168,14 +193,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isToday ? 'Perhitungan Hari Ini' : 'Pilih Tanggal',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          AppStrings.text(context,
+                            isToday ? 'Perhitungan Hari Ini' : 'Pilih Tanggal',
+                          ),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
+                          ),
                         ),
                         Text(
                           _formatDate(_selectedDate),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black54,
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ],
@@ -193,20 +223,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
           const Divider(height: 1),
           _buildDropdownRow(
             icon: Icons.calculate_outlined,
-            label: 'Jenis',
+            label: AppStrings.text(context, 'Jenis'),
             value: _selectedCalculator,
             hint: 'Semua Kalkulator',
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: 'Semua Kalkulator',
-                child: Text('Semua Kalkulator'),
+                child: Text(AppStrings.text(context, 'Semua Kalkulator')),
               ),
               DropdownMenuItem(
                 value: 'Pivot Point',
-                child: Text('Pivot Point'),
+                child: Text(AppStrings.text(context, 'Pivot Point')),
               ),
-              DropdownMenuItem(value: 'Emas Fisik', child: Text('Emas Fisik')),
-              DropdownMenuItem(value: 'NEST', child: Text('NEST')),
+              DropdownMenuItem(
+                value: 'Emas Fisik',
+                child: Text(AppStrings.text(context, 'Emas Fisik')),
+              ),
+              DropdownMenuItem(
+                value: 'NEST',
+                child: Text(AppStrings.text(context, 'NEST')),
+              ),
             ],
             onChanged: (value) {
               if (value != null) {
@@ -264,12 +300,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
             allVisibleSelected ? Icons.deselect : Icons.select_all,
             size: 19,
           ),
-          label: Text(allVisibleSelected ? 'Batalkan' : 'Pilih semua'),
+          label: Text(
+            AppStrings.text(context, allVisibleSelected ? 'Batalkan' : 'Pilih semua'),
+          ),
           style: TextButton.styleFrom(foregroundColor: primaryOrange),
         ),
         const Spacer(),
         if (_selectedHistoryIds.isNotEmpty) ...[
-          Text('${_selectedHistoryIds.length} dipilih'),
+          Text(AppStrings.selectedCount(_selectedHistoryIds.length)),
           IconButton(
             tooltip: 'Hapus riwayat terpilih',
             onPressed: _deleteSelectedHistory,
@@ -313,18 +351,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus riwayat?'),
+        title: Text(AppStrings.text(context, 'Hapus riwayat?')),
         content: Text(
-          'Hapus ${_selectedHistoryIds.length} riwayat perhitungan terpilih?',
+          AppStrings.deleteSelectedCount(_selectedHistoryIds.length),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(AppStrings.text(context, 'Batal')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
+            child: Text(AppStrings.text(context, 'Hapus')),
           ),
         ],
       ),
@@ -340,13 +378,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isSelectionMode = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Riwayat berhasil dihapus.')),
+        SnackBar(content: Text(AppStrings.text(context, 'Riwayat berhasil dihapus.'))),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Riwayat gagal dihapus.')));
+      ).showSnackBar(
+        SnackBar(content: Text(AppStrings.text(context, 'Riwayat gagal dihapus.'))),
+      );
     } finally {
       _isDeleting = false;
     }
@@ -364,14 +404,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
       children: [
         Icon(icon, color: primaryOrange, size: 20),
         const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.text(context),
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String?>(
               value: value,
               isExpanded: true,
-              hint: Text(hint),
+              hint: Text(AppStrings.text(context, hint)),
               items: items,
               onChanged: onChanged,
             ),
@@ -416,12 +462,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFFE2D1) : cardBgColor,
+            color: isSelected
+                ? Theme.of(context).colorScheme.secondaryContainer
+                : AppTheme.surface(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cardBorderColor, width: 1.2),
+            border: Border.all(color: AppTheme.border(context), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -449,23 +497,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ],
                   Text(
                     history.jenisKalkulator,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: primaryOrange,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     dateText,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.mutedText(context),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               Text(
                 'Hasil: ${history.hasil.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.text(context),
+                ),
               ),
             ],
           ),
@@ -474,21 +528,5 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  String _monthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
+  String _monthName(int month) => AppStrings.monthName(month);
 }

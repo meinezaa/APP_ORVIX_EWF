@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../main_screen.dart';
 import '../Home/beranda_admin.dart';
 import '../../Models/users_model.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/auth_services.dart';
 import 'register.dart';
 import 'forgot_password.dart';
@@ -208,7 +210,7 @@ class _LoginViewState extends State<LoginView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF8F5),
+      backgroundColor: AppTheme.background(context),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -241,25 +243,25 @@ class _LoginViewState extends State<LoginView>
                 const SizedBox(height: 24),
 
                 // 2. JUDUL Halaman
-                const Text(
-                  'Masuk',
+                Text(
+                  AppStrings.text(context, 'Masuk'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E1A0C),
+                    color: AppTheme.text(context),
                   ),
                 ),
 
                 const SizedBox(height: 32),
 
                 // 3. FIELD EMAIL
-                const Text(
-                  'Email',
+                Text(
+                  AppStrings.text(context, 'Email'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2E1A0C),
+                    color: AppTheme.text(context),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -269,19 +271,19 @@ class _LoginViewState extends State<LoginView>
                   enabled: !_isLoading,
                   decoration: InputDecoration(
                     hintText: 'contoh@email.com',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFFA09891),
+                    hintStyle: TextStyle(
+                      color: AppTheme.mutedText(context),
                       fontSize: 14,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppTheme.surface(context),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 16,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE8E0D8)),
+                      borderSide: BorderSide(color: AppTheme.border(context)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -296,12 +298,12 @@ class _LoginViewState extends State<LoginView>
                 const SizedBox(height: 20),
 
                 // 4. FIELD PASSWORD
-                const Text(
-                  'Password',
+                Text(
+                  AppStrings.text(context, 'Password'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2E1A0C),
+                    color: AppTheme.text(context),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -311,19 +313,19 @@ class _LoginViewState extends State<LoginView>
                   enabled: !_isLoading,
                   decoration: InputDecoration(
                     hintText: 'Masukkan kata sandi',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFFA09891),
+                    hintStyle: TextStyle(
+                      color: AppTheme.mutedText(context),
                       fontSize: 14,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppTheme.surface(context),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 16,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE8E0D8)),
+                      borderSide: BorderSide(color: AppTheme.border(context)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -337,7 +339,7 @@ class _LoginViewState extends State<LoginView>
                         _obscurePassword
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        color: const Color(0xFF7A6E65),
+                        color: AppTheme.mutedText(context),
                       ),
                       onPressed: () {
                         setState(() {
@@ -356,8 +358,8 @@ class _LoginViewState extends State<LoginView>
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: _onLupaPasswordPressed,
-                    child: const Text(
-                      'Lupa Password?',
+                    child: Text(
+                      AppStrings.text(context, 'Lupa Password?'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -392,8 +394,8 @@ class _LoginViewState extends State<LoginView>
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          'Masuk',
+                      : Text(
+                          AppStrings.text(context, 'Masuk'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -406,16 +408,16 @@ class _LoginViewState extends State<LoginView>
 
                 // 7. PEMBATAS TEXT "Atau"
                 Row(
-                  children: const [
+                  children: [
                     Expanded(
                       child: Divider(color: Color(0xFFE0D8D0), thickness: 1),
                     ),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'Atau',
+                        AppStrings.text(context, 'Atau'),
                         style: TextStyle(
-                          color: Color(0xFF8C827A),
+                          color: AppTheme.mutedText(context),
                           fontSize: 14,
                         ),
                       ),
@@ -455,8 +457,8 @@ class _LoginViewState extends State<LoginView>
                             ),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        'Continue with Google',
+                      Text(
+                        AppStrings.text(context, 'Continue with Google'),
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -473,9 +475,12 @@ class _LoginViewState extends State<LoginView>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Belum punya akun? ',
-                      style: TextStyle(color: Color(0xFF6E5544), fontSize: 14),
+                    Text(
+                      AppStrings.text(context, 'Belum punya akun? '),
+                      style: TextStyle(
+                        color: AppTheme.mutedText(context),
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -485,8 +490,8 @@ class _LoginViewState extends State<LoginView>
                           ),
                         );
                       },
-                      child: const Text(
-                        'Buat Akun',
+                      child: Text(
+                        AppStrings.text(context, 'Buat Akun'),
                         style: TextStyle(
                           color: Color(0xFFD36A28),
                           fontSize: 14,

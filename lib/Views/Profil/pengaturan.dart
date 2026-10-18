@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../Models/users_model.dart';
+import '../../Services/app_preferences.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import 'notifikasi.dart';
 import 'ganti_password.dart';
 import 'tentang_aplikasi.dart';
@@ -43,17 +46,98 @@ class _PengaturanViewState extends State<PengaturanView> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqView()));
   }
 
+  Future<void> _showThemePicker() async {
+    final current = AppPreferences.instance.themeMode;
+    final selected = await showDialog<ThemeMode>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(AppStrings.text(context, 'Pilih Tema')),
+        children: [
+          for (final theme in [ThemeMode.light, ThemeMode.dark])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, theme),
+              child: Row(
+                children: [
+                  Icon(
+                    current == theme
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: const Color(0xFFFF7A1C),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    AppStrings.text(context,
+                      theme == ThemeMode.light ? 'Terang' : 'Gelap',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (selected != null) {
+      await AppPreferences.instance.setThemeMode(selected);
+    }
+  }
+
+  Future<void> _showLanguagePicker() async {
+    final current = AppPreferences.instance.locale;
+    final selected = await showDialog<Locale>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(AppStrings.text(context, 'Pilih Bahasa')),
+        children: [
+          for (final locale in const [Locale('id'), Locale('en')])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, locale),
+              child: Row(
+                children: [
+                  Icon(
+                    current == locale
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: const Color(0xFFFF7A1C),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(AppStrings.text(context,
+                    locale.languageCode == 'id'
+                        ? 'Bahasa Indonesia'
+                        : 'English',
+                  )),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (selected != null) {
+      await AppPreferences.instance.setLocale(selected);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF1A06D), Color(0xFFF8C9A9), Color(0xFFFFF8F3)],
-            stops: [0.0, 0.38, 0.82],
+            colors: isDark
+                ? const [
+                    Color(0xFF253034),
+                    Color(0xFF151E21),
+                    Color(0xFF0B1113),
+                  ]
+                : const [
+                    Color(0xFFF1A06D),
+                    Color(0xFFF8C9A9),
+                    Color(0xFFFFF8F3),
+                  ],
+            stops: const [0.0, 0.38, 0.82],
           ),
         ),
         child: SafeArea(
@@ -73,7 +157,7 @@ class _PengaturanViewState extends State<PengaturanView> {
                   const SizedBox(height: 30),
                   _buildSettingTile(
                     Icons.notifications_none,
-                    'Notifikasi',
+                    AppStrings.text(context, 'Notifikasi'),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const NotifikasiView()),
@@ -82,7 +166,7 @@ class _PengaturanViewState extends State<PengaturanView> {
                   const SizedBox(height: 12),
                   _buildSettingTile(
                     Icons.key_outlined,
-                    'Ganti Password',
+                    AppStrings.text(context, 'Ganti Password'),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -90,14 +174,46 @@ class _PengaturanViewState extends State<PengaturanView> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  AnimatedBuilder(
+                    animation: AppPreferences.instance,
+                    builder: (context, _) => _buildSettingTile(
+                      Icons.palette_outlined,
+                      AppStrings.text(context, 'Tema'),
+                      subtitle: AppStrings.text(context,
+                        AppPreferences.instance.themeMode == ThemeMode.dark
+                            ? 'Gelap'
+                            : 'Terang',
+                      ),
+                      onTap: _showThemePicker,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AnimatedBuilder(
+                    animation: AppPreferences.instance,
+                    builder: (context, _) => _buildSettingTile(
+                      Icons.language_outlined,
+                      AppStrings.text(context, 'Bahasa'),
+                      subtitle: AppStrings.text(context,
+                        AppPreferences.instance.locale.languageCode == 'en'
+                            ? 'English'
+                            : 'Bahasa Indonesia',
+                      ),
+                      onTap: _showLanguagePicker,
+                    ),
+                  ),
                   const SizedBox(height: 28),
                   _buildSettingTile(
                     Icons.info_outline,
-                    'Tentang Aplikasi',
+                    AppStrings.text(context, 'Tentang Aplikasi'),
                     onTap: _showAbout,
                   ),
                   const SizedBox(height: 12),
-                  _buildSettingTile(Icons.help_outline, 'FAQ', onTap: _showFaq),
+                  _buildSettingTile(
+                    Icons.help_outline,
+                    AppStrings.text(context, 'FAQ'),
+                    onTap: _showFaq,
+                  ),
                 ],
               );
             },
@@ -111,10 +227,10 @@ class _PengaturanViewState extends State<PengaturanView> {
     children: [
       _circleButton(Icons.arrow_back, () => Navigator.pop(context)),
       const SizedBox(width: 12),
-      const Text(
-        'Pengaturan',
+      Text(
+        AppStrings.text(context, 'Pengaturan'),
         style: TextStyle(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 23,
           fontWeight: FontWeight.w700,
         ),
@@ -123,7 +239,7 @@ class _PengaturanViewState extends State<PengaturanView> {
   );
 
   Widget _circleButton(IconData icon, VoidCallback onTap) => Material(
-    color: Colors.white,
+    color: AppTheme.surface(context),
     shape: const CircleBorder(),
     child: InkWell(
       onTap: onTap,
@@ -131,7 +247,11 @@ class _PengaturanViewState extends State<PengaturanView> {
       child: SizedBox(
         width: 40,
         height: 40,
-        child: Icon(icon, color: const Color(0xFFE07856), size: 24),
+        child: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+          size: 24,
+        ),
       ),
     ),
   );
@@ -151,8 +271,8 @@ class _PengaturanViewState extends State<PengaturanView> {
         const SizedBox(height: 18),
         Text(
           name,
-          style: const TextStyle(
-            color: Color(0xFFE87824),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -183,12 +303,12 @@ class _PengaturanViewState extends State<PengaturanView> {
 
   Widget _buildInitials(String name) {
     return Container(
-      color: const Color(0xFF192D4B),
+      color: AppTheme.surfaceRaised(context),
       alignment: Alignment.center,
       child: Text(
         name.substring(0, 1).toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 48,
           fontWeight: FontWeight.w500,
         ),
@@ -201,6 +321,7 @@ class _PengaturanViewState extends State<PengaturanView> {
     String title, {
     VoidCallback? onTap,
     Widget? trailing,
+    String? subtitle,
   }) {
     return Material(
       color: Colors.transparent,
@@ -208,14 +329,15 @@ class _PengaturanViewState extends State<PengaturanView> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(11),
         child: Container(
-          height: 54,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
+          constraints: const BoxConstraints(minHeight: 54),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.80),
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(11),
-            boxShadow: const [
+            border: Border.all(color: AppTheme.border(context)),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x33000000),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: Offset(0, 4),
               ),
@@ -223,21 +345,40 @@ class _PengaturanViewState extends State<PengaturanView> {
           ),
           child: Row(
             children: [
-              Icon(icon, color: const Color(0xFFFF7A1C), size: 23),
+              Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 23,
+              ),
               const SizedBox(width: 20),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF665E5A),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: AppTheme.text(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: AppTheme.mutedText(context),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const Spacer(),
               trailing ??
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    color: Color(0xFF171311),
+                    color: AppTheme.mutedText(context),
                     size: 25,
                   ),
             ],

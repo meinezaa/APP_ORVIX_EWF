@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart' as pdf;
@@ -32,8 +34,13 @@ class MyApp extends StatelessWidget {
 
 class OrvixKalkulatorScreen extends StatefulWidget {
   final bool showBottomNavigation;
+  final bool embedded;
 
-  const OrvixKalkulatorScreen({super.key, this.showBottomNavigation = true});
+  const OrvixKalkulatorScreen({
+    super.key,
+    this.showBottomNavigation = true,
+    this.embedded = false,
+  });
 
   @override
   State<OrvixKalkulatorScreen> createState() => _OrvixKalkulatorScreenState();
@@ -362,24 +369,15 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _buildEmbeddedContent();
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFE57B43), // Oranye bagian atas
-              Color(0xFFF7DAC9), // Transisi lembut
-              Color(0xFFFFF7F2), // Krem bagian bawah
-            ],
-            stops: [0.0, 0.4, 0.85],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           child: Column(
             children: [
@@ -390,17 +388,8 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                       RepaintBoundary(
                         key: _resultsKey,
                         child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFE57B43),
-                                Color(0xFFF7DAC9),
-                                Color(0xFFFFF7F2),
-                              ],
-                              stops: [0.0, 0.4, 0.85],
-                            ),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.pageGradient(context),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
@@ -426,17 +415,21 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text(
-                                      'Hasil Nest',
+                                    Text(
+                                      AppStrings.text(context, 'Hasil Nest'),
                                       style: TextStyle(
-                                        color: Color(0xFF8B2500),
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     Text(
                                       _formatResultDate(),
-                                      style: const TextStyle(
-                                        color: Color(0xFF8B2500),
+                                      style: TextStyle(
+                                        color: AppTheme.mutedText(context),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -485,6 +478,56 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     );
   }
 
+  Widget _buildEmbeddedContent() => Column(
+    children: [
+      RepaintBoundary(
+        key: _resultsKey,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10, top: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppStrings.text(context, 'Hasil Nest'),
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    _formatResultDate(),
+                    style: TextStyle(
+                      color: AppTheme.mutedText(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            _buildInputCard(),
+            if (_saveError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _saveError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 28),
+            _buildResultCard(),
+            const SizedBox(height: 28),
+          ],
+        ),
+      ),
+      _buildActionButtons(),
+      const SizedBox(height: 24),
+    ],
+  );
+
   // --- 1. HEADER TITLE ---
   Widget _buildHeaderTitle() {
     return Row(
@@ -492,8 +535,8 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
       children: [
         Image.asset('assets/text_logo.png', height: 28, fit: BoxFit.contain),
         const SizedBox(width: 8),
-        const Text(
-          'Kalkulator',
+        Text(
+          AppStrings.text(context, 'Kalkulator'),
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -511,8 +554,9 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppTheme.border(context)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -560,7 +604,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    tabs[index],
+                    AppStrings.text(context, tabs[index]),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -583,8 +627,9 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border(context)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -598,11 +643,11 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Otomatis',
+              Text(
+                AppStrings.text(context, 'Otomatis'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF555555),
+                  color: AppTheme.mutedText(context),
                 ),
               ),
               Switch(
@@ -615,13 +660,13 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           // Open Field Row
           Row(
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 60,
                 child: Text(
-                  'Open',
+                  AppStrings.text(context, 'Open'),
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF555555),
+                    color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -638,13 +683,13 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           // Close Field Row
           Row(
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 60,
                 child: Text(
-                  'Close',
+                  AppStrings.text(context, 'Close'),
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF555555),
+                    color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -666,12 +711,8 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
     TextEditingController controller, {
     required bool saveOnSubmitted,
   }) {
-    return Container(
+    return SizedBox(
       height: 38,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: TextField(
         controller: controller,
         onChanged: (_) => _calculateNest(),
@@ -685,15 +726,21 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textAlign: TextAlign.left,
         textAlignVertical: TextAlignVertical.center,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        decoration: const InputDecoration(
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.text(context),
+        ),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: AppTheme.surface(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFF888888)),
+            borderSide: BorderSide(color: AppTheme.border(context)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFF888888)),
+            borderSide: BorderSide(color: AppTheme.border(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -716,12 +763,9 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           margin: const EdgeInsets.only(top: 16),
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
           decoration: BoxDecoration(
-            color: const Color(0xFFFBF2EB),
+            color: AppTheme.surfaceRaised(context),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.6),
-              width: 1.5,
-            ),
+            border: Border.all(color: AppTheme.border(context), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -732,12 +776,14 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
           ),
           child: Column(
             children: [
-              const Text(
-                'Hasil Nest',
+              Text(
+                AppStrings.text(context, 'Hasil Nest'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6E2E1A),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.text(context)
+                      : Colors.black,
                 ),
               ),
               const SizedBox(height: 6),
@@ -748,7 +794,7 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                   horizontal: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppTheme.surface(context),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: const Color(0xFFE8833A),
@@ -757,22 +803,22 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                 ),
                 child: Text(
                   _formatNumber(_nestValue),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF801B00),
+                    color: Theme.of(context).colorScheme.primary,
                     letterSpacing: 0.2,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Action',
+              Text(
+                AppStrings.text(context, 'Action'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6E2E1A),
+                  color: AppTheme.text(context),
                 ),
               ),
               const SizedBox(height: 6),
@@ -805,18 +851,18 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
               ),
               const SizedBox(height: 12),
               if (_action == 'BUY')
-                const Text(
-                  'Jika Close diatas Open BUY',
-                  style: TextStyle(
+                Text(
+                  AppStrings.text(context, 'Jika Close diatas Open BUY'),
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2E683A),
                   ),
                 )
               else if (_action == 'SELL')
-                const Text(
-                  'Jika Close dibawah Open SELL',
-                  style: TextStyle(
+                Text(
+                  AppStrings.text(context, 'Jika Close dibawah Open SELL'),
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFC62828),
@@ -840,8 +886,8 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                 ),
               ],
             ),
-            child: const Text(
-              'Indikasi',
+            child: Text(
+              AppStrings.text(context, 'Indikasi'),
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

@@ -10,6 +10,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../Models/historikalkulator_model.dart';
 import '../../Models/users_model.dart';
 import '../../Services/auth_services.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import '../../Services/history_service.dart';
 import '../Auth/login.dart';
 import 'detail_profil.dart';
@@ -43,18 +45,29 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFF3A06D),
-            Color(0xFFF8C29E),
-            Color(0xFFFFE8D8),
-            Color(0xFFFFF8F3),
-          ],
-          stops: [0.0, 0.38, 0.68, 1.0],
-        ),
+      decoration: BoxDecoration(
+        gradient: Theme.of(context).brightness == Brightness.dark
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF253034),
+                  Color(0xFF151E21),
+                  Color(0xFF0B1113),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              )
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFF3A06D),
+                  Color(0xFFF8C29E),
+                  Color(0xFFFFE8D8),
+                  Color(0xFFFFF8F3),
+                ],
+                stops: [0.0, 0.38, 0.68, 1.0],
+              ),
       ),
       child: SafeArea(
         child: StreamBuilder<List<HistoryModel>>(
@@ -74,8 +87,6 @@ class _ProfileViewState extends State<ProfileView> {
                     _buildIdentityCard(user),
                     const SizedBox(height: 18),
                     _buildTipCard(),
-                    const SizedBox(height: 14),
-                    _buildUsageChart(),
                     const SizedBox(height: 30),
                     _buildSummary(counts),
                     const SizedBox(height: 66),
@@ -123,7 +134,7 @@ class _ProfileViewState extends State<ProfileView> {
                 width: 50,
                 height: 50,
                 child: Material(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   shape: const CircleBorder(),
                   clipBehavior: Clip.antiAlias,
                   child: Image.asset(
@@ -144,8 +155,8 @@ class _ProfileViewState extends State<ProfileView> {
               children: [
                 Image.asset('assets/text_logo.png', width: 88),
                 const SizedBox(width: 10),
-                const Text(
-                  'Profil',
+                Text(
+                  AppStrings.text(context, 'Profil'),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -179,11 +190,12 @@ class _ProfileViewState extends State<ProfileView> {
     return Container(
       width: 50,
       height: 50,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFF0E7),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceRaised(context),
         shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.border(context)),
       ),
-      child: Icon(icon, color: Color(0xFF241A17), size: 26),
+      child: Icon(icon, color: AppTheme.text(context), size: 26),
     );
   }
 
@@ -201,7 +213,8 @@ class _ProfileViewState extends State<ProfileView> {
       borderRadius: BorderRadius.circular(15),
       child: _panel(
         padding: const EdgeInsets.all(18),
-        color: Colors.white.withValues(alpha: 0.72),
+        color: AppTheme.surface(context),
+        showBorder: true,
         child: Row(
           children: [
             ClipOval(
@@ -218,30 +231,34 @@ class _ProfileViewState extends State<ProfileView> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
+                      color: AppTheme.text(context),
                     ),
                   ),
                   Text(
                     email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF594D48),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Bergabung sejak',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF766D68)),
+                  Text(
+                    AppStrings.text(context, 'Bergabung sejak'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.mutedText(context),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_month_outlined,
                         size: 16,
-                        color: Color(0xFFE75D1C),
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       const SizedBox(width: 5),
                       Text(
@@ -284,7 +301,7 @@ class _ProfileViewState extends State<ProfileView> {
 
   Widget _buildInitials(String name) {
     return Container(
-      color: const Color(0xFF192D4B),
+      color: AppTheme.surfaceRaised(context),
       alignment: Alignment.center,
       child: Text(
         name.substring(0, 1).toUpperCase(),
@@ -298,12 +315,20 @@ class _ProfileViewState extends State<ProfileView> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         height: 150,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFD4B7), Color(0xFFFFE9DB)],
-          ),
+        decoration: BoxDecoration(
+          gradient: Theme.of(context).brightness == Brightness.dark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF202B2E), Color(0xFF172124)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFFFD4B7), Color(0xFFFFE9DB)],
+                ),
+          border: Border.all(color: AppTheme.border(context)),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
@@ -317,12 +342,19 @@ class _ProfileViewState extends State<ProfileView> {
                     Text.rich(
                       TextSpan(
                         children: [
-                          TextSpan(text: 'Hitung '),
+                          TextSpan(text: AppStrings.text(context, 'Hitung ')),
                           TextSpan(
-                            text: 'Emas Fisik, Pivot\nPoint & NEST',
-                            style: TextStyle(color: Color(0xFFE75D1C)),
+                            text: AppStrings.text(
+                              context,
+                              'Emas Fisik, Pivot\nPoint & NEST',
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
-                          TextSpan(text: ' dengan mudah'),
+                          TextSpan(
+                            text: AppStrings.text(context, ' dengan mudah'),
+                          ),
                         ],
                       ),
                       style: TextStyle(
@@ -333,8 +365,14 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Gunakan kalkulator ORVIX untuk perhitungan yang cepat, akurat, dan terpercaya.',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF766D68)),
+                      AppStrings.text(
+                        context,
+                        'Gunakan kalkulator ORVIX untuk perhitungan yang cepat, akurat, dan terpercaya.',
+                      ),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.mutedText(context),
+                      ),
                     ),
                   ],
                 ),
@@ -353,110 +391,49 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildUsageChart() {
-    return StreamBuilder<List<int>>(
-      stream: _watchUsage(),
-      builder: (context, snapshot) {
-        final values = snapshot.data ?? List<int>.filled(5, 0);
-        const maxValue = 60;
-        final totalMinutes = values.fold<int>(
-          0,
-          (runningTotal, item) => runningTotal + item,
-        );
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF9F3EF).withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Penggunaan Aplikasi',
-                    style: TextStyle(
-                      color: Color(0xFF2D302F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1E8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$totalMinutes menit',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFE75D1C),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 170,
-                child: CustomPaint(
-                  painter: _UsageChartPainter(
-                    values: values,
-                    maxValue: maxValue,
-                  ),
-                  size: Size.infinite,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildSummary(Map<String, int> counts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.receipt_long, color: Color(0xFFE75D1C), size: 19),
-            SizedBox(width: 5),
+            Icon(
+              Icons.receipt_long,
+              color: Theme.of(context).colorScheme.primary,
+              size: 19,
+            ),
+            const SizedBox(width: 5),
             Text(
-              'Ringkasan Aktivitas',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              AppStrings.text(context, 'Ringkasan Aktivitas'),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.text(context),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         _summaryCard(
           Icons.analytics_rounded,
-          'Total Perhitungan',
+          AppStrings.text(context, 'Total Perhitungan'),
           '${counts['total']}',
           fullWidth: true,
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            _summaryCard(Icons.balance, 'Emas Fisik', '${counts['emas']}'),
+            _summaryCard(
+              Icons.balance,
+              AppStrings.text(context, 'Emas Fisik'),
+              '${counts['emas']}',
+            ),
             const SizedBox(width: 10),
-            _summaryCard(Icons.show_chart, 'Pivot Point', '${counts['pivot']}'),
+            _summaryCard(
+              Icons.show_chart,
+              AppStrings.text(context, 'Pivot Point'),
+              '${counts['pivot']}',
+            ),
             const SizedBox(width: 10),
             _summaryCard(Icons.calculate_rounded, 'NEST', '${counts['nest']}'),
           ],
@@ -497,15 +474,16 @@ class _ProfileViewState extends State<ProfileView> {
         vertical: horizontal ? 12 : 9,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.38),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.58),
-          width: 1,
-        ),
+        border: Border.all(color: AppTheme.border(context), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.18),
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.28
+                  : 0.06,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -514,7 +492,7 @@ class _ProfileViewState extends State<ProfileView> {
       child: horizontal
           ? Row(
               children: [
-                Icon(icon, size: 54, color: Colors.black),
+                Icon(icon, size: 54, color: AppTheme.text(context)),
                 const SizedBox(width: 18),
                 Expanded(
                   child: Column(
@@ -522,11 +500,11 @@ class _ProfileViewState extends State<ProfileView> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        label,
+                        AppStrings.text(context, label),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF716761),
+                          color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -534,8 +512,8 @@ class _ProfileViewState extends State<ProfileView> {
                       Text(
                         value,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFFC84F15),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
                         ),
@@ -548,12 +526,12 @@ class _ProfileViewState extends State<ProfileView> {
           : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 30, color: Colors.black),
+                Icon(icon, size: 30, color: AppTheme.text(context)),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Color(0xFFC84F15),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                   ),
@@ -561,13 +539,13 @@ class _ProfileViewState extends State<ProfileView> {
                 const SizedBox(height: 4),
                 Center(
                   child: Text(
-                    label,
+                    AppStrings.text(context, label),
                     maxLines: 1,
                     softWrap: false,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF716761),
+                      color: AppTheme.mutedText(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -582,19 +560,24 @@ class _ProfileViewState extends State<ProfileView> {
     borderRadius: BorderRadius.circular(12),
     child: _panel(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-      child: const Row(
+      showBorder: true,
+      child: Row(
         children: [
-          Icon(Icons.logout, color: Color(0xFFD82222)),
-          SizedBox(width: 18),
+          const Icon(Icons.logout, color: Color(0xFFD82222)),
+          const SizedBox(width: 18),
           Text(
-            'Keluar',
+            AppStrings.text(context, 'Keluar'),
             style: TextStyle(
-              color: Color(0xFF716761),
+              color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
           ),
-          Spacer(),
-          Icon(Icons.chevron_right, size: 28),
+          const Spacer(),
+          Icon(
+            Icons.chevron_right,
+            size: 28,
+            color: AppTheme.mutedText(context),
+          ),
         ],
       ),
     ),
@@ -604,11 +587,13 @@ class _ProfileViewState extends State<ProfileView> {
     required Widget child,
     required EdgeInsets padding,
     Color? color,
+    bool showBorder = false,
   }) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: color ?? const Color(0xFFFFF8F3),
+      color: color ?? AppTheme.surface(context),
       borderRadius: BorderRadius.circular(15),
+      border: showBorder ? Border.all(color: AppTheme.border(context)) : null,
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: .18),
@@ -632,28 +617,6 @@ class _ProfileViewState extends State<ProfileView> {
         .where((item) => item.jenisKalkulator.toLowerCase().contains('nest'))
         .length,
   };
-
-  Stream<List<int>> _watchUsage() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return Stream.value(List<int>.filled(5, 0));
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('app_usage')
-        .orderBy('date', descending: true)
-        .limit(7)
-        .snapshots()
-        .map((snapshot) {
-          final usageByWeekday = List<int>.filled(5, 0);
-          for (final doc in snapshot.docs) {
-            final date = DateTime.tryParse(doc.id);
-            if (date == null || date.weekday > 5) continue;
-            usageByWeekday[date.weekday - 1] =
-                (doc.data()['minutes'] as num?)?.toInt() ?? 0;
-          }
-          return usageByWeekday;
-        });
-  }
 
   String _monthYear(DateTime date) =>
       '${date.day} ${_monthName(date.month)} ${date.year}';
@@ -703,146 +666,4 @@ class AppUsageTracker {
           'minutes': FieldValue.increment(1),
         }, SetOptions(merge: true));
   }
-}
-
-class _UsageChartPainter extends CustomPainter {
-  final List<int> values;
-  final int maxValue;
-
-  const _UsageChartPainter({required this.values, required this.maxValue});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const paddingTop = 18.0;
-    const paddingBottom = 34.0;
-    const labelGap = 18.0;
-    const lineColor = Color(0xFFE75D1C);
-    const fillColor = Color(0x55F28A3C);
-    const guideColor = Color(0xFFE7E1DE);
-    const axisColor = Color(0xFFBFAAA0);
-
-    final chartWidth = size.width - labelGap;
-    final chartBottom = size.height - paddingBottom;
-    final chartTop = paddingTop;
-    final slotWidth = chartWidth / (values.length - 1);
-
-    final guidePaint = Paint()
-      ..color = guideColor
-      ..strokeWidth = 1.2;
-
-    final axisPaint = Paint()
-      ..color = axisColor
-      ..strokeWidth = 1.0;
-
-    for (var i = 0; i < 4; i++) {
-      final y = chartTop + ((chartBottom - chartTop) / 3) * i;
-      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), guidePaint);
-    }
-
-    canvas.drawLine(
-      Offset(0, chartBottom),
-      Offset(chartWidth, chartBottom),
-      axisPaint,
-    );
-
-    final points = List<Offset>.generate(values.length, (index) {
-      final value = values[index].clamp(0, maxValue);
-      final x = index * slotWidth;
-      final y = chartBottom - ((chartBottom - chartTop) * value / maxValue);
-      return Offset(x, y);
-    });
-
-    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      final previous = points[i - 1];
-      final current = points[i];
-      final controlX = (previous.dx + current.dx) / 2;
-      linePath.cubicTo(
-        controlX,
-        previous.dy,
-        controlX,
-        current.dy,
-        current.dx,
-        current.dy,
-      );
-    }
-
-    final areaPath = Path.from(linePath)
-      ..lineTo(points.last.dx, chartBottom)
-      ..lineTo(points.first.dx, chartBottom)
-      ..close();
-
-    canvas.drawPath(
-      areaPath,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [fillColor, Color(0x00F28A3C)],
-        ).createShader(Rect.fromLTRB(0, chartTop, chartWidth, chartBottom)),
-    );
-
-    final linePaint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    canvas.drawPath(linePath, linePaint);
-
-    for (var index = 0; index < points.length; index++) {
-      final point = points[index];
-      final glowPaint = Paint()..color = const Color(0x44E75D1C);
-      canvas.drawCircle(point, 10, glowPaint);
-      canvas.drawCircle(point, 5.5, Paint()..color = lineColor);
-
-      final label = _dayLabel(index);
-      final labelPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: const TextStyle(
-            color: Color(0xFF403A36),
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      labelPainter.paint(
-        canvas,
-        Offset(point.dx - labelPainter.width / 2, chartBottom + 10),
-      );
-    }
-
-    final scaleMarks = ['60', '40', '20'];
-    for (var i = 0; i < scaleMarks.length; i++) {
-      final value = scaleMarks[i];
-      final y =
-          chartTop + ((chartBottom - chartTop) / (scaleMarks.length - 1)) * i;
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: value,
-          style: const TextStyle(
-            color: Color(0xFF8A7263),
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainter.paint(
-        canvas,
-        Offset(chartWidth + 8, y - textPainter.height / 2),
-      );
-    }
-  }
-
-  String _dayLabel(int index) =>
-      const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'][index];
-
-  @override
-  bool shouldRepaint(covariant _UsageChartPainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.maxValue != maxValue;
 }
