@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../Services/auth_services.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 import 'login.dart';
 
 class RegisterView extends StatefulWidget {
@@ -34,10 +36,10 @@ class _RegisterViewState extends State<RegisterView> {
 
   // Skema Warna dari UI
   final Color primaryOrange = const Color(0xFFE05813);
-  final Color inputBgColor = const Color(0xFFFAFAFA);
-  final Color inputBorderColor = const Color(0xFFEFEFEF);
-  final Color labelTextColor = const Color(0xFF212121);
-  final Color subtitleTextColor = const Color(0xFF828282);
+  Color get inputBgColor => AppTheme.surface(context);
+  Color get inputBorderColor => AppTheme.border(context);
+  Color get labelTextColor => AppTheme.text(context);
+  Color get subtitleTextColor => AppTheme.mutedText(context);
 
   @override
   void dispose() {
@@ -52,7 +54,7 @@ class _RegisterViewState extends State<RegisterView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.background(context),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -63,7 +65,7 @@ class _RegisterViewState extends State<RegisterView> {
 
               // 1. Judul
               Text(
-                'Buat Akun Baru',
+                AppStrings.text(context, 'Buat Akun Baru'),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -74,8 +76,10 @@ class _RegisterViewState extends State<RegisterView> {
 
               // Sub-judul / Deskripsi
               Text(
-                'Buat akun sebagai staff atau nasabah. Setelah terdaftar, '
-                'Anda bisa langsung masuk dan menggunakan sistem kalkulator.',
+                AppStrings.text(
+                  context,
+                  'Buat akun sebagai staff atau nasabah. Setelah terdaftar, Anda bisa langsung masuk dan menggunakan sistem kalkulator.',
+                ),
                 style: TextStyle(
                   fontSize: 15,
                   color: subtitleTextColor,
@@ -130,20 +134,24 @@ class _RegisterViewState extends State<RegisterView> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: inputBorderColor,
-                      width: 1.5,
-                    ),
+                    borderSide: BorderSide(color: inputBorderColor, width: 1.5),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: primaryOrange, width: 1.5),
                   ),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'staff', child: Text('Staff')),
-                  DropdownMenuItem(value: 'nasabah', child: Text('Nasabah')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'staff',
+                    child: Text(AppStrings.text(context, 'Staff')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'nasabah',
+                    child: Text(AppStrings.text(context, 'Nasabah')),
+                  ),
                 ],
+                style: TextStyle(color: AppTheme.text(context)),
                 onChanged: _isLoading
                     ? null
                     : (value) {
@@ -154,9 +162,12 @@ class _RegisterViewState extends State<RegisterView> {
               ),
               const SizedBox(height: 8),
               Text(
-                _selectedRole == 'staff'
-                    ? 'Data perhitungan staff akan tersedia untuk admin.'
-                    : 'Data perhitungan nasabah hanya tersimpan di akun Anda.',
+                AppStrings.text(
+                  context,
+                  _selectedRole == 'staff'
+                      ? 'Data perhitungan staff akan tersedia untuk admin.'
+                      : 'Data perhitungan nasabah hanya tersimpan di akun Anda.',
+                ),
                 style: TextStyle(
                   fontSize: 13,
                   color: subtitleTextColor,
@@ -244,15 +255,25 @@ class _RegisterViewState extends State<RegisterView> {
                           height: 1.4,
                         ),
                         children: [
-                          const TextSpan(text: 'Saya telah menyetujui '),
                           TextSpan(
-                            text: 'Syarat dan Ketentuan',
+                            text: AppStrings.text(
+                              context,
+                              'Saya telah menyetujui ',
+                            ),
+                          ),
+                          TextSpan(
+                            text: AppStrings.text(
+                              context,
+                              'Syarat dan Ketentuan',
+                            ),
                             style: TextStyle(
                               color: primaryOrange,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const TextSpan(text: ' yang berlaku.'),
+                          TextSpan(
+                            text: AppStrings.text(context, ' yang berlaku.'),
+                          ),
                         ],
                       ),
                     ),
@@ -284,8 +305,8 @@ class _RegisterViewState extends State<RegisterView> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Daftar',
+                      : Text(
+                          AppStrings.text(context, 'Daftar'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -302,7 +323,7 @@ class _RegisterViewState extends State<RegisterView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Sudah punya akun? ',
+                    AppStrings.text(context, 'Sudah punya akun? '),
                     style: TextStyle(fontSize: 14, color: subtitleTextColor),
                   ),
                   GestureDetector(
@@ -310,7 +331,7 @@ class _RegisterViewState extends State<RegisterView> {
                       Navigator.of(context).pop();
                     },
                     child: Text(
-                      'Masuk',
+                      AppStrings.text(context, 'Masuk'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -332,7 +353,7 @@ class _RegisterViewState extends State<RegisterView> {
   // Helper Widget untuk Label Input
   Widget _buildInputLabel(String label) {
     return Text(
-      label,
+      AppStrings.text(context, label),
       style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.bold,
@@ -353,9 +374,10 @@ class _RegisterViewState extends State<RegisterView> {
       controller: controller,
       obscureText: isObscure,
       keyboardType: keyboardType,
+      style: TextStyle(color: AppTheme.text(context)),
       decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(color: Color(0xFFA6A6A6), fontSize: 14),
+        hintText: AppStrings.text(context, hintText),
+        hintStyle: TextStyle(color: AppTheme.mutedText(context), fontSize: 14),
         filled: true,
         fillColor: inputBgColor,
         contentPadding: const EdgeInsets.symmetric(
@@ -440,9 +462,9 @@ class _RegisterViewState extends State<RegisterView> {
         final message = e is StateError
             ? e.message
             : 'Gagal registrasi: ${e.toString()}';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 
 class TradingViewChartCarousel extends StatefulWidget {
   const TradingViewChartCarousel({super.key});
@@ -58,25 +60,29 @@ class _TradingViewChartCarouselState extends State<TradingViewChartCarousel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             children: [
-              Icon(Icons.show_chart, color: Color(0xFF8B3D16), size: 20),
-              SizedBox(width: 8),
+              Icon(
+                Icons.show_chart,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
               Text(
-                'Grafik Harga',
+                AppStrings.text(context, 'Grafik Harga'),
                 style: TextStyle(
-                  color: Color(0xFF4A2D1F),
+                  color: AppTheme.text(context),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               Text(
                 'TradingView',
                 style: TextStyle(
-                  color: Color(0xFF8A7568),
+                  color: AppTheme.mutedText(context),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -95,21 +101,21 @@ class _TradingViewChartCarouselState extends State<TradingViewChartCarousel> {
               final timeframe = _timeframes[index];
               final selected = _selectedTimeframe == index;
               return ChoiceChip(
-                label: Text(timeframe.label),
+                label: Text(AppStrings.text(context, timeframe.label)),
                 selected: selected,
                 onSelected: (_) => setState(() => _selectedTimeframe = index),
                 showCheckmark: false,
                 labelStyle: TextStyle(
-                  color: selected ? Colors.white : const Color(0xFF76513E),
+                  color: selected ? Colors.white : AppTheme.text(context),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
-                backgroundColor: Colors.white,
-                selectedColor: const Color(0xFFD95B14),
+                backgroundColor: AppTheme.surface(context),
+                selectedColor: Theme.of(context).colorScheme.primary,
                 side: BorderSide(
                   color: selected
-                      ? const Color(0xFFD95B14)
-                      : const Color(0xFFE6CBBB),
+                      ? Theme.of(context).colorScheme.primary
+                      : AppTheme.border(context),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -129,10 +135,12 @@ class _TradingViewChartCarouselState extends State<TradingViewChartCarousel> {
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: _TradingViewChartCard(
-                  title: chart.title,
+                  title: AppStrings.text(context, chart.title),
                   symbol: chart.symbol,
-                  description: chart.description,
+                  description: AppStrings.text(context, chart.description),
                   interval: _timeframes[_selectedTimeframe].interval,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                  languageCode: Localizations.localeOf(context).languageCode,
                 ),
               );
             },
@@ -167,12 +175,16 @@ class _TradingViewChartCard extends StatefulWidget {
   final String symbol;
   final String description;
   final String interval;
+  final bool isDark;
+  final String languageCode;
 
   const _TradingViewChartCard({
     required this.title,
     required this.symbol,
     required this.description,
     required this.interval,
+    required this.isDark,
+    required this.languageCode,
   });
 
   @override
@@ -199,7 +211,9 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
   @override
   void didUpdateWidget(covariant _TradingViewChartCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.interval != widget.interval) {
+    if (oldWidget.interval != widget.interval ||
+        oldWidget.isDark != widget.isDark ||
+        oldWidget.languageCode != widget.languageCode) {
       setState(() {
         _isLoading = true;
         _loadError = null;
@@ -212,6 +226,8 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
     final uri = Uri.https('www.tradingview.com', '/chart/', {
       'symbol': widget.symbol,
       'interval': widget.interval,
+      'theme': widget.isDark ? 'dark' : 'light',
+      'locale': widget.languageCode,
     });
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -230,9 +246,15 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
   }
 
   Future<void> _loadChart() async {
+    final chartBackground = AppTheme.background(context);
+    final connectionError = AppStrings.text(
+      context,
+      'Grafik gagal dimuat. Periksa koneksi internet.',
+    );
+    final genericError = AppStrings.text(context, 'Grafik gagal dimuat.');
     try {
       await _controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-      await _controller.setBackgroundColor(Colors.white);
+      await _controller.setBackgroundColor(chartBackground);
       await _controller.enableZoom(true);
       await _controller.setNavigationDelegate(
         NavigationDelegate(
@@ -243,7 +265,7 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
             if (error.isForMainFrame == true && mounted) {
               setState(() {
                 _isLoading = false;
-                _loadError = 'Grafik gagal dimuat. Periksa koneksi internet.';
+                _loadError = connectionError;
               });
             }
           },
@@ -252,20 +274,22 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
       final chartUri = Uri.https('www.tradingview.com', '/chart/', {
         'symbol': widget.symbol,
         'interval': widget.interval,
+        'theme': widget.isDark ? 'dark' : 'light',
+        'locale': widget.languageCode,
       });
       await _controller.loadRequest(chartUri);
     } catch (error) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _loadError = 'Grafik gagal dimuat: $error';
+          _loadError = '$genericError: $error';
         });
       }
     }
   }
 
-  String _timeframeLabel(String interval) {
-    return switch (interval) {
+  String _timeframeLabel(BuildContext context, String interval) {
+    return AppStrings.text(context, switch (interval) {
       '1' => '1 menit',
       '5' => '5 menit',
       '15' => '15 menit',
@@ -276,15 +300,19 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
       'W' => '1 minggu',
       'M' => '1 bulan',
       _ => interval,
-    };
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.32),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF6D3D22).withValues(alpha: 0.12),
@@ -309,18 +337,18 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
                         widget.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF4A2D1F),
+                        style: TextStyle(
+                          color: AppTheme.text(context),
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
-                        '${widget.description} · ${_timeframeLabel(widget.interval)}',
+                        '${widget.description} · ${_timeframeLabel(context, widget.interval)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF8A7568),
+                        style: TextStyle(
+                          color: AppTheme.mutedText(context),
                           fontSize: 10,
                         ),
                       ),
@@ -330,9 +358,9 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
                 TextButton.icon(
                   onPressed: _openTradingView,
                   icon: const Icon(Icons.open_in_new, size: 15),
-                  label: const Text('Buka'),
+                  label: Text(AppStrings.text(context, 'Buka')),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFD95B14),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -345,22 +373,22 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
               children: [
                 WebViewWidget(controller: _controller),
                 if (_isLoading)
-                  const ColoredBox(
-                    color: Colors.white,
+                  ColoredBox(
+                    color: AppTheme.surface(context),
                     child: Center(
                       child: SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFFD95B14),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
                   ),
                 if (_loadError != null)
                   ColoredBox(
-                    color: Colors.white,
+                    color: AppTheme.surface(context),
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
@@ -375,8 +403,8 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
                             Text(
                               _loadError!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFF6B5B52),
+                              style: TextStyle(
+                                color: AppTheme.text(context),
                                 fontSize: 11,
                               ),
                             ),
@@ -388,7 +416,9 @@ class _TradingViewChartCardState extends State<_TradingViewChartCard> {
                                 });
                                 unawaited(_loadChart());
                               },
-                              child: const Text('Coba lagi'),
+                              child: Text(
+                                AppStrings.text(context, 'Coba Lagi'),
+                              ),
                             ),
                           ],
                         ),

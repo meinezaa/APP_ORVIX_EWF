@@ -96,8 +96,7 @@ abstract final class MarketNewsService {
   }) async {
     final localizedUri = _localizedArticleUri(article.articleUri, languageCode);
     try {
-      final page = await _getText(localizedUri);
-      final paragraphs = _newsMakerPageParagraphs(page);
+      final paragraphs = await _fetchNewsMakerPageParagraphs(localizedUri);
       if (paragraphs.isNotEmpty) {
         return MarketNewsArticle(
           slug: article.slug,
@@ -111,8 +110,11 @@ abstract final class MarketNewsService {
           source: article.source,
         );
       }
-    } on Exception {
-      if (languageCode != 'en' && article.contentParagraphs.isEmpty) rethrow;
+    } on Exception catch (error) {
+      if (languageCode != 'en' && article.contentParagraphs.isEmpty) {
+        debugPrint('Unable to load localized article ${article.slug}: $error');
+        rethrow;
+      }
     }
 
     if (article.contentParagraphs.isNotEmpty) {
@@ -177,8 +179,9 @@ abstract final class MarketNewsService {
   ) async {
     if (article.summary.isNotEmpty) return article;
     try {
-      final page = await _getText(article.articleUri);
-      final paragraphs = _newsMakerPageParagraphs(page);
+      final paragraphs = await _fetchNewsMakerPageParagraphs(
+        article.articleUri,
+      );
       if (paragraphs.isEmpty) return article;
       return MarketNewsArticle(
         slug: article.slug,
@@ -196,6 +199,39 @@ abstract final class MarketNewsService {
         'Unable to load localized summary for ${article.slug}: $error',
       );
       return article;
+    }
+  }
+
+  static Future<List<String>> _fetchNewsMakerPageParagraphs(Uri uri) async {
+    Object? directError;
+    if (!kIsWeb) {
+      try {
+        final paragraphs = _newsMakerPageParagraphs(await _getText(uri));
+        if (paragraphs.isNotEmpty) return paragraphs;
+      } on Exception catch (error) {
+        directError = error;
+      }
+    }
+
+    try {
+      final paragraphs = _newsMakerPageParagraphs(
+        await _getText(uri, useReaderProxy: true),
+      );
+      if (paragraphs.isEmpty && directError != null) {
+        debugPrint(
+          'Unable to parse NewsMaker article $uri after direct fetch failed: '
+          '$directError',
+        );
+      }
+      return paragraphs;
+    } on Exception catch (proxyError) {
+      if (directError != null) {
+        debugPrint(
+          'Unable to fetch NewsMaker article $uri directly ($directError) '
+          'or through the reader proxy ($proxyError).',
+        );
+      }
+      rethrow;
     }
   }
 
@@ -321,19 +357,24 @@ abstract final class MarketNewsService {
     return decoded;
   }
 
-  static Future<String> _getText(Uri target) async {
-    final uri = kIsWeb ? Uri.parse('https://r.jina.ai/$target') : target;
+  static Future<String> _getText(
+    Uri target, {
+    bool useReaderProxy = kIsWeb,
+  }) async {
+    final uri = useReaderProxy
+        ? Uri.parse('https://r.jina.ai/$target')
+        : target;
     final response = await http
         .get(
           uri,
-          headers: {'Accept': kIsWeb ? 'text/plain' : 'application/json'},
+          headers: {'Accept': useReaderProxy ? 'text/plain' : 'application/json'},
         )
         .timeout(const Duration(seconds: 15));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('HTTP ${response.statusCode} from $target');
     }
     var body = response.body;
-    if (kIsWeb) {
+    if (useReaderProxy) {
       const marker = 'Markdown Content:\n';
       final markerIndex = body.indexOf(marker);
       if (markerIndex < 0) {
@@ -376,10 +417,15 @@ abstract final class MarketNewsService {
       return Uri.parse('$_ewfWebsite/analisis/berita');
     }
 
-    final categorySlug = category.toLowerCase().replaceAll(' ', '-');
+    final categorySlug = category
+        .toLowerCase()
+        .replaceAll('&', 'and')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
     final route = switch (categorySlug) {
       'gold' || 'oil' || 'silver' => 'news/commodity/$categorySlug/$slug',
       'market-update' => 'news/index/market-update/$slug',
+      'analysis-and-opinion' => 'analysis/analisis-opinion/$slug',
       _ => 'economic-news/global-economy',
     };
     return Uri.parse('$_newsMakerWebsite/id/$route');
@@ -402,6 +448,14 @@ abstract final class MarketNewsService {
   static List<String> _newsMakerPageParagraphs(String page) {
     final normalizedPage = page
         .replaceAll(
+          RegExp(r'<script\b[^>]*>[\s\S]*?</script>', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'<style\b[^>]*>[\s\S]*?</style>', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
           RegExp(r'</(?:p|div|li|h[1-6]|blockquote)\s*>', caseSensitive: false),
           '\n',
         )
@@ -415,7 +469,10 @@ abstract final class MarketNewsService {
         .where((line) => line.isNotEmpty)
         .toList();
     final paragraphs = <String>[];
-    var readingArticle = false;
+    var readingArticle = !lines.any(
+      (line) => RegExp(r'^(sumber|source)\s*:', caseSensitive: false)
+          .hasMatch(line),
+    );
     for (final line in lines) {
       if (RegExp(
         r'^(sumber|source)\s*:',
@@ -429,14 +486,26 @@ abstract final class MarketNewsService {
           line.startsWith('#') ||
           line.startsWith('URL Source:') ||
           line.startsWith('Title:') ||
+          line == 'Markdown Content:' ||
           line == '* * *') {
         continue;
       }
       final text = _plainSummary(line);
+      if (_isNewsMakerPageChrome(text)) break;
       if (text.isNotEmpty) paragraphs.add(text);
     }
     return paragraphs;
   }
+
+  static bool _isNewsMakerPageChrome(String text) =>
+      RegExp(
+        r'^(?:©|copyright\b|hak cipta\b|follow us\b|bagikan$|share$|ikuti kami\b|tiktok$|instagram$|youtube$|whatsapp$)',
+        caseSensitive: false,
+      ).hasMatch(text) ||
+      RegExp(
+        r'(?:\$RB\s*=|\$RV\s*=|self\.__next_f\.push|__next_f\.push\(|react\.fragment)',
+        caseSensitive: false,
+      ).hasMatch(text);
 
   static String _firstParagraph(String html) =>
       RegExp(

@@ -78,17 +78,19 @@ class _MarketNewsDetailScreenState extends State<MarketNewsDetailScreen> {
         body: SafeArea(
           top: false,
           bottom: false,
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildHero(context, widget.article)),
-              SliverToBoxAdapter(
-                child: FutureBuilder<MarketNewsArticle>(
-                  future: _articleFuture,
-                  builder: (context, snapshot) =>
-                      _buildArticleBody(context, widget.article, snapshot),
-                ),
-              ),
-            ],
+          child: FutureBuilder<MarketNewsArticle>(
+            future: _articleFuture,
+            builder: (context, snapshot) {
+              final article = snapshot.data ?? widget.article;
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _buildHero(context, article)),
+                  SliverToBoxAdapter(
+                    child: _buildArticleBody(context, article, snapshot),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

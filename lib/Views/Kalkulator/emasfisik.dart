@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
@@ -30,6 +32,10 @@ class KalkulatorEmasFisikView extends StatefulWidget {
 class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   late int _selectedTab = widget.initialTab;
   bool _isLoadingKurs = false;
+  String? _kursError;
+  DateTime? _kursUpdatedAt;
+  Timer? _kursRefreshTimer;
+  final FocusNode _kursFocusNode = FocusNode();
 
   final TextEditingController _tozController = TextEditingController(
     text: '31,1',
@@ -44,39 +50,77 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
   void initState() {
     super.initState();
     _fetchKursUSD();
+    _kursRefreshTimer = Timer.periodic(
+      const Duration(minutes: 30),
+      (_) => _fetchKursUSD(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _kursRefreshTimer?.cancel();
+    _kursFocusNode.dispose();
+    _tozController.dispose();
+    _kursController.dispose();
+    _modalController.dispose();
+    _hargaBeliController.dispose();
+    _hargaJualController.dispose();
+    _hasilController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchKursUSD() async {
+    if (_isLoadingKurs) return;
     setState(() => _isLoadingKurs = true);
 
     try {
-      final response = await http.get(
-        Uri.parse('https://open.er-api.com/v6/latest/USD'),
-      );
+      final sourceUri = Uri.https('api.fxratesapi.com', '/latest', {
+        'base': 'USD',
+        'currencies': 'IDR',
+      });
+      final requestUri = kIsWeb
+          ? Uri.parse('https://r.jina.ai/${sourceUri.toString()}')
+          : sourceUri;
+      final response = await http
+          .get(requestUri, headers: {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['rates'] != null && data['rates']['IDR'] != null) {
-          double idrRate = (data['rates']['IDR'] as num).toDouble();
-
-          String formattedRate = idrRate
-              .toStringAsFixed(0)
-              .replaceAllMapped(
-                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                (Match m) => '${m[1]}.',
-              );
-
-          if (mounted) {
-            setState(() {
-              _kursController.text = formattedRate;
-            });
-          }
-        }
-      } else {
-        if (mounted) setState(() => _kursController.text = '16.000');
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
       }
-    } catch (e) {
-      if (mounted) setState(() => _kursController.text = '16.000');
+      final jsonStart = response.body.indexOf('{');
+      final jsonEnd = response.body.lastIndexOf('}');
+      if (jsonStart < 0 || jsonEnd < jsonStart) {
+        throw const FormatException('Kurs USD/IDR tidak tersedia.');
+      }
+      final data = jsonDecode(response.body.substring(jsonStart, jsonEnd + 1));
+      final rates = data is Map ? data['rates'] : null;
+      final rawIdrRate = rates is Map ? rates['IDR'] : null;
+      final idrRate = rawIdrRate is num ? rawIdrRate.toDouble() : null;
+      if (data is! Map ||
+          data['success'] != true ||
+          idrRate == null ||
+          !idrRate.isFinite ||
+          idrRate <= 0) {
+        throw const FormatException('Kurs USD/IDR tidak tersedia.');
+      }
+
+      final formattedRate = idrRate.round().toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match match) => '${match[1]}.',
+      );
+      final updatedAt =
+          DateTime.tryParse('${data['date']}')?.toLocal() ?? DateTime.now();
+
+      if (mounted) {
+        setState(() {
+          if (!_kursFocusNode.hasFocus) _kursController.text = formattedRate;
+          _kursUpdatedAt = updatedAt;
+          _kursError = null;
+        });
+      }
+    } on Exception catch (error) {
+      if (mounted) setState(() => _kursError = error.toString());
     } finally {
       if (mounted) setState(() => _isLoadingKurs = false);
     }
@@ -142,6 +186,16 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     double hargaBeli = _parseInput(_hargaBeliController.text);
     double hargaJual = _parseInput(_hargaJualController.text);
 
+    if (kurs <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.text(context, 'Kurs USD/IDR belum tersedia.'),
+          ),
+        ),
+      );
+      return;
+    }
     if (toz == 0) toz = 31.1;
 
     final h1 = _truncate((hargaBeli * kurs) / toz);
@@ -187,6 +241,16 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     double hargaBeli = _parseInput(_hargaBeliController.text);
     double hargaJual = _parseInput(_hargaJualController.text);
 
+    if (kurs <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.text(context, 'Kurs USD/IDR belum tersedia.'),
+          ),
+        ),
+      );
+      return;
+    }
     if (toz == 0) toz = 31.1;
 
     Navigator.push(
@@ -217,10 +281,9 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
         decoration: BoxDecoration(gradient: AppTheme.pageGradient(context)),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Column(
               children: [
-                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -353,13 +416,27 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                 const SizedBox(height: 20),
 
                 KalkulatorInfoCard(
-                  title: _selectedTab == 0 ? 'Emas Fisik' : 'Pivot Point',
-                  summary: _selectedTab == 0
-                      ? 'Emas fisik adalah emas berwujud yang dapat disimpan sebagai aset riil.'
-                      : 'Pivot Point adalah harga acuan untuk menentukan aksi beli atau jual berdasarkan harga Open.',
-                  details: _selectedTab == 0
-                      ? 'Emas fisik adalah emas yang berwujud, dapat berupa batangan, koin, atau perhiasan, yang dibeli oleh investor dan disimpan sebagai aset riil. Emas fisik memiliki nilai intrinsik yang dihargai di seluruh dunia, dan karena bentuknya yang nyata, investor dapat menyimpannya di rumah dan atau di tempat penyimpanan khusus.'
-                      : 'Pivot Point adalah harga wajar atau harga pasaran untuk menentukan aksi beli dan jual yang mengacu pada harga pembukaan (Open).\n\nOpen < Pivot Point: BUY\nOpen > Pivot Point: SELL',
+                  title: switch (_selectedTab) {
+                    0 => 'Emas Fisik',
+                    1 => 'Pivot Point',
+                    _ => 'NEST',
+                  },
+                  summary: switch (_selectedTab) {
+                    0 =>
+                      'Emas fisik adalah emas berwujud yang dapat disimpan sebagai aset riil.',
+                    1 =>
+                      'Pivot Point adalah harga acuan untuk menentukan aksi beli atau jual berdasarkan harga Open.',
+                    _ =>
+                      'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).',
+                  },
+                  details: switch (_selectedTab) {
+                    0 =>
+                      'Emas fisik adalah emas yang berwujud, dapat berupa batangan, koin, atau perhiasan, yang dibeli oleh investor dan disimpan sebagai aset riil. Emas fisik memiliki nilai intrinsik yang dihargai di seluruh dunia, dan karena bentuknya yang nyata, investor dapat menyimpannya di rumah dan atau di tempat penyimpanan khusus.',
+                    1 =>
+                      'Pivot Point adalah harga wajar atau harga pasaran untuk menentukan aksi beli dan jual yang mengacu pada harga pembukaan (Open).\n\nOpen < Pivot Point: BUY\nOpen > Pivot Point: SELL',
+                    _ =>
+                      'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
+                  },
                 ),
 
                 if (_selectedTab == 1)
@@ -405,11 +482,11 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                               ),
                             ),
                             const Spacer(),
-                            const Text(
+                            Text(
                               'Kurs',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF555555),
+                                color: AppTheme.text(context),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -419,9 +496,56 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
                                 _kursController,
                                 textAlign: TextAlign.center,
                                 isLoading: _isLoadingKurs,
-                                inputFormatters: [
-                                  ThousandsSeparatorFormatter(),
-                                ],
+                                focusNode: _kursFocusNode,
+                                allowDecimal: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (_kursError != null)
+                              Expanded(
+                                child: Text(
+                                  AppStrings.text(
+                                    context,
+                                    'Kurs gagal diperbarui; periksa koneksi.',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              )
+                            else if (_kursUpdatedAt != null)
+                              Expanded(
+                                child: Text(
+                                  '${AppStrings.text(context, 'Kurs USD/IDR')} · ${AppStrings.text(context, 'Kurs diperbarui')} ${_kursUpdatedAt!.day} ${AppStrings.monthName(_kursUpdatedAt!.month)} ${_kursUpdatedAt!.hour.toString().padLeft(2, '0')}:${_kursUpdatedAt!.minute.toString().padLeft(2, '0')}',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    color: AppTheme.mutedText(context),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            IconButton(
+                              tooltip: AppStrings.text(
+                                context,
+                                'Perbarui kurs',
+                              ),
+                              onPressed: _isLoadingKurs ? null : _fetchKursUSD,
+                              visualDensity: VisualDensity.compact,
+                              iconSize: 16,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 28,
+                                height: 28,
+                              ),
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                Icons.refresh,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],
@@ -753,19 +877,22 @@ class _KalkulatorEmasFisikViewState extends State<KalkulatorEmasFisikView> {
     TextEditingController controller, {
     TextAlign textAlign = TextAlign.start,
     bool isLoading = false,
+    FocusNode? focusNode,
     List<TextInputFormatter>? inputFormatters,
+    bool allowDecimal = false,
   }) {
     return SizedBox(
       height: 38,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         textAlign: textAlign,
-        keyboardType: TextInputType.number,
+        keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
         inputFormatters: inputFormatters,
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppTheme.text(context),
         ),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(

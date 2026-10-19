@@ -313,79 +313,88 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _buildTipCard() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 150,
-        decoration: BoxDecoration(
-          gradient: Theme.of(context).brightness == Brightness.dark
-              ? const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF202B2E), Color(0xFF172124)],
-                )
-              : const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFFFD4B7), Color(0xFFFFE9DB)],
-                ),
-          border: Border.all(color: AppTheme.border(context)),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 6, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: AppStrings.text(context, 'Hitung ')),
-                          TextSpan(
-                            text: AppStrings.text(
-                              context,
-                              'Emas Fisik, Pivot\nPoint & NEST',
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 160),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: Theme.of(context).brightness == Brightness.dark
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF202B2E), Color(0xFF172124)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFFD4B7), Color(0xFFFFE9DB)],
+                  ),
+            border: Border.all(color: AppTheme.border(context)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 6, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: AppStrings.text(context, 'Hitung ')),
+                            TextSpan(
+                              text: AppStrings.text(
+                                context,
+                                'Emas Fisik, Pivot\nPoint & NEST',
+                              ),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
+                            TextSpan(
+                              text: AppStrings.text(context, ' dengan mudah'),
                             ),
-                          ),
-                          TextSpan(
-                            text: AppStrings.text(context, ' dengan mudah'),
-                          ),
-                        ],
+                          ],
+                        ),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
                       ),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
+                      const SizedBox(height: 10),
+                      Text(
+                        AppStrings.text(
+                          context,
+                          'Gunakan kalkulator ORVIX untuk perhitungan yang cepat, akurat, dan terpercaya.',
+                        ),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.mutedText(context),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      AppStrings.text(
-                        context,
-                        'Gunakan kalkulator ORVIX untuk perhitungan yang cepat, akurat, dan terpercaya.',
-                      ),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.mutedText(context),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Image.asset('assets/home_page.png', fit: BoxFit.cover),
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: SizedBox(
+                    height: 128,
+                    child: Image.asset(
+                      'assets/home_page.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -666,17 +675,16 @@ class AppUsageTracker {
         userRole == null ||
         normalizedRole == null ||
         !{'admin', 'staff', 'nasabah'}.contains(normalizedRole)) {
-      throw StateError('Profil pengguna tidak ditemukan untuk mencatat aktivitas.');
+      throw StateError(
+        'Profil pengguna tidak ditemukan untuk mencatat aktivitas.',
+      );
     }
 
-    await userReference
-        .collection('app_usage')
-        .doc(date)
-        .set({
-          'user_id': user.uid,
-          'role': userRole,
-          'date': date,
-          'minutes': FieldValue.increment(1),
-        }, SetOptions(merge: true));
+    await userReference.collection('app_usage').doc(date).set({
+      'user_id': user.uid,
+      'role': userRole,
+      'date': date,
+      'minutes': FieldValue.increment(1),
+    }, SetOptions(merge: true));
   }
 }

@@ -138,11 +138,11 @@ class HomeViewState extends State<HomeView> {
         _newsPageController.jumpToPage(0);
       }
     } on Exception catch (error) {
+      debugPrint('Unable to load latest market news: $error');
       if (!mounted || requestGeneration != _newsRequestGeneration) return;
       setState(() {
         _isLoadingNews = false;
-        _newsError =
-            '${AppStrings.text(context, 'Berita terbaru gagal dimuat.')} $error';
+        _newsError = AppStrings.text(context, 'Berita terbaru gagal dimuat.');
       });
     }
   }

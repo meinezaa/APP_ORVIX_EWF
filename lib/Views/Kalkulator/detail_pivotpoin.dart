@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 
 class DetailPivotPoint extends StatelessWidget {
   final double pp, r1, r2, r3, r4, s1, s2, s3, s4;
@@ -65,16 +67,16 @@ class DetailPivotPoint extends StatelessWidget {
           ),
         ],
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: AppTheme.border(context), width: 1),
           ),
           child: Column(
             children: [
               _card(
+                context,
                 'R4',
                 r4,
                 _midpoint(r4, r3),
@@ -82,6 +84,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFF8B2500),
               ),
               _card(
+                context,
                 'R3',
                 r3,
                 _midpoint(r3, r2),
@@ -89,6 +92,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFF8B2500),
               ),
               _card(
+                context,
                 'R2',
                 r2,
                 _midpoint(r2, r1),
@@ -96,6 +100,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFF8B2500),
               ),
               _card(
+                context,
                 'R1',
                 r1,
                 _midpoint(r1, pp),
@@ -103,6 +108,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFF8B2500),
               ),
               _card(
+                context,
                 'PP',
                 pp,
                 _midpoint(pp, s1),
@@ -110,6 +116,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFFD85A63),
               ),
               _card(
+                context,
                 'S1',
                 s1,
                 _midpoint(s1, s2),
@@ -117,6 +124,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFFFF7A00),
               ),
               _card(
+                context,
                 'S2',
                 s2,
                 _midpoint(s2, s3),
@@ -124,6 +132,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFFFF7A00),
               ),
               _card(
+                context,
                 'S3',
                 s3,
                 _midpoint(s3, s4),
@@ -131,6 +140,7 @@ class DetailPivotPoint extends StatelessWidget {
                 const Color(0xFFFF7A00),
               ),
               _card(
+                context,
                 'S4',
                 s4,
                 _midpoint(s4, s3),
@@ -149,10 +159,13 @@ class DetailPivotPoint extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onDownload,
                 icon: const Icon(Icons.download_outlined, size: 19),
-                label: const Text('Download'),
+                label: Text(AppStrings.text(context, 'Download')),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFD67236),
-                  side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1.5,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -166,8 +179,11 @@ class DetailPivotPoint extends StatelessWidget {
               OutlinedButton(
                 onPressed: onReset,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFD67236),
-                  side: const BorderSide(color: Color(0xFFD67236), width: 1.5),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1.5,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -176,7 +192,7 @@ class DetailPivotPoint extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: const Text('Reset'),
+                child: Text(AppStrings.text(context, 'Reset')),
               ),
             ],
           ),
@@ -186,6 +202,7 @@ class DetailPivotPoint extends StatelessWidget {
   }
 
   Widget _card(
+    BuildContext context,
     String label,
     double value,
     double midpoint,
@@ -197,50 +214,59 @@ class DetailPivotPoint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 64,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: levelColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: const Color(0xFF888888)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final valueWidth = constraints.maxWidth - 64 < 200
+                  ? constraints.maxWidth - 64
+                  : 200.0;
+              return Row(
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: levelColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
-                  ),
-                  child: Text(
-                    _format(value),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: Color(0xFF6E2016),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              ),
-            ],
+                  const Spacer(),
+                  SizedBox(
+                    width: valueWidth,
+                    child: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface(context),
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: AppTheme.border(context)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        _format(value),
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: AppTheme.text(context),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           if (showMidpoint) ...[
             const SizedBox(height: 14),
@@ -249,8 +275,12 @@ class DetailPivotPoint extends StatelessWidget {
                 SizedBox(
                   width: 64,
                   child: Text(
-                    'midpoint',
-                    style: TextStyle(color: midpointColor, fontSize: 13),
+                    AppStrings.text(context, 'midpoint'),
+                    style: TextStyle(
+                      color: midpointColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -258,9 +288,9 @@ class DetailPivotPoint extends StatelessWidget {
                     _format(midpoint),
                     textAlign: TextAlign.right,
                     style: TextStyle(
-                      color: const Color(0xFF6E2016),
+                      color: AppTheme.text(context),
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

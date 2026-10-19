@@ -53,11 +53,11 @@ class _MarketNewsListScreenState extends State<MarketNewsListScreen> {
         _selectedCategory = 'All';
       });
     } on Exception catch (error) {
+      debugPrint('Unable to load latest market news: $error');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _error =
-            '${AppStrings.text(context, 'Berita terbaru gagal dimuat.')} $error';
+        _error = AppStrings.text(context, 'Berita terbaru gagal dimuat.');
       });
     }
   }
@@ -119,7 +119,7 @@ class _MarketNewsListScreenState extends State<MarketNewsListScreen> {
                         height: 38,
                       ),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppTheme.surface(context),
                         foregroundColor: Theme.of(context).colorScheme.primary,
                         padding: EdgeInsets.zero,
                         shape: const CircleBorder(),

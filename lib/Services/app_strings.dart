@@ -190,6 +190,74 @@ abstract final class AppStrings {
     'Masuk': 'Sign In',
     'Email': 'Email',
     'Password': 'Password',
+    'Buat Akun Baru': 'Create a New Account',
+    'Buat akun sebagai staff atau nasabah. Setelah terdaftar, Anda bisa langsung masuk dan menggunakan sistem kalkulator.':
+        'Register as staff or a customer. After registering, you can sign in and use the calculator.',
+    'Daftar Sebagai': 'Register As',
+    'Staff': 'Staff',
+    'Nasabah': 'Customer',
+    'Data perhitungan staff akan tersedia untuk admin.':
+        'Staff calculations will be available to administrators.',
+    'Data perhitungan nasabah hanya tersimpan di akun Anda.':
+        'Customer calculations are stored only in your account.',
+    'Masukkan nama lengkap Anda': 'Enter your full name',
+    'Contoh: 08123456789': 'Example: 08123456789',
+    'Buat kata sandi minimal 8 karakter':
+        'Create a password with at least 8 characters',
+    'Masukkan kembali kata sandi': 'Re-enter your password',
+    'Konfirmasi Password': 'Confirm Password',
+    'Sudah punya akun? ': 'Already have an account? ',
+    'Daftar': 'Register',
+    'Baca selengkapnya': 'Read more',
+    'Tutup': 'Close',
+    'NEST': 'NEST',
+    'Grafik gagal dimuat.': 'Could not load chart.',
+    'Grafik gagal dimuat. Periksa koneksi internet.':
+        'Could not load the chart. Check your internet connection.',
+    'Coba lagi': 'Try again',
+    'Tidak dapat membuka TradingView.': 'Could not open TradingView.',
+    'Gold Spot / U.S. Dollar': 'Gold Spot / U.S. Dollar',
+    'Hang Seng Index': 'Hang Seng Index',
+    'Nikkei 225 Index': 'Nikkei 225 Index',
+    'Kurs gagal diperbarui; periksa koneksi.':
+        'Could not refresh the exchange rate; check your connection.',
+    'Kurs diperbarui': 'Rate updated',
+    'Kurs USD/IDR': 'USD/IDR rate',
+    'Perbarui kurs': 'Refresh exchange rate',
+    'Kurs USD/IDR belum tersedia.':
+        'The USD/IDR exchange rate is not available yet.',
+    'Kurs': 'Rate',
+    'midpoint': 'midpoint',
+    'Emas': 'Gold',
+    'Syarat dan Ketentuan': 'Terms and Conditions',
+    'Saya telah menyetujui ': 'I agree to the ',
+    ' yang berlaku.': '.',
+    'Apa itu Emas Fisik?': 'What is Physical Gold?',
+    'Apa itu Pivot Point?': 'What is Pivot Point?',
+    'Apa itu NEST?': 'What is NEST?',
+    'Emas fisik adalah emas berwujud yang dapat disimpan sebagai aset riil.':
+        'Physical gold is tangible gold that can be held as a real asset.',
+    'Emas fisik adalah emas yang berwujud, dapat berupa batangan, koin, atau perhiasan, yang dibeli oleh investor dan disimpan sebagai aset riil. Emas fisik memiliki nilai intrinsik yang dihargai di seluruh dunia, dan karena bentuknya yang nyata, investor dapat menyimpannya di rumah dan atau di tempat penyimpanan khusus.':
+        'Physical gold is tangible gold, such as bars, coins, or jewelry, purchased and held by investors as a real asset. It has intrinsic value recognized worldwide and can be stored at home or in a dedicated facility.',
+    'Pivot Point adalah harga acuan untuk menentukan aksi beli atau jual berdasarkan harga Open.':
+        'Pivot Point is a reference price used to determine buy or sell actions based on the Open price.',
+    'Pivot Point adalah harga wajar atau harga pasaran untuk menentukan aksi beli dan jual yang mengacu pada harga pembukaan (Open).\n\nOpen < Pivot Point: BUY\nOpen > Pivot Point: SELL':
+        'Pivot Point is a fair or market price used to guide buy and sell decisions based on the opening price (Open).\n\nOpen < Pivot Point: BUY\nOpen > Pivot Point: SELL',
+    'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).':
+        'NEST follows the trend using the closing price (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
+    'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).\n\nClose > Open: BUY\nClose < Open: SELL':
+        'NEST follows the trend using the closing price (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
+    'Grafik Harga': 'Price Chart',
+    'Buka': 'Open',
+    '1 menit': '1 minute',
+    '5 menit': '5 minutes',
+    '15 menit': '15 minutes',
+    '30 menit': '30 minutes',
+    '1 jam': '1 hour',
+    '4 jam': '4 hours',
+    '1 hari': '1 day',
+    '1 minggu': '1 week',
+    '1 bulan': '1 month',
     'Lupa Password?': 'Forgot Password?',
     'Continue with Google': 'Continue with Google',
     'Belum punya akun? ': "Don't have an account? ",
@@ -443,7 +511,6 @@ abstract final class AppStrings {
     'Login Berhasil! Selamat datang, ': 'Login successful! Welcome, ',
     'Hasil tampil, tetapi histori gagal disimpan.':
         'The result is shown, but could not be saved to history.',
-    'Coba lagi': 'Try again',
     'ORVIX membantu perhitungan Emas Fisik, Pivot Point, dan NEST lebih mudah':
         'ORVIX makes Physical Gold, Pivot Point, and NEST calculations easier',
   };
@@ -459,9 +526,12 @@ abstract final class AppStrings {
     'High': 'Tertinggi',
     'Low': 'Terendah',
     'Close': 'Tutup',
+    'midpoint': 'titik tengah',
+    'Gold Spot / U.S. Dollar': 'Emas Spot / Dolar AS',
     'Calculate': 'Hitung',
     'Nest': 'NEST',
     'Market Update': 'Pembaruan Pasar',
+    'Analysis & Opinion': 'Analisis & Opini',
     'Gold': 'Emas',
     'Oil': 'Minyak',
     'Silver': 'Perak',

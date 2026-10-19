@@ -72,12 +72,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (user == null) {
       final previousUid = _trackedAdminUid;
       _trackedAdminUid = null;
+      _isAdminSession = false;
       if (previousUid != null) {
         final preferences = await SharedPreferences.getInstance();
         await preferences.remove(_adminActivityKey(previousUid));
       }
       final wasInitialized = _hasReceivedInitialAuthState;
       _hasReceivedInitialAuthState = true;
+      if (mounted) setState(() {});
       if (wasInitialized && mounted) {
         _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const OnboardingScreen()),
@@ -93,7 +95,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return;
     }
 
-    _isAdminSession = profile?.role.trim().toLowerCase() == 'admin';
+    final isAdminSession = profile?.role.trim().toLowerCase() == 'admin';
+    setState(() => _isAdminSession = isAdminSession);
     if (_isAdminSession) {
       _trackedAdminUid = user.uid;
       final preferences = await SharedPreferences.getInstance();
@@ -267,15 +270,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             navigatorKey: _navigatorKey,
             theme: ThemeData(
               useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFFE75D1C),
-                brightness: Brightness.light,
-                surface: const Color(0xFFFFF8F3),
-              ).copyWith(
-                onSurface: const Color(0xFF261D19),
-                surfaceContainer: const Color(0xFFFFF4EC),
-                outlineVariant: const Color(0xFFE8E0D8),
-              ),
+              colorScheme:
+                  ColorScheme.fromSeed(
+                    seedColor: const Color(0xFFE75D1C),
+                    brightness: Brightness.light,
+                    surface: const Color(0xFFFFF8F3),
+                  ).copyWith(
+                    onSurface: const Color(0xFF261D19),
+                    surfaceContainer: const Color(0xFFFFF4EC),
+                    outlineVariant: const Color(0xFFE8E0D8),
+                  ),
               scaffoldBackgroundColor: const Color(0xFFFFF8F3),
               cardTheme: const CardThemeData(
                 color: Color(0xFFFFFFFF),
@@ -293,16 +297,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             darkTheme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.dark,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFFE75D1C),
-                brightness: Brightness.dark,
-                surface: const Color(0xFF11191B),
-              ).copyWith(
-                onSurface: const Color(0xFFE7ECEE),
-                surfaceContainer: const Color(0xFF172124),
-                surfaceContainerHigh: const Color(0xFF202B2E),
-                outlineVariant: const Color(0xFF354346),
-              ),
+              colorScheme:
+                  ColorScheme.fromSeed(
+                    seedColor: const Color(0xFFE75D1C),
+                    brightness: Brightness.dark,
+                    surface: const Color(0xFF11191B),
+                  ).copyWith(
+                    onSurface: const Color(0xFFE7ECEE),
+                    surfaceContainer: const Color(0xFF172124),
+                    surfaceContainerHigh: const Color(0xFF202B2E),
+                    outlineVariant: const Color(0xFF354346),
+                  ),
               scaffoldBackgroundColor: const Color(0xFF0B1113),
               cardTheme: const CardThemeData(
                 color: Color(0xFF172124),
@@ -317,8 +322,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 fillColor: Color(0xFF172124),
               ),
             ),
-            themeMode: AppPreferences.instance.themeMode,
-            locale: AppPreferences.instance.locale,
+            themeMode: _isAdminSession
+                ? ThemeMode.light
+                : AppPreferences.instance.themeMode,
+            locale: _isAdminSession
+                ? const Locale('id')
+                : AppPreferences.instance.locale,
             supportedLocales: const [Locale('id'), Locale('en')],
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,

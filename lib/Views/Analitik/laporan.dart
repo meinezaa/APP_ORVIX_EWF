@@ -536,7 +536,7 @@ class _LaporanViewState extends State<LaporanView> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
-      childAspectRatio: 1.55,
+      childAspectRatio: 1.5,
       children: [
         _metric('Total Hitung', total, _blue, Icons.bar_chart_rounded),
         _metric(

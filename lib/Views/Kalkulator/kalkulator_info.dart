@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../Services/app_strings.dart';
+import '../../Services/app_theme.dart';
 
 class KalkulatorInfoCard extends StatefulWidget {
   final String title;
@@ -25,9 +27,9 @@ class _KalkulatorInfoCardState extends State<KalkulatorInfoCard> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+        border: Border.all(color: AppTheme.border(context)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -59,18 +61,21 @@ class _KalkulatorInfoCardState extends State<KalkulatorInfoCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Apa itu ${widget.title}?',
-                  style: const TextStyle(
-                    color: Color(0xFF6E2E1A),
+                  AppStrings.text(context, 'Apa itu ${widget.title}?'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _isExpanded ? widget.details : widget.summary,
-                  style: const TextStyle(
-                    color: Color(0xFF666666),
+                  AppStrings.text(
+                    context,
+                    _isExpanded ? widget.details : widget.summary,
+                  ),
+                  style: TextStyle(
+                    color: AppTheme.mutedText(context),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -82,7 +87,7 @@ class _KalkulatorInfoCardState extends State<KalkulatorInfoCard> {
                       setState(() => _isExpanded = !_isExpanded);
                     },
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFD8531D),
+                      foregroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.only(left: 8, top: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -94,7 +99,10 @@ class _KalkulatorInfoCardState extends State<KalkulatorInfoCard> {
                       size: 18,
                     ),
                     label: Text(
-                      _isExpanded ? 'Tutup' : 'Baca selengkapnya',
+                      AppStrings.text(
+                        context,
+                        _isExpanded ? 'Tutup' : 'Baca selengkapnya',
+                      ),
                       style: const TextStyle(fontSize: 12),
                     ),
                     iconAlignment: IconAlignment.end,

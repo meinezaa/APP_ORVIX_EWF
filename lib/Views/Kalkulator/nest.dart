@@ -437,13 +437,14 @@ class _OrvixKalkulatorScreenState extends State<OrvixKalkulatorScreen> {
                               _buildTopTabBar(),
                               const SizedBox(height: 20),
 
-                              const KalkulatorInfoCard(
-                                title: 'NEST',
-                                summary:
-                                    'NEST menggunakan konsep Follow the Trend dengan membandingkan harga Close dan Open.',
-                                details:
-                                    'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
-                              ),
+                              if (!widget.embedded)
+                                const KalkulatorInfoCard(
+                                  title: 'NEST',
+                                  summary:
+                                      'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).',
+                                  details:
+                                      'NEST adalah konsep Follow the Trend yang mengacu pada harga penutupan (Close).\n\nClose > Open: BUY\nClose < Open: SELL',
+                                ),
 
                               Padding(
                                 padding: const EdgeInsets.only(
